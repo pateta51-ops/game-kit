@@ -105,22 +105,32 @@ function metric(value, label) {
   return { total: value.total, covered: value.covered, percent: value.total ? 100 * value.covered / value.total : null };
 }
 
+const fileStats = { bigint: true, throwIfNoEntry: false };
+
+function readUnaliased(file) {
+  const entry = fs.lstatSync(file, fileStats);
+  if (!entry) return;
+  const matches = stat => stat?.isFile() && stat.nlink === 1n && stat.dev === entry.dev && stat.ino === entry.ino
+    && stat.mtimeNs === entry.mtimeNs && stat.ctimeNs === entry.ctimeNs;
+  const invalid = () => new Error('Expected an unchanged regular file without aliases');
+  if (!matches(entry)) throw invalid();
+  const fd = fs.openSync(file, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0) | (fs.constants.O_NONBLOCK ?? 0));
+  try {
+    const opened = fs.fstatSync(fd, fileStats);
+    if (!matches(opened)) throw invalid();
+    const bytes = fs.readFileSync(fd);
+    if (!matches(fs.lstatSync(file, fileStats))) throw invalid();
+    return { bytes, mtimeNs: opened.mtimeNs };
+  } finally { fs.closeSync(fd); }
+}
+
 function readSummary() {
   const empty = (status, reason) => ({ summary: { status, reason }, components: [], files: [] });
-  const invalidFile = () => empty('invalid', 'Coverage summary must be a regular file without aliases');
-  let bytes, mtimeNs;
-  try {
-    const entry = fs.lstatSync(summaryFile, { bigint: true, throwIfNoEntry: false });
-    if (!entry) return empty('unavailable', 'No V8 coverage summary was produced');
-    if (!entry.isFile() || entry.nlink !== 1n) return invalidFile();
-    const fd = fs.openSync(summaryFile, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
-    try {
-      const opened = fs.fstatSync(fd, { bigint: true });
-      if (!opened.isFile() || opened.nlink !== 1n || opened.dev !== entry.dev || opened.ino !== entry.ino) return invalidFile();
-      bytes = fs.readFileSync(fd);
-      mtimeNs = opened.mtimeNs;
-    } finally { fs.closeSync(fd); }
-  } catch { return empty('invalid', 'Coverage summary could not be read'); }
+  let file;
+  try { file = readUnaliased(summaryFile); }
+  catch { return empty('invalid', 'Coverage summary must be a readable regular file without aliases'); }
+  if (!file) return empty('unavailable', 'No V8 coverage summary was produced');
+  const { bytes, mtimeNs } = file;
   const sha256 = digest(bytes);
   try {
     const input = JSON.parse(bytes.toString('utf8'));
@@ -160,9 +170,12 @@ function readSummary() {
 
 function binding(file, source, data, configuration, mtimeNs) {
   if (!file) return { status: 'unavailable', reason: 'No before-run source context was supplied' };
-  if (!fs.existsSync(file)) return { status: 'unavailable', reason: 'Before-run source context is missing' };
+  let capture;
+  try { capture = readUnaliased(file); }
+  catch { return { status: 'invalid', reason: 'Before-run source context must be a readable regular file without aliases' }; }
+  if (!capture) return { status: 'unavailable', reason: 'Before-run source context is missing' };
   let before;
-  try { before = JSON.parse(fs.readFileSync(file, 'utf8')); }
+  try { before = JSON.parse(capture.bytes.toString('utf8')); }
   catch { return { status: 'invalid', reason: 'Malformed before-run source context' }; }
   if (!isCapture(before)) return { status: 'invalid', reason: 'Unsupported before-run source context' };
   if (!before.source.clean || !source.clean) return { status: 'invalid', reason: 'Coverage source is dirty; it is not the recorded commit tree' };
@@ -170,7 +183,7 @@ function binding(file, source, data, configuration, mtimeNs) {
   if (before.source.commit !== source.commit || before.source.tree !== source.tree || before.tool.sha256 !== tool.sha256) return { status: 'stale', reason: 'Source or reporting tool changed since capture' };
   if (before.source.workingSha256 !== source.workingSha256) return { status: 'stale', reason: 'Tracked working bytes changed since capture' };
   if (mtimeNs === undefined && data.summary.status === 'unavailable') return { status: 'unavailable', reason: 'No summary for the captured run' };
-  if (mtimeNs !== undefined && mtimeNs < fs.statSync(file, { bigint: true }).mtimeNs) return { status: 'stale', reason: 'Coverage summary predates source capture' };
+  if (mtimeNs !== undefined && mtimeNs < capture.mtimeNs) return { status: 'stale', reason: 'Coverage summary predates source capture' };
   if (data.summary.status !== 'reported') return { status: 'unavailable', reason: 'No valid component summary for the captured run' };
   for (const entry of [...data.files, ...configuration]) {
     try {
@@ -199,14 +212,24 @@ function markdown(report) {
   ].join('\n');
 }
 
-function reportTargets(commit) {
-  const existing = fs.lstatSync(directory, { throwIfNoEntry: false });
-  if (existing && !existing.isDirectory()) throw new Error('Coverage must be a real directory before reporting');
-  const targets = ['coverage-evidence.json', 'coverage-evidence.md'].map(name => path.join(directory, name));
-  for (const target of targets) {
-    const entry = fs.lstatSync(target, { throwIfNoEntry: false });
-    if (entry && (!entry.isFile() || entry.nlink !== 1)) throw new Error('Coverage reports must be regular files without aliases');
-  }
+function sameReportDirectory(pinned) {
+  const current = fs.lstatSync(directory, fileStats);
+  return (!current || current.isDirectory()) && current?.dev === pinned.entry?.dev && current?.ino === pinned.entry?.ino
+    && path.relative(canonical(directory), pinned.location) === '';
+}
+
+function assertReportDirectory(pinned) {
+  if (!sameReportDirectory(pinned)) throw new Error('Coverage directory changed or is not a real directory');
+}
+
+function assertReportFile(target) {
+  const entry = fs.lstatSync(target, fileStats);
+  if (entry && (!entry.isFile() || entry.nlink !== 1n)) throw new Error('Coverage reports must be regular files without aliases');
+}
+
+function reportTargets(commit, location) {
+  const targets = ['coverage-evidence.json', 'coverage-evidence.md'].map(name => path.join(location, name));
+  for (const target of targets) assertReportFile(target);
   let repo;
   try { repo = canonical(git('rev-parse', '--show-toplevel')); }
   catch (error) {
@@ -221,8 +244,10 @@ function reportTargets(commit) {
 }
 
 function report(options) {
+  const pinned = { location: path.join(fs.realpathSync.native(root), 'coverage'), entry: fs.lstatSync(directory, fileStats) };
+  assertReportDirectory(pinned);
   const source = identity();
-  const targets = reportTargets(source.commit);
+  const targets = reportTargets(source.commit, pinned.location);
   const { mtimeNs, ...data } = readSummary();
   const configuration = ['vitest.config.ts', 'package.json', 'package-lock.json', 'check-runner.config.json'].filter(file => fs.existsSync(path.join(root, file))).map(file => ({ path: file, sha256: digest(fs.readFileSync(path.join(root, file))) }));
   const evidence = {
@@ -236,16 +261,29 @@ function report(options) {
     },
     baseline: { status: 'unavailable', reason: 'Automatic baseline selection and verification are not implemented' }, comparison: { status: 'unknown' },
   };
-  fs.mkdirSync(directory, { recursive: true });
   const text = markdown(evidence);
-  const scratch = fs.mkdtempSync(path.join(directory, '.coverage-report-'));
+  const contents = [JSON.stringify(evidence, null, 2) + '\n', text];
+  assertReportDirectory(pinned);
+  if (!pinned.entry) {
+    fs.mkdirSync(pinned.location);
+    pinned.entry = fs.lstatSync(pinned.location, fileStats);
+  }
+  for (const target of targets) assertReportFile(target);
+  assertReportDirectory(pinned);
+  const scratch = fs.mkdtempSync(path.join(pinned.location, '.coverage-report-'));
   try {
     const staged = targets.map(target => path.join(scratch, path.basename(target)));
-    fs.writeFileSync(staged[0], JSON.stringify(evidence, null, 2) + '\n');
-    fs.writeFileSync(staged[1], text);
-    for (const [index, target] of targets.entries()) fs.renameSync(staged[index], target);
+    for (const [index, file] of staged.entries()) {
+      assertReportDirectory(pinned);
+      fs.writeFileSync(file, contents[index], { flag: 'wx' });
+    }
+    for (const [index, target] of targets.entries()) {
+      assertReportFile(target);
+      assertReportDirectory(pinned);
+      fs.renameSync(staged[index], target);
+    }
   } finally {
-    fs.rmSync(scratch, { recursive: true, force: true });
+    if (sameReportDirectory(pinned)) fs.rmSync(scratch, { recursive: true, force: true });
   }
   if (options['--started'] && process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, text);
   console.log(text);

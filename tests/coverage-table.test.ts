@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const script = path.resolve(import.meta.dirname, '../scripts/coverage-table.mjs');
@@ -189,6 +190,50 @@ describe('coverage history evidence', () => {
     expect(result.status).toBe(1);
     expect(f.read()).toMatchObject({ summary: { status: 'invalid' }, execution: { binding: { status: 'unavailable' } } });
     expect(fs.readFileSync(payload)).toEqual(bytes);
+  });
+
+  it.each(['regular file', 'hardlink', 'symlink'] as const)('checks an external capture context reported through a %s', kind => {
+    if (kind === 'symlink' && process.platform === 'win32') return;
+    const f = fixture('external-context-' + kind.replaceAll(' ', '-'));
+    const original = path.join(root, kind + '.json');
+    expect(f.run('--capture', original).status).toBe(0);
+    f.writeSummary();
+    let context = original;
+    if (kind !== 'regular file') {
+      context = path.join(root, kind + '-alias.json');
+      if (kind === 'hardlink') fs.linkSync(original, context);
+      else fs.symlinkSync(original, context);
+    }
+    const result = f.run('--started', context, '--check-outcome', 'success');
+    expect(result.status).toBe(kind === 'regular file' ? 0 : 1);
+    expect(f.read().execution.binding.status).toBe(kind === 'regular file' ? 'matched' : 'invalid');
+  });
+
+  it('preserves both reports when directory identity changes after reading the summary', () => {
+    const f = fixture('report-directory-change');
+    expect(f.run('--capture', f.start).status).toBe(0);
+    const coverage = path.dirname(f.writeSummary());
+    const json = path.join(coverage, 'coverage-evidence.json');
+    const markdown = path.join(coverage, 'coverage-evidence.md');
+    fs.writeFileSync(json, 'previous JSON');
+    fs.writeFileSync(markdown, 'previous Markdown');
+    const other = fs.mkdtempSync(path.join(f.dir, '.cache/coverage-'));
+    const preload = path.join(other, 'directory-identity.mjs');
+    fs.writeFileSync(preload, `import fs from 'node:fs';
+const stat = fs.lstatSync, read = fs.readFileSync;
+let changed = false;
+fs.readFileSync = (file, ...options) => {
+  const result = read(file, ...options);
+  if (typeof file === 'number') changed = true;
+  return result;
+};
+fs.lstatSync = (file, ...options) => stat(changed && file === ${JSON.stringify(coverage)} ? ${JSON.stringify(other)} : file, ...options);
+`);
+    const result = spawnSync(process.execPath, ['--import', pathToFileURL(preload).href, script, '--started', f.start, '--check-outcome', 'success'], { cwd: f.dir, encoding: 'utf8' });
+    expect(result.status, result.stdout + result.stderr).toBe(1);
+    expect(result.stderr).toContain('Coverage directory changed');
+    expect(fs.readFileSync(json, 'utf8')).toBe('previous JSON');
+    expect(fs.readFileSync(markdown, 'utf8')).toBe('previous Markdown');
   });
 
   it('rejects a cached tracked edit outside the files named in the coverage summary', () => {
