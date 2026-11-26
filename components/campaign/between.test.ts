@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   begin, campaignRoster, changeCampaignRoster, count, emptyLog, end, linear,
@@ -167,4 +169,76 @@ describe('K595 campaign save and step integration', () => {
     expect(count(retried.log, 'supplies')).toBe(2);
     expect(startCalendarDay(initial, 2, lessons).log).toEqual(day.log);
   });
+});
+
+it('K595 matches a physical-copy count for every small deck pair, box, attendance and edit order', () => {
+  const decks = [[], ['lantern'], ['rope'], ['lantern', 'lantern'], ['lantern', 'rope'], ['rope', 'rope']];
+  const attendance = [[], ['north'], ['south'], ['north', 'south']];
+  for (const absent of attendance) {
+    const initial = changeCampaignRoster(seats(), absent.map(player => ({ kind: 'sitOut', player })), { box });
+    const snapshot = structuredClone(initial);
+    for (const north of decks) for (const south of decks) {
+      const cards = [...north, ...south];
+      const edits = [
+        { kind: 'setDeck', player: 'north', deck: north },
+        { kind: 'setDeck', player: 'south', deck: south },
+      ] as const;
+      for (const lantern of [1, 2]) for (const rope of [1, 2]) {
+        const limits = { lantern, rope };
+        const free = {
+          lantern: lantern - cards.filter(card => card === 'lantern').length,
+          rope: rope - cards.filter(card => card === 'rope').length,
+        };
+        for (const order of [edits, edits.toReversed()]) {
+          const apply = () => changeCampaignRoster(initial, order, { box: limits });
+          if (free.lantern < 0 || free.rope < 0) {
+            expect(apply).toThrow(/shared box/);
+          } else {
+            const result = apply();
+            expect(remainingCampaignCards(result, limits)).toEqual(free);
+            expect(campaignRoster(result)).toEqual([
+              { id: 'north', status: absent.includes('north') ? 'sitting-out' : 'active', deck: north },
+              { id: 'south', status: absent.includes('south') ? 'sitting-out' : 'active', deck: south },
+            ]);
+          }
+          expect(initial).toEqual(snapshot);
+        }
+      }
+    }
+  }
+});
+
+it('K595 matches the expected day order and effects across permutations and saved replay', () => {
+  const rules: Readonly<Record<string, Instruction>> = {
+    provision: lessons.provision!,
+    reset: { id: 'reset', text: 'Reset supplies.', cite: 'synthetic 4', ops: [{ op: 'set', key: 'supplies', n: 5 }] },
+    mark: { id: 'mark', text: 'Mark the camp.', cite: 'synthetic 5', ops: [{ op: 'record', key: 'camp' }] },
+  };
+  const ids = Object.keys(rules);
+  for (const first of ids) for (const last of ids.filter(id => id !== first)) for (const day of [1, 2, 5]) {
+    const order = [first, ids.find(id => id !== first && id !== last)!, last];
+    const queued = order.reduce((log, id) => scheduleCalendarEntry(log, day, id),
+      scheduleCalendarEntry(emptyLog(), day + 1, 'provision'));
+    const supplies = order.indexOf('reset') < order.indexOf('provision') ? 7 : 5;
+    expect(() => startCalendarDay(queued, day + 1, rules)).toThrow(/pending/);
+    const result = startCalendarDay(queued, day, rules);
+    expect(result.ran.map(rule => rule.id)).toEqual(order);
+    expect(count(result.log, 'supplies')).toBe(supplies);
+    expect(result.log.recorded).toEqual(['camp']);
+    const loaded = readLog(json(result.log));
+    if (!loaded) throw new Error('fixture log did not load');
+    expect(startCalendarDay(loaded, day, rules)).toEqual({ log: loaded, ran: [] });
+    expect(count(startCalendarDay(loaded, day + 1, rules).log, 'supplies')).toBe(supplies + 2);
+  }
+});
+
+it('K595 runs the opening campaign from the README', () => {
+  const readme = readFileSync(new URL('./README.md', import.meta.url), 'utf8');
+  const example = /## Use it in 10 lines\s+```ts\r?\n([\s\S]*?)```/.exec(readme)?.[1];
+  if (!example) throw new Error('campaign README example missing');
+  const output = execFileSync(process.execPath, ['--input-type=module-typescript', '-'], {
+    input: example.replaceAll("'../kit/campaign/index'", JSON.stringify(new URL('./index.ts', import.meta.url).href)),
+    encoding: 'utf8',
+  });
+  expect(output.trim()).toBe("[ 'stocked' ]");
 });
