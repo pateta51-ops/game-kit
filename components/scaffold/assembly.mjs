@@ -1,3 +1,4 @@
+import { referenceCards } from './reference-cards.mjs'
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -31,6 +32,7 @@ function resolveCourier(input) {
 }
 
 export const ASSEMBLIES = {
+  'reference-cards': referenceCards,
   courier: {
     components: ['grid-map', 'plan-checker', 'traceability', 'plain-text', 'theme-check'],
     resolve: resolveCourier,

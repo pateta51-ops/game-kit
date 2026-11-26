@@ -7,7 +7,7 @@ import { MainMenu, SetupForm } from '../../kit/screens/ui.ts';
 import { SettingsScreen } from '../../kit/settings/ui.ts';
 import { gameResult, logLines } from '../../kit/table-panels/index.ts';
 import { GameOver, LogPanel } from '../../kit/table-panels/ui.tsx';
-import { cardText, CONTENT, defOf, VERBS, WORDS, type RefPrompt, type RefStep, type RefView } from '../engine/api.ts';
+import { CARD_SETUP, cardText, CONTENT, defOf, VERBS, WORDS, type RefPrompt, type RefStep, type RefView } from '../engine/api.ts';
 import { campaignNow, game, INITIAL, mySeat, nextScenario, saves, SCHEMA, SPEC, startCampaign, startGame, useGame, useSettings } from './store.ts';
 
 type Name = 'menu' | 'setup' | 'play' | 'settings' | 'saves';
@@ -49,7 +49,7 @@ function Play() {
 }
 
 function Menu() {
-  const entries = [{ id: 'setup', label: 'New game' }, { id: 'campaign', label: 'Campaign' }, { id: 'play', label: 'Continue' }, { id: 'settings', label: 'Settings' }, { id: 'saves', label: 'Saves' }];
+  const entries = [{ id: 'setup', label: 'New game' }, ...(CARD_SETUP.fixedSeats ? [] : [{ id: 'campaign', label: 'Campaign' }]), { id: 'play', label: 'Continue' }, { id: 'settings', label: 'Settings' }, { id: 'saves', label: 'Saves' }];
   return (
     <MainMenu
       entries={entries}

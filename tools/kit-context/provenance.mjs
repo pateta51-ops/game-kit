@@ -5,9 +5,21 @@ import { execFileSync, spawnSync } from 'node:child_process';
 
 const checkout=path.resolve(import.meta.dirname,'../..');
 const git=(cwd,...args)=>execFileSync('git',['-C',cwd,...args],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
+const evidenceDependencies=['components/check-runner/check-runner.ts','components/check-runner/receipt.ts','components/check-runner/tracked-source.ts','tools/reuse-metrics/report.mjs'];
 
 export function contextTool() {
-  let commit=null,modified=null;
+  let commit=null,modified=null,sourceSha256=null;
+  try {
+    // Include the verifier's producer binding and scanner, not just their callers.
+    // The digest covers local repository code, not Node or installed packages.
+    const modules=fs.readdirSync(import.meta.dirname).filter(file=>file.endsWith('.mjs')&&!file.endsWith('.test.mjs')).map(file=>'tools/kit-context/'+file);
+    const files=['kit.mjs',...modules,...evidenceDependencies].sort();
+    const inputs=files.map(file=>{
+      try {return [file,createHash('sha256').update(fs.readFileSync(path.join(checkout,file))).digest('hex')];}
+      catch(error) {if(error.code==='ENOENT') return [file,null];throw error;}
+    });
+    sourceSha256=createHash('sha256').update(JSON.stringify(inputs)).digest('hex');
+  } catch { /* Unreadable producer dependencies leave the code fingerprint unknown. */ }
   try {
     if(fs.realpathSync(git(checkout,'rev-parse','--show-toplevel'))===fs.realpathSync(checkout)) {
       const head=git(checkout,'rev-parse','HEAD');
@@ -15,13 +27,13 @@ export function contextTool() {
       const tracked=git(checkout,'ls-tree','--name-only',head,'--',...required).split(/\r?\n/);
       if(required.every(file=>tracked.includes(file))) {
         commit=head;
-        const files=['kit.mjs','tools/kit-context/*.mjs'];
+        const files=['kit.mjs','tools/kit-context/*.mjs',...evidenceDependencies];
         if(git(checkout,'status','--porcelain','--untracked-files=all','--',...files)) modified=true;
         else if(!/^[a-zS] /m.test(git(checkout,'ls-files','-v','--',...files))) modified=false;
       }
     }
   } catch { /* A copied tool has no checkout revision to report. */ }
-  return {name:'kit-context',commit,modified};
+  return {name:'kit-context',commit,modified,sourceSha256};
 }
 
 export function sourceProvenance({root,component,source}) {

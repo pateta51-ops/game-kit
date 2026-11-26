@@ -1,0 +1,16 @@
+# Four-card campaign continuation
+
+This original synthetic compatibility scenario is a four-card hand variant of the reference card duel. Each active player's whole allocated deck of four physical copies becomes that player's starting hand. The shared draw pile is empty. Sitting-out players' copies and unallocated box copies do not enter the scenario. Existing Jab, Blow, Rally, Ward and Mend effects, turn order, end strikes and life-based victory still apply. The duel lasts two rounds unless an actual life-based terminal result occurs first. A deterministic public-view bot chooses the first legal answer, preferring yes for an optional choice.
+
+The campaign has arrival on day 1 and crossing on day 2. Arrival must reach an actual engine terminal result before crossing is available. Lead always owns human seat 0. Partner initially owns automated seat 1, while reserve sits out. Before crossing, partner sits out and reserve returns to automated seat 1. Sitting out reserves the full deck. Retirement empties the retiring player's deck exactly once and releases those copies. Every non-retired deck has exactly four copies; lead and exactly one other player must be active.
+
+The day 2 calendar resolves stock (+1 supply), route choice, then ready, in that recording order. Rest grants the configuration's starting-life bonus to lead; press grants zero. A required unresolved choice commits no calendar, roster, deck or scenario update. A completed day cannot grant stock or bonus again. Roster edits are batched against the actual shared box; exchange of the single Ward and Mend requires a batch, and over-allocation refuses the whole edit. After partner retires, one released Blow can replace a Jab in lead's deck.
+
+| Configuration | Shared box | Lead | Partner | Reserve | Base life / rest bonus |
+| --- | --- | --- | --- | --- | --- |
+| camp-a | Jab 6, Blow 2, Rally 2, Ward 1, Mend 1 | Jab, Jab, Blow, Ward | Jab, Blow, Rally, Rally | Jab, Jab, Jab, Mend | 12 / 12; +2 |
+| camp-b | Jab 4, Blow 3, Rally 3, Ward 1, Mend 1 | Jab, Blow, Rally, Ward | Jab, Jab, Blow, Blow | Jab, Rally, Rally, Mend | 14 / 10; +4 |
+
+Both configurations use the same adapter source. The crossing milestone is a human card choice followed by an automated answer, or an earlier legitimate terminal result. The acceptance also completes crossing to test scenario retry. Retry restores the log, processed calendar, roster, decks and game-owned journal/betweenSessions fields from the scenario-start snapshot, discarding the later crossing result. It rebuilds the same scenario seed and does not process the day or exchange the decks again.
+
+Archives identify this variant and the exact selected configuration. They retain the campaign and, while playing, the engine action history, content seal and final state hash. Current completion is a prefix of arrival then crossing, and it must agree with the active step, status, resolutions and recorded result markers. Attempt history stays chronological and retains repeated completed attempts when a scenario is retried; it is not the current completion list. Restore checks this progress and the current log and every retry snapshot against the selected physical box, then replays the scenario through the same real engine. These are bounded consumer checks, not general campaign-generation support or production adoption evidence.

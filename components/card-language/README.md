@@ -19,6 +19,8 @@ The card-language shell (K206): card effects as data, one typed verb table where
 - `expectVerbs`: test that every verb has a handler, text and an example
 <!-- /hooks -->
 
+Standalone `paymentPlans` and `preferredPayment` callers follow the complete rules in [payment.md](payment.md). The verb-table and offer-policy instructions below apply when using the effect interpreter or standard pack. Focused context for these two exports uses that payment guide at the installed pin; it does not describe a game's other effect APIs.
+
 **What it does:** Card effects as data: one typed verb table where each verb has a field check, a handler on engine-core and a text generator, so the screen prints what the engine does.
 
 **You must:**

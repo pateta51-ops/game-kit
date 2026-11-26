@@ -4,3 +4,4 @@ export { AUTOMA, BOTS, TIERS } from './automa.ts';
 export { BONUS, logAfter, NEXT, playerOf, startOf, STEPS } from './campaign.ts';
 export { REF } from './game.ts';
 export { applyAction, createGame, hashState, type SaveFile } from '../../kit/engine-core/index.ts';
+export { CARD_SETUP } from './card-config.ts';

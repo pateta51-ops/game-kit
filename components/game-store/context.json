@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "sources": {
+    "README.md": "ec24cea87c6b03f8fa05ccc0af5643b5378068f25aff47a21885d74ddf895246"
+  },
+  "apis": [
+    {
+      "entry": "index.ts",
+      "symbol": "defineGame",
+      "rules": [
+        {
+          "file": "README.md",
+          "from": 7,
+          "to": 44
+        }
+      ],
+      "usage": [
+        {
+          "file": "README.md",
+          "from": 1,
+          "to": 5
+        },
+        {
+          "file": "README.md",
+          "from": 45,
+          "to": 85
+        }
+      ],
+      "dependencies": [
+        {
+          "component": "engine-core",
+          "entry": "kernel.ts",
+          "symbol": "GameTypes"
+        },
+        {
+          "component": "engine-core",
+          "entry": "kernel.ts",
+          "symbol": "GameRules"
+        },
+        {
+          "component": "engine-core",
+          "entry": "kernel.ts",
+          "symbol": "SaveFormat"
+        },
+        {
+          "component": "prompt-host",
+          "entry": "index.ts",
+          "symbol": "Forced"
+        },
+        {
+          "component": "sim-pool",
+          "entry": "browser.ts",
+          "symbol": "DriverRng"
+        },
+        {
+          "component": "cheat-options",
+          "entry": "index.ts",
+          "symbol": "CheatConfig"
+        }
+      ]
+    }
+  ]
+}

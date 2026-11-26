@@ -6,6 +6,7 @@
 // This synchronous schema parser validates JSON records; it performs no engine I/O.
 // eslint-disable-next-line no-restricted-imports -- content-pack requires a zod schema; this is the sole external engine import.
 import { z } from 'zod';
+import { CARD_RECORDS } from './card-config.ts';
 import { addEffect, draftOf, hashValue, seedRng, stateInvariants, sumEffects, timingHandlers, would, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState, type StateCheck, type TimingConfig } from '../../kit/engine-core/index.ts';
 import { describeEffect, effectTasks, posInt, validateEffect, verbHandler, type VerbTable, type VerbTask } from '../../kit/card-language/index.ts';
 import { cardPack, inDryRun, type PackEnv, type PackState, type PackStep } from '../../kit/card-language/pack.ts';
@@ -58,14 +59,7 @@ export interface Ref {
   readonly rules: { readonly life: Readonly<Record<Seat, number>>; readonly rounds: number };
 }
 
-const DEFS: Record<string, CardDef> = {
-  jab: { name: 'Jab', effect: [{ op: 'hit', n: 2 }] },
-  blow: { name: 'Blow', effect: [{ op: 'hit', n: 3 }] },
-  rally: { name: 'Rally', effect: [{ op: 'boost', n: 2 }] },
-  ward: { name: 'Ward', effect: [], stay: true, text: 'If you would take damage, instead discard this.' },
-  mend: { name: 'Mend', effect: [], stay: true, when: [{ on: 'damage', if: 'mine', optional: true, then: [{ op: 'heal', n: 1 }] }] },
-};
-export const BASE_CARDS: readonly CardRecord[] = Object.entries(DEFS).map(([id, def], i) => ({ id, line: `${id}.1`, copies: [6, 4, 4, 3, 3][i] ?? 0, ...def }));
+export const BASE_CARDS = CARD_RECORDS;
 export const LIMIT = 4;
 export const defOf = (id: string, content = CONTENT): CardRecord | undefined => content.defs[content.cards[id] ?? ''];
 const hand = (seat: string): string => seatZone('hand', seat);
@@ -125,7 +119,17 @@ export function loadContent(records: readonly unknown[] = BASE_CARDS): Ref['cont
 }
 export const CONTENT = loadContent();
 export const CARD_PROBE = createProbe<RuntimeCardNote>();
-export const cardObservation = (state: RefState) => ({ life0: state.life[0], life1: state.life[1] });
+export const cardObservation = (state: RefState) => ({
+  life0: state.life[0], life1: state.life[1],
+  boost0: sumEffects(state, 'boost', effect => effect.target === '0'),
+  boost1: sumEffects(state, 'boost', effect => effect.target === '1'),
+  warded: state.log.filter(event => event.type === 'warded').length,
+  healed: state.log.filter(event => event.type === 'healed').length,
+  ...Object.fromEntries(Object.entries(state.zones).flatMap(([zone, value]) => value.cards.map(card => [`zone:${card}`, zone]))),
+});
+const clauseNote = (kind: string, id: string | undefined, state: RefState): void => {
+  if (id !== undefined && !inDryRun()) CARD_PROBE.note(() => ({ kind, id, observation: cardObservation(state) }));
+};
 export const cardText = (d: string): string => {
   const c = CONTENT.defs[d];
   if (c === undefined) return '';
@@ -163,7 +167,7 @@ const played = (ctx: Ctx<Ref>, task: RefTask): void => {
   if (d === undefined) throw new Error(`Unknown played card ${id}`);
   moveCard(s, id, d.stay === true ? seatZone('play', seat) : 'discard');
   ctx.emit({ type: 'played', seat, card: d.name });
-  ctx.then({ kind: 'clause-begin', line: d.line }, ...effectTasks(d.effect, { seat, source: id, line: d.line }), { kind: 'clause-end', line: d.line });
+  if (d.effect.length) ctx.then({ kind: 'clause-begin', line: d.line }, ...effectTasks(d.effect, { seat, source: id, line: d.line }), { kind: 'clause-end', line: d.line });
 };
 const final = (ctx: Ctx<Ref>): void => {
   const s = draftOf(ctx);
@@ -200,15 +204,22 @@ const timingFor = (content: Ref['content'], limits: Pick<TimingConfig<Ref>, 'tri
   happen: (ctx, o) => void (pack.happen(ctx, o) || (o.kind === 'damage' && life(ctx, o.keys.player ?? '', -(o.amount ?? 0)))),
   event: (o) => (o.kind === 'damage' ? { type: 'hurt', seat: o.keys.player ?? '', n: o.amount ?? 0 } : undefined),
   replacementsFor: (s, o) => {
+    if (o.kind === 'damage') clauseNote('clause-attempt', content.defs.ward?.line, s);
     const w = o.kind === 'damage' ? wardOf(s, o.keys.player ?? '', content) : undefined;
     return w === undefined ? [] : [{ id: Number(w.slice(1)), controller: o.keys.player ?? '', cls: 1, label: 'Ward' }];
   },
   applyReplacement: (ctx, r) => {
+    const line = defOf(`c${String(r.id)}`, ctx.content)?.line;
+    clauseNote('clause-begin', line, ctx.s);
     moveCard(draftOf(ctx), `c${String(r.id)}`, 'discard');
     ctx.emit({ type: 'warded', seat: r.controller });
+    clauseNote('clause', line, ctx.s);
+    clauseNote('clause-end', line, ctx.s);
     return 'replaced';
   },
-  ...cardTriggers<Ref>({ pool: content.defs, player: (s, c) => locate(s, c)?.zone.split(':')[1] ?? '', defOf: (_s, c) => content.cards[c] ?? '', tests: { mine: (_s, env, o) => o.keys.player === env.seat }, table: VERBS }),
+  ...cardTriggers<Ref>({ pool: content.defs, player: (s, c) => locate(s, c)?.zone.split(':')[1] ?? '', defOf: (_s, c) => content.cards[c] ?? '',
+    env: (_s, source, seat) => ({ seat, source, line: defOf(source, content)?.line, triggered: true }),
+    tests: { mine: (_s, env, o) => o.keys.player === env.seat }, table: VERBS }),
   checkpoint: { checks: CHECKS },
 });
 export const TIMING = timingFor(CONTENT);
@@ -225,9 +236,14 @@ export function referenceRules(content = CONTENT, limits: Pick<TimingConfig<Ref>
   handlers: {
     ...flowHandlers(FLOW), played, final, ...timingHandlers<Ref>(content === CONTENT && limits.triggerCap === undefined ? TIMING : timingFor(content, limits)),
     verb(ctx, task) {
+      const current = task as VerbTask<RefStep, PackEnv & { readonly line?: string; readonly triggered?: boolean }>;
+      const { line, triggered } = current.env ?? {};
+      const healing = triggered === true && current.step.op === 'heal';
+      if (triggered) clauseNote('clause-attempt', line, ctx.s);
+      if (healing) clauseNote('clause-begin', line, ctx.s);
       runVerb(ctx, task);
-      const line = (task as VerbTask<RefStep, PackEnv & { readonly line?: string }>).env?.line;
-      if (line !== undefined && !inDryRun()) CARD_PROBE.note({ kind: 'clause', id: line });
+      if (!triggered || healing) clauseNote('clause', line, ctx.s);
+      if (healing) clauseNote('clause-end', line, ctx.s);
     },
     'clause-begin'(ctx, task) {
       if ('line' in task && task.line !== undefined && !inDryRun()) CARD_PROBE.note({ kind: 'clause-begin', id: task.line, observation: cardObservation(ctx.s) });

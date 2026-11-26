@@ -14,6 +14,11 @@ function Board() {
   const [native, setNative] = useState<'radio' | 'disclosure' | 'shared-radio' | 'frame' | 'first-frame' | 'ordered-frame' | 'adjacent-frames' | 'scroll' | null>(null);
   const [nested, setNested] = useState(false);
   const [sheet, setSheet] = useState(false);
+  const [childOwner, setChildOwner] = useState<'Modal' | 'Sheet' | null>(null);
+  const [childKeys, setChildKeys] = useState<string[]>([]);
+  const [childCloses, setChildCloses] = useState(0);
+  const [ancestorKeys, setAncestorKeys] = useState<string[]>([]);
+  const [backgroundKeys, setBackgroundKeys] = useState<string[]>([]);
   const [numbers, setNumbers] = useState(0);
   const [phases, setPhases] = useState(0);
   const [clears, setClears] = useState(0);
@@ -27,8 +32,25 @@ function Board() {
       clear: () => { setClears((n) => n + 1); return true; } });
     const unplay = bindPlayKeys(document, { panel: () => panel.current,
       board: { e: () => { setPhases((n) => n + 1); return true; } } });
-    return () => { unprompt(); unplay(); };
+    const background = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' || event.key === 'Tab') setBackgroundKeys((keys) => [...keys, event.key]);
+    };
+    document.addEventListener('keydown', background);
+    return () => { unprompt(); unplay(); document.removeEventListener('keydown', background); };
   }, []);
+  const closeChildOwner = () => { setChildCloses((n) => n + 1); setChildOwner(null); };
+  const childControls = <>
+    <button>Child fallback</button>
+    <button onKeyDown={(event) => {
+      if (event.key === 'Escape') { event.stopPropagation(); setChildKeys((keys) => [...keys, 'stopped']); }
+    }}>Child stops Escape</button>
+    <textarea aria-label="Child editor" onKeyDown={(event) => {
+      if (event.key === 'Escape' || event.key === 'Tab') {
+        event.preventDefault();
+        setChildKeys((keys) => [...keys, event.key]);
+      }
+    }} />
+  </>;
   return <>
     <main>
       <h1>Keyboard ownership fixture</h1>
@@ -47,6 +69,12 @@ function Board() {
       <button onClick={() => setNative('adjacent-frames')}>Open adjacent frames</button>
       <button onClick={() => setNative('scroll')}>Open scrolling modal</button>
       <button onClick={() => setSheet(true)}>Open sheet</button>
+      <button onClick={() => setChildOwner('Modal')}>Open child Modal</button>
+      <button onClick={() => setChildOwner('Sheet')}>Open child Sheet</button>
+      <span data-testid="child-keys">{childKeys.join(',')}</span>
+      <span data-testid="child-closes">{childCloses}</span>
+      <span data-testid="child-ancestor-keys">{ancestorKeys.join(',')}</span>
+      <span data-testid="child-background-keys">{backgroundKeys.join(',')}</span>
       <label>Background choice <input type="radio" name="shared-choice" defaultChecked /></label>
       <details><summary>Board disclosure</summary>Board explanation</details>
       <label>Board note <input aria-label="Board note" /></label>
@@ -117,6 +145,16 @@ function Board() {
         <button tabIndex={2}>Last scroll action</button>
       </> : <details><summary>Show explanation</summary><button>Hidden action</button></details>}
     </Modal>
+    <div onKeyDown={(event) => {
+      if (event.key === 'Escape' || event.key === 'Tab') setAncestorKeys((keys) => [...keys, event.key]);
+    }}>
+      <Modal open={childOwner === 'Modal'} title="Modal child keys" speed={0} onClose={closeChildOwner}>
+        {childControls}
+      </Modal>
+      {childOwner === 'Sheet' && <Sheet title="Sheet child keys" slideMs={0} onClose={closeChildOwner}>
+        {childControls}
+      </Sheet>}
+    </div>
   </>;
 }
 

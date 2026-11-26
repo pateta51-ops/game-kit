@@ -12,6 +12,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   check:
@@ -20,6 +21,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Fetch the starter compatibility tag
         run: git fetch --no-tags --depth=1 origin tag v0.272.0
       - uses: actions/setup-node@v7
@@ -35,9 +38,14 @@ jobs:
         run: node components/check-runner/check-runner.ts --config check-runner.config.json --keep-going
         env:
           NO_COLOR: '1'
+      - name: Select a retained successful main ancestor
+        if: always() && steps.coverage-source.outcome == 'success'
+        run: node scripts/coverage-baseline.mjs "$RUNNER_TEMP/game-kit-coverage-baseline"
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Record coverage from this check
         if: always() && steps.coverage-source.outcome == 'success'
-        run: node scripts/coverage-table.mjs --started "$RUNNER_TEMP/game-kit-coverage-start.json" --check-outcome "$CHECK_OUTCOME"
+        run: node scripts/coverage-table.mjs --started "$RUNNER_TEMP/game-kit-coverage-start.json" --check-outcome "$CHECK_OUTCOME" --baseline "$RUNNER_TEMP/game-kit-coverage-baseline"
         env:
           CHECK_OUTCOME: ${{ steps.checks.outcome }}
       - name: Retain exact-source coverage evidence
@@ -49,6 +57,50 @@ jobs:
             coverage/coverage-summary.json
             coverage/coverage-evidence.json
             coverage/coverage-evidence.md
+          if-no-files-found: error
+          retention-days: 30
+
+  windows-paths:
+    name: Windows path alias cases
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci --no-audit --no-fund
+      - name: Execute and require all five Windows cases
+        shell: pwsh
+        run: node scripts/platform-cases.mjs windows "$env:RUNNER_TEMP/windows-cases.json"
+      - name: Retain case execution and source identity
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: windows-cases-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/windows-cases.json*
+          if-no-files-found: error
+          retention-days: 30
+
+  pdf-capability:
+    name: PDF rendering capability
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save --package-lock=false --no-audit --no-fund pdfjs-dist@6.5.438 @napi-rs/canvas@1.2.1
+      - name: Execute real optional PDF rendering
+        run: node scripts/platform-cases.mjs pdf "$RUNNER_TEMP/pdf-cases.json"
+      - name: Retain capability and case execution
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: pdf-cases-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pdf-cases.json*
           if-no-files-found: error
           retention-days: 30
 

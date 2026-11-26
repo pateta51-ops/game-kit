@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "sources": {
+    "README.md": "5ce6a33e54def416133dc262aec757963ba4680a806f00ffb574ee0d96caa436",
+    "legal.md": "22e7ed44eb0e2408ddda7c2901d8fae3f009c97410adf148c0c83efa05fbe1c8"
+  },
+  "apis": [
+    {
+      "entry": "kernel.ts",
+      "symbol": "preview",
+      "rules": [
+        {
+          "file": "README.md",
+          "from": 7,
+          "to": 46
+        }
+      ],
+      "usage": [
+        {
+          "file": "legal.md",
+          "from": 1,
+          "to": 11
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "entry": "index.ts",
+      "symbol": "preview",
+      "rules": [
+        {
+          "file": "README.md",
+          "from": 7,
+          "to": 46
+        }
+      ],
+      "usage": [
+        {
+          "file": "legal.md",
+          "from": 1,
+          "to": 11
+        }
+      ],
+      "dependencies": []
+    }
+  ]
+}

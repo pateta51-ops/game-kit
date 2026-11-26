@@ -4,6 +4,8 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 
 ## Rules for agents
 
+Focused context for `preview` retains all rules in this section, the complete declaration graph and [legal.md](legal.md). Read other subsystem guides when opting into their APIs; the focused packet does not certify a whole game task.
+
 **What it does:** The game engine kernel: seeded random numbers, canonical JSON and hashes, tasks and prompts, copy on write, replay, undo and saves. A game passes `GameTypes` and `GameRules<G>`.
 
 **You must:**

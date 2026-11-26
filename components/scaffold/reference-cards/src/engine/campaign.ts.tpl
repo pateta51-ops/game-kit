@@ -1,11 +1,12 @@
 // The campaign (kit campaign): two scenarios in a line; winning the first records it in the log and gives the player 3
 // more life in the second. The game reads only the frozen log `begin` hands it.
 import { addCount, count, linear, record, type CampaignLog, type Step } from '../../kit/campaign/index.ts';
+import { CARD_SETUP } from './card-config.ts';
 import { SEATS, type Level, type Ref, type RefState, type Seat } from './rules.ts';
 
 export const STEPS: readonly Step[] = [{ kind: 'scenario', id: 'first' }, { kind: 'scenario', id: 'second' }];
 export const NEXT = linear(STEPS);
-const SCENARIOS: Readonly<Record<string, { life: number; foe: number; rounds: number }>> = { first: { life: 10, foe: 10, rounds: 6 }, second: { life: 10, foe: 12, rounds: 6 } };
+const SCENARIOS: Readonly<Record<string, { life: number; foe: number; rounds: number }>> = { first: { life: CARD_SETUP.life[0], foe: CARD_SETUP.life[1], rounds: CARD_SETUP.rounds }, second: { life: CARD_SETUP.life[0], foe: CARD_SETUP.life[1] + 2, rounds: CARD_SETUP.rounds } };
 export const BONUS = 3;
 export interface Start { readonly level: Level; readonly bots: readonly Seat[]; readonly scenario: string }
 export const playerOf = (bots: readonly Seat[]): Seat => SEATS.find((x) => !bots.includes(x)) ?? '0';

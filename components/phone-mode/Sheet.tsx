@@ -56,6 +56,7 @@ export function Sheet({
   const id = useId();
   const layer = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLElement>(null);
+  const keyHandler = useRef<(event: Pick<KeyboardEvent, 'key' | 'defaultPrevented' | 'preventDefault' | 'stopPropagation'>) => void>(() => undefined);
   const t0 = useRef(0);
   const drag = useRef<{ y0: number; dy: number } | null>(null);
   const [own, setLeaving] = useState(false);
@@ -113,14 +114,20 @@ export function Sheet({
     behindRef.current = [...(el?.parentElement?.children ?? [])].filter((c): c is HTMLElement => c !== el && c instanceof HTMLElement && (!c.hasAttribute('inert') || holds.has(c)));
     hold(true);
     box.current?.focus({ preventScroll: true });
-    const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented || activeModal(document) !== box.current) return;
+    keyHandler.current = (e) => {
+      if ((e.key !== 'Escape' && e.key !== 'Tab') || activeModal(document) !== box.current) return;
+      e.stopPropagation();
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
       e.preventDefault();
       req.current();
+    };
+    const key = (e: KeyboardEvent) => {
+      if (box.current && !e.composedPath().includes(box.current)) keyHandler.current(e);
     };
     document.addEventListener('keydown', key, true);
     return () => {
       document.removeEventListener('keydown', key, true);
+      keyHandler.current = () => undefined;
       hold(false);
       const front = activeModal(document) as Element | null;
       if (from?.isConnected && (!front || composedContains(front, from))) from.focus?.({ preventScroll: true });
@@ -161,6 +168,7 @@ export function Sheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby={id}
+        onKeyDown={(event) => keyHandler.current(event)}
         data-testid={testId}
         style={{ animationDuration: `${String(slideMs)}ms`, ...(height ? { height } : {}), ...(leaving ? { transition: `transform ${ms} ease-in`, transform: 'translateY(105%)' } : {}) }}
       >
