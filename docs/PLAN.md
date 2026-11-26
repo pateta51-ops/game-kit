@@ -456,6 +456,8 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K775 | Import record-traced development observations and compare compatible accepted endpoints with explicit measurement limits. | M |  | done |
 | K776 | Verify retained ancestor coverage evidence, require actual Windows and PDF capability cases, and check the identities of commits contributed to a pull request. | M |  | done |
 | K777 | Compare compatible coverage per component, distinguish source and instrumentation scope changes, and replay the comparator against retained successful main workflow artifacts. | M |  | done |
+| K778 | Classify receipt-bound consumer gameplay separately from test, reference and authorized production observations, and label legacy static and operator-reported metrics. | S |  | done |
+| K779 | Reconcile recorded provider usage from a completed Codex CLI turn and its retained rollout for record-traced development observations. | S |  | done |
 | K780 | Use a monotonic clock for check elapsed durations and fail receipt finalization when its observed UTC completion precedes its start. | S |  | done |
 
 ## Candidates

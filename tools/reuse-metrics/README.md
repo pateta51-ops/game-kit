@@ -6,12 +6,13 @@ Local, read-only measurement of locked kit availability, static references and e
 
 **You must:**
 1. Run from a kit checkout with TypeScript installed: `node tools/reuse-metrics/report.mjs <game-dir> [<game-dir> ...]`. Pass only game directories the owner authorizes.
-2. Use the lock for installed availability. Use static reference lists to inspect literal relative imports and re-exports in `src/` and `tests/`. Referring to a component by value and observing its execution are separate measurements. CLI tools, transitive dependencies, aliases, dynamic imports and scripts can escape static reference counts. Test sources live under the game's `tests/` directory or a `__tests__` directory in the scan, or have a basename containing `.test.` or `.spec.`. The checkout's parent directories have no effect.
+2. Use the lock for installed availability. Use static reference lists to inspect literal relative imports and re-exports in `src/` and `tests/`. The legacy `production*` fields describe static application source, and `runtimeAdoption` is operator-reported. Use [versioned component observations](../kit-context/README.md#versioned-component-observations) when you have receipt-bound gameplay execution evidence. CLI tools, transitive dependencies, aliases, dynamic imports and scripts can escape static reference counts. Test sources live under the game's `tests/` directory or a `__tests__` directory in the scan, or have a basename containing `.test.` or `.spec.`. The checkout's parent directories have no effect.
 3. Supply optional build telemetry in a local `kit-reuse-metrics.json` at the game root. Record the revisions, measurement window, protocol, classification and provenance described below. Give each project and observation a stable opaque ID before comparing submissions from multiple checkouts. Reuse the same IDs when copying an observation. Omit unknown values and review the identity status before treating totals as independent observations.
 4. The report contains no game names, source text or absolute paths. It may still disclose private usage and costs; keep the output and input telemetry local unless the owner expressly authorizes sharing.
 5. Use a controlled baseline for savings. Treat the reported differences as the outcome of the supplied comparison. Claims about what caused the difference require independent evidence.
 6. For record-traced development observations, declare the task protocol before handing off work, retain authorized source records outside the public repository, then run `node tools/reuse-metrics/observations.mjs <observation.json> [...]`. Use only the three normalized formats below. The importer checks actual bytes and derivations; it does not authenticate a provider, source revision, preparation timestamp or reviewer identity. Do not relabel a hand-entered quantity as a normalized usage export.
 7. Record the playable milestone and quality result independently of efficiency, with a reviewer identity distinct from the worker. Use `--baseline <observation.json>` only with one current observation and a genuinely compatible task. Missing usage, review or comparison evidence stays missing. Keep coding-agent development usage separate from LLM gameplay usage.
+8. For a fresh single-turn Codex CLI 0.166.0 run using the OpenAI provider, retain both `exec --json` output and the exact local rollout. Reconcile them with `codex-cli.mjs` before creating the usage record. Keep both originals and their hashes private.
 
 ## Measurement input
 
@@ -46,7 +47,7 @@ The file is optional. An omitted file or an empty object produces a static scan 
 
 ## Report and migration
 
-The CLI prints per-game reports in argument order and a cross-game summary. Runtime observations are counted separately from static references, with the number of games supplying runtime observations shown as `gamesWithRuntimeObservations`. Current totals group measured, estimated and inferred values separately, with `reportedGames` and `sum` per group and a `missingGames` count per metric. `sum: null` means that group has no reported values. A nonfinite aggregate or a counter total beyond the safe integer range exits with an error identifying the metric and group. Cross-game totals sum submitted quantities. Comparable savings are evaluated within each measured pair.
+The CLI prints per-game reports in argument order and a cross-game summary. The `evidence` field identifies static references and operator-reported runtime evidence. The legacy `gamesWithRuntimeObservations` and `componentsObservedAcrossGames` totals count submissions with operator-reported runtime data. Current totals group measured, estimated and inferred values separately, with `reportedGames` and `sum` per group and a `missingGames` count per metric. `sum: null` means that group has no reported values. A nonfinite aggregate or a counter total beyond the safe integer range exits with an error identifying the metric and group. Cross-game totals sum submitted quantities. Comparable savings are evaluated within each measured pair.
 
 The existing `games`, `reportedGames`, and component counts are submission counts. One project can contribute distinct observations, each of which contributes to the submission totals. `summary.identity` counts identified projects and observations separately and lists each runtime-observed component once per identified project. `status: "unverified"` lists the 1-based inputs with measurements lacking identity in `unidentifiedMeasurementInputs`. Their values remain in the submission totals. `status: "identified"` means every submitted measurement supplied an explicit identity. Static scans without measurements remain valid and produce `status: "no-measurements"` when all inputs are static.
 
@@ -89,6 +90,16 @@ An optional manifest `metrics` object accepts the existing seven metric names wi
 ### Supported source records
 
 Only these three normalized JSON formats are implemented. A provider export needs an explicit local conversion to this contract; no provider format or generic mapping is automatically recognized. Keep the original authorized export and conversion record locally so the normalization can be audited. A manually invented normalized file is not evidence of actual usage.
+
+### Convert a Codex CLI export
+
+```sh
+node tools/reuse-metrics/codex-cli.mjs private/exec.jsonl private/rollout.jsonl
+```
+
+The tested adapter pairs the exact CLI thread with the single completed rollout turn, checks the chronology and deduplicates provider response identities. It checks cumulative counts against per-response usage and reconciles them with the CLI's completion totals. It reports the model, reasoning setting, successful completion timestamp, digests of both input files, recorded provider-response and tool-call counts, and observed token fields. Cached tokens are included in total input and also reported separately. Absent fields remain missing. The adapter does not determine cost. Failed, interrupted, resumed or incompatible sessions are outside this conversion contract. Retain their raw records and report partial capture separately.
+
+Copy the returned `usage` to a `normalized-records-v1` usage record's `values`, and use the returned `at` and `inputIncludesCached` fields. Add the associated trial identity, verified revisions, window and protocol digest before importing. Successful reconciliation checks consistency between local files. Validate that the runner captured the whole trial and that its source and protocol match before using the results.
 
 Every record includes `version: 1`, globally unique opaque `recordId`, `kind`, the same `identity`, `sourceRevision`, `kitRevision`, `window`, and `protocolSha256` as the manifest. These associations are checked against the supplied manifest and protocol, not against a remote service or a Git checkout. Source files with duplicate IDs or hashes fail, including across observations and the optional baseline. Distinct observations require distinct globally unique observation IDs; copied observations retain their original IDs.
 

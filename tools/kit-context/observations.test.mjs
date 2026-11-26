@@ -28,7 +28,7 @@ function fixture(fail=false,consumerKind='reference') {
   put(path.join(root,'.gitignore'),'evidence/\n');
   put(path.join(root,'spec.json'),'{}\n');put(path.join(root,'acceptance.json'),JSON.stringify({componentObservations:[{id:'identity-function',component:'sample',script:'slice',behavior:'The move function preserves its argument.',consumerKind}]}));
   put(path.join(root,'tests/sample.test.ts'),"import { move } from '../kit/sample/index.ts';\nexport const probe = move(1);\n");
-  put(path.join(root,'check.mjs'),"import assert from 'node:assert/strict';\nimport fs from 'node:fs';\nimport { move } from './kit/sample/index.ts';\nfs.writeFileSync('evidence/executed','once');\nassert.equal(move(7), "+(fail?'8':'7')+");\nconsole.log('observed behavior');\n");
+  put(path.join(root,'check.mjs'),"import assert from 'node:assert/strict';\nimport fs from 'node:fs';\nimport { move } from './kit/sample/index.ts';\nfs.writeFileSync('evidence/executed','once');\nassert.equal("+(fail==='disconnected'?'undefined':'move(7)')+", "+(fail===true?'8':'7')+");\nconsole.log('observed behavior');\n");
   put(path.join(root,'package.json'),JSON.stringify({scripts:{check:'npm run slice',slice:'node check.mjs'}}));
   put(path.join(root,'check-runner.config.json'),JSON.stringify({checkScript:'check',first:['slice'],lanes:[],npmSilent:true,receipt:{output:'evidence/acceptance.json',spec:'spec.json',acceptance:'acceptance.json'}}));
   git(root,'init','-q');git(root,'add','-A');git(root,'commit','-qm','Observation consumer fixture');
@@ -70,6 +70,26 @@ describe('source-bound component observations',()=>{
     const report=f.report([f.row,duplicate],{productionConsumers:[f.row.consumer.id,duplicate.consumer.id]});
     expect(report.summary).toMatchObject({executedObservations:2,authorizedProductionConsumers:1});
     expect(()=>f.report([f.row,{...f.row}])).toThrow('duplicate observation identity');
+  });
+  it('counts receipt-bound consumer gameplay separately from static, test, reference and release evidence',()=>{
+    const f=fixture(false,'consumer'), file='tests/sample.test.ts';
+    const staticOnly={...f.row,id:'static-only',kind:'static-reference',evidence:{file,sha256:sha(fs.readFileSync(path.join(f.root,file)))}};
+    const copied={...f.row,id:'copied-observation',consumer:{...f.row.consumer,id:'copied-consumer'}};
+    const test=fixture(false,'test'), reference=fixture();
+    const report=f.report([f.row,copied,staticOnly,test.row,reference.row],{productionConsumers:[f.row.consumer.id]});
+    expect(report.summary).toMatchObject({status:'matching',gameplayConsumers:1,executedObservations:4,staticReferences:1,
+      executedTestConsumers:1,referenceConsumers:1,authorizedProductionConsumers:0,unconfirmedProductionConsumers:0});
+    expect(report.observations[0]).toMatchObject({status:'verified-execution',adoption:'consumer-gameplay',
+      consumer:{classificationSource:'operator-declared'},coverage:'declared-by-bound-acceptance',independentRuleReview:'not-assessed'});
+    expect(report.observations[2]).toMatchObject({executed:false});
+    expect(f.report([staticOnly]).summary.gameplayConsumers).toBe(0);
+    const reclassified={...test.row,consumer:{...test.row.consumer,kind:'consumer'}};
+    expect(f.report([reclassified]).summary).toMatchObject({status:'invalid',gameplayConsumers:0});
+  });
+  it('cannot count disconnected gameplay or another pin as a consumer execution',()=>{
+    const f=fixture('disconnected','consumer');
+    expect(f.report().summary).toMatchObject({status:'failed',gameplayConsumers:0,executedObservations:0});
+    expect(f.report([{...f.row,revision:'0'.repeat(40)}]).summary).toMatchObject({status:'stale',gameplayConsumers:0,executedObservations:0});
   });
   it('never promotes a stale pin, missing log, modified source or failed run into matching execution',()=>{
     const f=fixture();

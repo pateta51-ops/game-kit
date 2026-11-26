@@ -187,6 +187,7 @@ export function measureGame(dir, telemetry={}) {
     productionFiles,productionFilesReferencingKit,testFiles,testFilesReferencingKit,
     measurement:measured?context:null,
     runtimeAdoption:adoptionOf(input.runtimeAdoption,locked),
+    evidence:{productionReferences:'static-application-source',runtimeAdoption:input.runtimeAdoption===undefined?'missing':'operator-reported'},
     telemetry:values,
     baseline,
     comparison:compareMeasurement(measured,baseline,values),
@@ -255,7 +256,8 @@ export function summarize(games) {
   }));
   const counts=entries=>[...entries].sort((a,b)=>b[1]-a[1]||compare(a[0],b[0])).map(([component,games])=>({component,games}));
   return {games:games.length,componentsReferencedAcrossGames:counts(parts),gamesWithRuntimeObservations,
-    componentsObservedAcrossGames:counts(observed),telemetry:metrics,identity};
+    componentsObservedAcrossGames:counts(observed),telemetry:metrics,identity,
+    evidence:{componentReferences:'static-source',runtimeAdoption:'operator-reported'}};
 }
 export function main(args) {
   if(!args.length)throw new Error('usage: node tools/reuse-metrics/report.mjs <game-dir> [<game-dir> ...]');

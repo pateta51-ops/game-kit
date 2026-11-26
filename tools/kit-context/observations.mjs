@@ -10,7 +10,8 @@ const checkout=path.resolve(import.meta.dirname,'../..');
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const revision=/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
 const label=/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
-const limits=['Local receipts are not signed execution attestations.','Recorded commands do not prove independent rule coverage.','Production classification requires a separately authorized consumer ID.','Consumer IDs are caller supplied; repeated IDs or identical source revisions are grouped.'];
+const adoptionKinds={test:'executed-test',reference:'reference',consumer:'consumer-gameplay'};
+const limits=['Local receipts are not signed execution attestations.','Recorded commands do not prove independent rule coverage.','Consumer kind and ID are operator declared; gameplay does not establish release use.','Production classification requires a separately authorized consumer ID.','Repeated IDs or identical source revisions are grouped.'];
 function object(value,keys,name) {
   if(!value||typeof value!=='object'||Array.isArray(value)) throw new Error(name+' must be an object');
   for(const key of Object.keys(value)) if(!keys.includes(key)) throw new Error('unknown '+name+' field: '+key);
@@ -30,12 +31,12 @@ function inspect(row,{base,component,commit,source,productionConsumers}) {
   object(row,['id','component','revision','kind','consumer','behavior','evidence','limitations'],'observation');
   if(!label.test(row.id??'')||!/^[a-z][a-z0-9-]*$/.test(row.component??'')||!revision.test(row.revision??'')) throw new Error('invalid observation identity');
   object(row.consumer,['id','root','kind'],'consumer');
-  if(!label.test(row.consumer.id??'')||!['test','reference','production'].includes(row.consumer.kind)) throw new Error('invalid consumer identity');
+  if(!label.test(row.consumer.id??'')||!['test','reference','consumer','production'].includes(row.consumer.kind)) throw new Error('invalid consumer identity');
   text(row.consumer.root,'consumer.root');text(row.behavior,'behavior');
   if(!Array.isArray(row.limitations)||!row.limitations.length||row.limitations.length>20) throw new Error('observation needs explicit limitations');
   row.limitations.forEach(value=>text(value,'limitation'));
   if(!['execution','test-file','static-reference'].includes(row.kind)) throw new Error('invalid observation kind');
-  const result={id:row.id,component:row.component,revision:row.revision,consumer:{id:row.consumer.id,kind:row.consumer.kind},kind:row.kind,behavior:row.behavior,status:'unknown',limitations:row.limitations};
+  const result={id:row.id,component:row.component,revision:row.revision,consumer:{id:row.consumer.id,kind:row.consumer.kind,classificationSource:'operator-declared'},kind:row.kind,behavior:row.behavior,status:'unknown',limitations:row.limitations};
   if(row.component!==component) return {...result,status:'other-component'};
   if(row.revision!==commit) return {...result,status:'stale',reason:'observation revision differs from requested pin'};
   try {
@@ -73,10 +74,13 @@ function inspect(row,{base,component,commit,source,productionConsumers}) {
     if(declarations.length!==1||declarations[0].component!==component||declarations[0].script!==row.evidence.script||declarations[0].behavior!==row.behavior||declarations[0].consumerKind!==row.consumer.kind) throw new Error('component behavior is not declared by the bound acceptance');
     const log=bytes(consumerFile(root,row.evidence.log));
     if(log.length!==command.output.bytes||sha(log)!==command.output.sha256) throw new Error('retained command log differs from receipt');
+    const adoption=row.consumer.kind==='production'
+      ? (productionConsumers.includes(row.consumer.id)?'authorized-production':'unconfirmed-production')
+      : adoptionKinds[row.consumer.kind];
     return {...result,status:'verified-execution',command:{script:command.script,commandSha256:sha(command.command),code:command.code,result:command.status},
       source:evidence.binding.source,kit:{commit,lockSha256:provenance.lock.sha256},
       evidence:{receipt:row.evidence.receipt,sha256:sha(data),log:row.evidence.log,logSha256:sha(log),behaviorId:row.evidence.behaviorId},coverage:'declared-by-bound-acceptance',independentRuleReview:'not-assessed',
-      adoption:row.consumer.kind==='reference'?'reference':row.consumer.kind==='production'?(productionConsumers.includes(row.consumer.id)?'authorized-production':'unconfirmed-production'):'executed-test'};
+      adoption};
   } catch(error) {
     return {...result,status:error?.code==='ENOENT'?'missing':'invalid',reason:error.message};
   }
@@ -109,7 +113,7 @@ export function observationEvidence({file,component,commit,source,productionCons
   const summary={status,component,revision:commit,
     input:{file:path.resolve(file),sha256:sha(data)},
     testFiles:rows.filter(row=>row.status==='test-file-present').length,staticReferences:rows.filter(row=>row.status==='static-reference-present').length,
-    executedObservations:verified.length,executedTestConsumers:count('executed-test'),referenceConsumers:count('reference'),authorizedProductionConsumers:count('authorized-production'),unconfirmedProductionConsumers:count('unconfirmed-production'),
+    executedObservations:verified.length,executedTestConsumers:count('executed-test'),referenceConsumers:count('reference'),gameplayConsumers:count('consumer-gameplay'),authorizedProductionConsumers:count('authorized-production'),unconfirmedProductionConsumers:count('unconfirmed-production'),
     statuses:Object.fromEntries([...new Set(rows.map(row=>row.status))].map(status=>[status,rows.filter(row=>row.status===status).length])),
     limitations:limits,report:{component,commit,source:path.resolve(source),file:path.resolve(file),productionConsumers}};
   return {schemaVersion:1,tool:contextTool(),scope:'component-observations',summary,observations:rows};
