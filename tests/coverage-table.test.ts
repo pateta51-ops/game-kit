@@ -148,6 +148,33 @@ describe('coverage history evidence', () => {
     expect(f.read().execution.binding.status).toBe('matched');
   });
 
+  it.each(['hardlink', 'symlink', 'tracked destination', 'aliased directory', 'directory destination'] as const)('preserves source and both reports with a %s', kind => {
+    if (kind === 'symlink' && process.platform === 'win32') return;
+    const f = fixture('report-' + kind.replaceAll(' ', '-'));
+    expect(f.run('--capture', f.start).status).toBe(0);
+    const coverage = path.dirname(f.writeSummary());
+    const json = path.join(coverage, 'coverage-evidence.json');
+    const markdown = path.join(coverage, 'coverage-evidence.md');
+    const source = path.join(f.dir, 'components/engine-core/a.ts');
+    const original = fs.readFileSync(source);
+    fs.writeFileSync(json, 'previous JSON');
+    if (kind === 'hardlink') fs.linkSync(source, markdown);
+    else if (kind === 'symlink') fs.symlinkSync(source, markdown);
+    else if (kind === 'directory destination') fs.mkdirSync(markdown);
+    else fs.writeFileSync(markdown, 'previous Markdown');
+    if (kind === 'tracked destination') f.git('add', '-f', 'coverage/coverage-evidence.md');
+    if (kind === 'aliased directory') {
+      const moved = path.join(f.dir, '.cache/real-coverage');
+      fs.renameSync(coverage, moved);
+      fs.symlinkSync(moved, coverage, process.platform === 'win32' ? 'junction' : 'dir');
+    }
+    const result = f.run('--started', f.start, '--check-outcome', 'success');
+    expect(result.status).toBe(1);
+    expect(fs.readFileSync(json, 'utf8')).toBe('previous JSON');
+    expect(fs.readFileSync(source)).toEqual(original);
+    if (kind !== 'directory destination') expect(fs.readFileSync(markdown, 'utf8')).toBe(['hardlink', 'symlink'].includes(kind) ? original.toString('utf8') : 'previous Markdown');
+  });
+
   it('rejects a cached tracked edit outside the files named in the coverage summary', () => {
     const f = fixture('cached-source');
     const script = path.join(f.dir, 'script.mjs');

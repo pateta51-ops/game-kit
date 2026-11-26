@@ -47,6 +47,13 @@ function contains(parent, file) {
   return !path.isAbsolute(relative) && relative.split(path.sep, 1)[0] !== '..';
 }
 
+function gitPaths(repo, commit) {
+  const tracked = [gitOutput('ls-files', '--cached', '--full-name', '-z'), commit ? gitOutput('ls-tree', '-rz', '--full-tree', '--name-only', commit) : '']
+    .flatMap(output => output.split('\0').filter(Boolean)).map(name => path.resolve(repo, name));
+  const internals = [canonical(git('rev-parse', '--absolute-git-dir')), canonical(path.resolve(git('rev-parse', '--git-common-dir')))];
+  return { tracked, internals };
+}
+
 function isCapture(value) {
   return value?.version === 1 && value.tool?.name === tool.name && value.tool?.version === tool.version
     && typeof value.capturedAt === 'string' && Number.isFinite(Date.parse(value.capturedAt))
@@ -64,13 +71,9 @@ function capture(file) {
   if (contains(directory, requested) || contains(coverage, target)) throw new Error('Capture context must be outside coverage, which Vitest replaces');
   const existingCoverage = fs.lstatSync(directory, { throwIfNoEntry: false });
   if (existingCoverage && !existingCoverage.isDirectory()) throw new Error('Coverage must be a real directory before capture');
-  const repo = canonical(git('rev-parse', '--show-toplevel'));
-  const tracked = [gitOutput('ls-files', '--cached', '--full-name', '-z'), gitOutput('ls-tree', '-rz', '--full-tree', '--name-only', source.commit)]
-    .flatMap(output => output.split('\0').filter(Boolean)).map(name => path.resolve(repo, name));
+  const { tracked, internals } = gitPaths(canonical(git('rev-parse', '--show-toplevel')), source.commit);
   if (tracked.some(name => path.relative(name, target) === '' || contains(coverage, name))) throw new Error('Capture cannot overwrite or remove tracked source');
-  const gitDir = canonical(git('rev-parse', '--absolute-git-dir'));
-  const commonDir = canonical(path.resolve(git('rev-parse', '--git-common-dir')));
-  if ([gitDir, commonDir].some(dir => contains(dir, target) || contains(coverage, dir))) throw new Error('Capture cannot write to or remove Git internals');
+  if (internals.some(dir => contains(dir, target) || contains(coverage, dir))) throw new Error('Capture cannot write to or remove Git internals');
   const existing = fs.lstatSync(requested, { throwIfNoEntry: false });
   if (existing) {
     if (!existing.isFile() || existing.nlink !== 1) throw new Error('Capture context must be a regular file without aliases');
@@ -183,8 +186,30 @@ function markdown(report) {
   ].join('\n');
 }
 
+function reportTargets(commit) {
+  const existing = fs.lstatSync(directory, { throwIfNoEntry: false });
+  if (existing && !existing.isDirectory()) throw new Error('Coverage must be a real directory before reporting');
+  const targets = ['coverage-evidence.json', 'coverage-evidence.md'].map(name => path.join(directory, name));
+  for (const target of targets) {
+    const entry = fs.lstatSync(target, { throwIfNoEntry: false });
+    if (entry && (!entry.isFile() || entry.nlink !== 1)) throw new Error('Coverage reports must be regular files without aliases');
+  }
+  let repo;
+  try { repo = canonical(git('rev-parse', '--show-toplevel')); }
+  catch (error) {
+    if (error.code === 'ENOENT' || String(error.stderr).includes('not a git repository')) return targets;
+    throw error;
+  }
+  const { tracked, internals } = gitPaths(repo, commit);
+  for (const target of targets.map(canonical)) {
+    if (tracked.some(name => path.relative(name, target) === '') || internals.some(dir => contains(dir, target))) throw new Error('Coverage reports cannot overwrite tracked source or Git internals');
+  }
+  return targets;
+}
+
 function report(options) {
   const source = identity();
+  const targets = reportTargets(source.commit);
   const data = readSummary();
   const configuration = ['vitest.config.ts', 'package.json', 'package-lock.json', 'check-runner.config.json'].filter(file => fs.existsSync(path.join(root, file))).map(file => ({ path: file, sha256: digest(fs.readFileSync(path.join(root, file))) }));
   const evidence = {
@@ -200,8 +225,15 @@ function report(options) {
   };
   fs.mkdirSync(directory, { recursive: true });
   const text = markdown(evidence);
-  fs.writeFileSync(path.join(directory, 'coverage-evidence.json'), JSON.stringify(evidence, null, 2) + '\n');
-  fs.writeFileSync(path.join(directory, 'coverage-evidence.md'), text);
+  const scratch = fs.mkdtempSync(path.join(directory, '.coverage-report-'));
+  try {
+    const staged = targets.map(target => path.join(scratch, path.basename(target)));
+    fs.writeFileSync(staged[0], JSON.stringify(evidence, null, 2) + '\n');
+    fs.writeFileSync(staged[1], text);
+    for (const [index, target] of targets.entries()) fs.renameSync(staged[index], target);
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
   if (options['--started'] && process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, text);
   console.log(text);
   return data.summary.status !== 'reported' || (options['--started'] && evidence.execution.binding.status !== 'matched') ? 1 : 0;
