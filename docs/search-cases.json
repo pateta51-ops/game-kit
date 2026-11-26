@@ -786,5 +786,8 @@
   {"q": "custom motion controller actor lifecycle", "first": "motion-frame"},
   {"q": "reject unread dice pattern fields", "first": "dice-patterns"},
   {"q": "dice pattern unsupported key", "first": "dice-patterns"},
-  {"q": "dice pattern unknown option", "first": "dice-patterns"}
+  {"q": "dice pattern unknown option", "first": "dice-patterns"},
+  {"q": "verified real consumer gameplay execution", "first": "kit-context"},
+  {"q": "receipt-bound game component invocation", "first": "kit-context"},
+  {"q": "real gameplay separate from production release", "first": "kit-context"}
 ]

@@ -125,10 +125,13 @@ describe('reuse metrics',()=>{
     expect(staticReport.productionTypeOnlyReferenced).toEqual(['card-harness','screens']);
     expect(staticReport.productionRuntimeReferenced).toEqual(['engine-core']);
     expect(staticReport.runtimeAdoption).toBeNull();
+    expect(staticReport.evidence).toEqual({productionReferences:'static-application-source',runtimeAdoption:'missing'});
     const runtimeAdoption={'engine-core':'synthetic-runtime-trace'};
     const observed=measureGame(root,build({}, {runtimeAdoption}));
     expect(observed.runtimeAdoption).toEqual(runtimeAdoption);
+    expect(observed.evidence).toEqual({productionReferences:'static-application-source',runtimeAdoption:'operator-reported'});
     const summary=summarize([staticReport,observed]);
+    expect(summary.evidence).toEqual({componentReferences:'static-source',runtimeAdoption:'operator-reported'});
     expect(summary.gamesWithRuntimeObservations).toBe(1);
     expect(summary.componentsObservedAcrossGames).toEqual([{component:'engine-core',games:1}]);
     expect(()=>measureGame(root,build({}, {runtimeAdoption:{unknown:'synthetic-runtime-trace'}}))).toThrow('unlocked adoption');

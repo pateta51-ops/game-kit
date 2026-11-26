@@ -455,6 +455,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K774 | Provide focused same-pin context and continuations, verify generated worker briefs against their inputs, and report component observations with their evidence limits. | M |  | done |
 | K775 | Import record-traced development observations and compare compatible accepted endpoints with explicit measurement limits. | M |  | done |
 | K776 | Verify retained ancestor coverage evidence, require actual Windows and PDF capability cases, and check the identities of commits contributed to a pull request. | M |  | done |
+| K778 | Classify receipt-bound consumer gameplay separately from test, reference and authorized production observations, and label legacy static and operator-reported metrics. | S |  | done |
 
 ## Candidates
 
