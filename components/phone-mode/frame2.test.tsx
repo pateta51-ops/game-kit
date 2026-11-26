@@ -29,15 +29,24 @@ describe('K263 review round', () => {
     expect(document.activeElement).toBe(screen.getByTestId('opener'));
   });
 
-  it('Escape runs in the capture phase and prevents default', () => {
+  it.each(['preventDefault', 'stopPropagation'] as const)('a native child can consume Escape with %s before the Sheet fallback', (consume) => {
     const onClose = vi.fn();
-    render(<Sheet title="T" onClose={onClose} slideMs={0}>b</Sheet>);
-    const inner = screen.getByTestId('phone-sheet');
-    inner.addEventListener('keydown', (e) => e.stopPropagation());
-    const ev = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
-    inner.dispatchEvent(ev);
+    render(<Sheet title="T" onClose={onClose} slideMs={0}><button type="button">Child</button></Sheet>);
+    const child = screen.getByRole('button', { name: 'Child' });
+    const handler = vi.fn((event: KeyboardEvent) => event[consume]());
+    child.addEventListener('keydown', handler, { once: true });
+    child.focus();
+    const consumed = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    fireEvent(child, consumed);
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(child);
+    expect(consumed.defaultPrevented).toBe(consume === 'preventDefault');
+
+    const fallback = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    fireEvent(child, fallback);
     expect(onClose).toHaveBeenCalledTimes(1);
-    expect(ev.defaultPrevented).toBe(true);
+    expect(fallback.defaultPrevented).toBe(true);
   });
 
   it('slideMs 0 means no motion and no scrim fade; reduced motion is still in the css', () => {

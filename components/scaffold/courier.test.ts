@@ -142,7 +142,7 @@ describe('bounded courier assembly', () => {
       const dir = path.join(tmp, `invalid-${index}`);
       const result = run('generate', { ...spec, assembly: invalid }, '--dir', dir, '--ports', ports, '--no-install');
       expect(result.status, result.stdout + result.stderr).toBe(1);
-      expect(result.stderr).toContain('courier');
+      expect(result.stderr).toMatch(/courier|assembly/);
       expect(fs.existsSync(dir)).toBe(false);
       expect(fs.readdirSync(tmp).filter(file => file.startsWith('.kit-spec-'))).toEqual([]);
     }

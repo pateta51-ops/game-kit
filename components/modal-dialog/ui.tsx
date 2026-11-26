@@ -92,6 +92,7 @@ function focusTarget(el: HTMLElement, backwards: boolean, options?: FocusOptions
 }
 let openCount = 0;
 let previousOverflow = '';
+type ModalKey = Pick<KeyboardEvent, 'key' | 'shiftKey' | 'defaultPrevented' | 'preventDefault' | 'stopPropagation'>;
 
 export interface ModalProps {
   open: boolean;
@@ -105,6 +106,7 @@ export interface ModalProps {
 
 export function Modal({ open, onClose, title, children, actions, closeOnBackdrop = true, speed = 1 }: ModalProps) {
   const dialog = useRef<HTMLDivElement>(null);
+  const keyHandler = useRef<(event: ModalKey) => void>(() => undefined);
   const titleId = useId();
   const close = useEffectEvent(onClose);
   const wrap = (backwards: boolean) => {
@@ -132,11 +134,12 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
 
     const frameGuards = new Map<HTMLIFrameElement, [HTMLSpanElement, HTMLSpanElement]>();
     let enteringFrame = false;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || activeModal(document) !== panel) return;
+    const onKey = (event: ModalKey) => {
+      if ((event.key !== 'Escape' && event.key !== 'Tab') || activeModal(document) !== panel) return;
+      event.stopPropagation();
+      if (event.defaultPrevented) return;
       if (event.key === 'Escape') {
         event.preventDefault();
-        event.stopPropagation();
         close();
       } else if (event.key === 'Tab') {
         const backwards = event.shiftKey;
@@ -174,6 +177,10 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
     const onFrameKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onKey(event);
     };
+    const onDocumentKey = (event: KeyboardEvent) => {
+      if (!event.composedPath().includes(panel)) onKey(event);
+    };
+    keyHandler.current = onKey;
     const watched = new Map<HTMLElement | ShadowRoot | Document, AbortController>();
     const onFrameLoad = (event: Event) => {
       if ((event.target as Element | null)?.localName === 'iframe') syncFrames();
@@ -184,7 +191,7 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
       root.addEventListener('load', onFrameLoad, options);
       if (root.nodeType === Node.DOCUMENT_NODE) {
         const doc = root as Document;
-        doc.addEventListener('keydown', onFrameKey, options);
+        doc.addEventListener('keydown', onFrameKey, { signal: controller.signal });
         doc.defaultView?.addEventListener('blur', syncFrames, { signal: controller.signal });
       }
       watched.set(root, controller);
@@ -249,13 +256,14 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
     const frameObserver = new MutationObserver(syncFrames);
     document.defaultView?.addEventListener('blur', syncFrames);
     syncFrames();
-    document.addEventListener('keydown', onKey, true);
+    document.addEventListener('keydown', onDocumentKey, true);
     return () => {
       frameObserver.disconnect();
       for (const guards of frameGuards.values()) for (const guard of guards) guard.remove();
       document.defaultView?.removeEventListener('blur', syncFrames);
       for (const controller of watched.values()) controller.abort();
-      document.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('keydown', onDocumentKey, true);
+      keyHandler.current = () => undefined;
       if (--openCount === 0) document.body.style.overflow = previousOverflow;
       const front = activeModal(document) as Element | null;
       if (opener instanceof HTMLElement && opener.isConnected && (!front || composedContains(front, opener))) {
@@ -275,7 +283,8 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
         if (open && closeOnBackdrop && event.target === event.currentTarget) onClose();
       }}
     >
-      <div ref={dialog} className="kc-modal" tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div ref={dialog} className="kc-modal" tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId}
+        onKeyDown={(event) => keyHandler.current(event)}>
         <span tabIndex={0} aria-hidden="true" style={tabGuardStyle} onFocus={() => wrap(true)} />
         <h2 className="kc-modal-title" id={titleId}>{title}</h2>
         <div className="kc-modal-body">{children}</div>

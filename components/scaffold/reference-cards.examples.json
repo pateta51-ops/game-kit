@@ -1,0 +1,271 @@
+{
+  "standard": {
+    "version": 1,
+    "id": "reference-cards-demo",
+    "name": "Reference Cards",
+    "opponent": "automa",
+    "assembly": {
+      "kind": "reference-cards",
+      "version": 1,
+      "cards": [
+        {
+          "id": "jab",
+          "line": "jab.1",
+          "name": "Jab",
+          "copies": 6,
+          "effect": [
+            {
+              "op": "hit",
+              "n": 2
+            }
+          ]
+        },
+        {
+          "id": "blow",
+          "line": "blow.1",
+          "name": "Blow",
+          "copies": 4,
+          "effect": [
+            {
+              "op": "hit",
+              "n": 3
+            }
+          ]
+        },
+        {
+          "id": "rally",
+          "line": "rally.1",
+          "name": "Rally",
+          "copies": 4,
+          "effect": [
+            {
+              "op": "boost",
+              "n": 2
+            }
+          ]
+        },
+        {
+          "id": "ward",
+          "line": "ward.1",
+          "name": "Ward",
+          "copies": 3,
+          "effect": [],
+          "stay": true,
+          "text": "If you would take damage, instead discard this."
+        },
+        {
+          "id": "mend",
+          "line": "mend.1",
+          "name": "Mend",
+          "copies": 3,
+          "effect": [],
+          "stay": true,
+          "when": [
+            {
+              "on": "damage",
+              "if": "mine",
+              "optional": true,
+              "then": [
+                {
+                  "op": "heal",
+                  "n": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "printed": [
+        {
+          "id": "jab.1",
+          "card": "jab",
+          "text": "Deal 2 damage.",
+          "rule": "JAB-01",
+          "damage": 2
+        },
+        {
+          "id": "blow.1",
+          "card": "blow",
+          "text": "Deal 3 damage.",
+          "rule": "BLOW-01",
+          "damage": 3
+        },
+        {
+          "id": "rally.1",
+          "card": "rally",
+          "text": "Until end of turn, your hits deal 2 more.",
+          "rule": "RALLY-01",
+          "family": "rally"
+        },
+        {
+          "id": "ward.1",
+          "card": "ward",
+          "text": "If you would take damage, instead discard this.",
+          "rule": "WARD-01",
+          "family": "ward",
+          "conditional": true
+        },
+        {
+          "id": "mend.1",
+          "card": "mend",
+          "text": "When you take damage, you may heal 1.",
+          "rule": "MEND-01",
+          "family": "mend",
+          "conditional": true
+        }
+      ],
+      "setup": {
+        "life": [
+          10,
+          10
+        ],
+        "rounds": 6,
+        "level": "normal"
+      }
+    }
+  },
+  "varied": {
+    "version": 1,
+    "id": "reference-cards-demo",
+    "name": "Reference Cards",
+    "opponent": "automa",
+    "assembly": {
+      "kind": "reference-cards",
+      "version": 1,
+      "cards": [
+        {
+          "id": "jab",
+          "line": "jab.1",
+          "name": "Jab",
+          "copies": 6,
+          "effect": [
+            {
+              "op": "hit",
+              "n": 1
+            }
+          ]
+        },
+        {
+          "id": "blow",
+          "line": "blow.1",
+          "name": "Blow",
+          "copies": 4,
+          "effect": [
+            {
+              "op": "hit",
+              "n": 4
+            }
+          ]
+        },
+        {
+          "id": "rally",
+          "line": "rally.1",
+          "name": "Rally",
+          "copies": 4,
+          "effect": [
+            {
+              "op": "boost",
+              "n": 2
+            }
+          ]
+        },
+        {
+          "id": "ward",
+          "line": "ward.1",
+          "name": "Ward",
+          "copies": 3,
+          "effect": [],
+          "stay": true,
+          "text": "If you would take damage, instead discard this."
+        },
+        {
+          "id": "mend",
+          "line": "mend.1",
+          "name": "Mend",
+          "copies": 3,
+          "effect": [],
+          "stay": true,
+          "when": [
+            {
+              "on": "damage",
+              "if": "mine",
+              "optional": true,
+              "then": [
+                {
+                  "op": "heal",
+                  "n": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tap",
+          "line": "tap.1",
+          "name": "Tap",
+          "copies": 4,
+          "effect": [
+            {
+              "op": "hit",
+              "n": 2
+            }
+          ]
+        }
+      ],
+      "printed": [
+        {
+          "id": "jab.1",
+          "card": "jab",
+          "text": "Deal 1 damage.",
+          "rule": "JAB-01",
+          "damage": 1
+        },
+        {
+          "id": "blow.1",
+          "card": "blow",
+          "text": "Deal 4 damage.",
+          "rule": "BLOW-01",
+          "damage": 4
+        },
+        {
+          "id": "rally.1",
+          "card": "rally",
+          "text": "Until end of turn, your hits deal 2 more.",
+          "rule": "RALLY-01",
+          "family": "rally"
+        },
+        {
+          "id": "ward.1",
+          "card": "ward",
+          "text": "If you would take damage, instead discard this.",
+          "rule": "WARD-01",
+          "family": "ward",
+          "conditional": true
+        },
+        {
+          "id": "mend.1",
+          "card": "mend",
+          "text": "When you take damage, you may heal 1.",
+          "rule": "MEND-01",
+          "family": "mend",
+          "conditional": true
+        },
+        {
+          "id": "tap.1",
+          "card": "tap",
+          "text": "Deal 2 damage.",
+          "rule": "TAP-01",
+          "damage": 2
+        }
+      ],
+      "setup": {
+        "life": [
+          14,
+          16
+        ],
+        "rounds": 8,
+        "level": "hard"
+      }
+    }
+  }
+}

@@ -45,6 +45,67 @@ const fixture=()=>{
 };
 
 describe('bounded worker briefs',()=>{
+  const assemblyFixture=()=>{
+    const value=fixture();
+    const assembly={kind:'reference-cards',version:1,setup:{life:12}};
+    put(path.join(value.game,'docs/game-spec.json'),JSON.stringify({version:1,id:'sample-game',assembly}));
+    put(path.join(value.game,'docs/kit-assembly.json'),JSON.stringify({version:1,id:'sample-game',commit,assembly,validation:{configuration:'validated',bootstrap:'not-run',gameSlice:'not-run'}}));
+    return {...value,input:{...value.task,assembly:{kind:'reference-cards',spec:'docs/game-spec.json',manifest:'docs/kit-assembly.json'},decisions:[{id:'setup',owner:'rules-reviewer',resolution:'Use the declared life and existing synthetic effects.'}]}};
+  };
+  it('maps explicit assembly decisions to pinned reads, rulings and required unresolved questions',()=>{
+    const {game,input,run}=assemblyFixture();
+    const result=run(input,'--assembly');
+    expect(result.status,result.stderr).toBe(0);
+    const brief=JSON.parse(result.stdout);
+    expect(brief.assembly).toMatchObject({kind:'reference-cards',spec:'docs/game-spec.json',manifest:'docs/kit-assembly.json',configuration:'not-assessed'});
+    expect(brief.task.rulings).toEqual(input.decisions);
+    expect(brief.reads.some(read=>read.file==='docs/game-spec.json')).toBe(true);
+    expect(brief.validationEvidence).toEqual([]);
+    expect(fs.existsSync(path.join(game,'executed'))).toBe(false);
+    input.decisions.push({id:'art',owner:'director',resolution:null,question:'Which approved appearance applies?'});
+    const pending=run(input,'--assembly');
+    expect(pending.status,pending.stderr).toBe(2);
+    expect(JSON.parse(pending.stdout).task.questions).toContainEqual({question:'Which approved appearance applies?',owner:'director'});
+  });
+  it('rejects mismatched assembly pins/configuration and protects assembly read paths',()=>{
+    const {game,input,run}=assemblyFixture();
+    const wrongPin=JSON.parse(fs.readFileSync(path.join(game,'docs/kit-assembly.json'),'utf8'));wrongPin.commit='0'.repeat(40);
+    put(path.join(game,'docs/kit-assembly.json'),JSON.stringify(wrongPin));
+    const stale=run(input,'--assembly');expect(stale.status).toBe(1);expect(stale.stderr).toContain('assembly pin');
+    wrongPin.commit=commit;wrongPin.assembly.setup.life=99;
+    put(path.join(game,'docs/kit-assembly.json'),JSON.stringify(wrongPin));
+    const mismatch=run(input,'--assembly');expect(mismatch.status).toBe(1);expect(mismatch.stderr).toContain('assembly configuration');
+    input.assembly.spec='../outside.json';
+    const escape=run(input,'--assembly');expect(escape.status).toBe(1);expect(escape.stderr).toContain('invalid game-relative path');
+  });
+  it('compares regenerated assembly inputs and reports changed scripts, files and decisions as stale',()=>{
+    const {game,input,run}=assemblyFixture();
+    put(path.join(game,'src/engine/adapter.ts'),'export const adapter = 1;\n');input.files[0].action='edit';
+    const first=run(input,'--assembly');expect(first.status,first.stderr).toBe(0);
+    const previous=path.join(game,'brief.json');put(previous,first.stdout);
+    const same=run(input,'--assembly','--compare',previous);expect(same.status,same.stderr).toBe(0);
+    expect(JSON.parse(same.stdout).status).toBe('matching');
+    put(path.join(game,'src/engine/adapter.ts'),'export const adapter = 2;\n');
+    const changed=run(input,'--assembly','--compare',previous);expect(changed.status,changed.stderr).toBe(2);
+    expect(JSON.parse(changed.stdout)).toMatchObject({status:'stale',changes:expect.arrayContaining(['inputs','inputFingerprint'])});
+    const fresh=run(input,'--assembly');put(previous,fresh.stdout);
+    put(path.join(game,'package.json'),JSON.stringify({scripts:{'test:slice':'node -e "console.log(123)"'}}));
+    const script=run(input,'--assembly','--compare',previous);expect(script.status,script.stderr).toBe(2);expect(JSON.parse(script.stdout).status).toBe('stale');
+    const scriptFresh=run(input,'--assembly');put(previous,scriptFresh.stdout);
+    input.decisions[0].resolution='Use another explicitly approved starting life.';
+    const decision=run(input,'--assembly','--compare',previous);expect(decision.status,decision.stderr).toBe(2);expect(JSON.parse(decision.stdout).status).toBe('stale');
+  });
+  it('rejects changed saved command and execution claims even when the input fingerprint matches',()=>{
+    const {game,run}=fixture();
+    const initial=run();expect(initial.status,initial.stderr).toBe(0);
+    const saved=JSON.parse(initial.stdout);
+    saved.acceptance[0].command='npm run skip';saved.acceptance[0].executed=true;
+    saved.validationEvidence=[{status:'passed'}];saved.taskReadiness='ready';
+    const file=path.join(game,'altered-brief.json');put(file,JSON.stringify(saved));
+    const checked=run(undefined,'--compare',file);
+    expect(checked.status,checked.stderr).toBe(2);
+    expect(JSON.parse(checked.stdout)).toMatchObject({status:'stale',changes:expect.arrayContaining(['acceptance','validationEvidence','taskReadiness'])});
+  });
   it('assembles supplied decisions and verified APIs without executing acceptance commands',()=>{
     const {game,run}=fixture();
     const result=run();expect(result.status,result.stderr).toBe(0);

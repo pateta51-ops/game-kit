@@ -42,6 +42,18 @@ beforeAll(()=>{
   commit('v2');
   put(path.join(source,'components/sample/README.md'),'# Sample\n## Rules for agents\nRequired: '+ 'read this instruction '.repeat(180)+'\n');
   commit('large');
+  put(path.join(source,'docs/recipes/sample.md'),'# Sample recipe\nFollow the component rules.\n');
+  for(const [tag,type] of [['mapped-v1','number'],['mapped-v2','string']]) {
+    const readme='# Sample\n## Rules for agents\nUse a '+type+'. Read [the recipe](../../docs/recipes/sample.md).\n';
+    put(path.join(source,'components/sample/README.md'),readme);
+    put(path.join(source,'components/sample/index.ts'),'export function move(value: '+type+'): '+type+' { return value; }\n');
+    put(path.join(source,'components/sample/context.json'),JSON.stringify({version:1,sources:{'README.md':createHash('sha256').update(readme).digest('hex')},apis:[{
+      entry:'index.ts',symbol:'move',rules:[{file:'README.md',from:3,to:3}],usage:[{file:'README.md',from:1,to:1}],dependencies:[],
+    }]}));
+    commit(tag);
+  }
+  fs.appendFileSync(path.join(source,'components/sample/README.md'),'New mandatory instruction without a refreshed map.\n');
+  commit('mapped-stale');
 });
 afterAll(()=>fs.rmSync(tmp,{recursive:true,force:true}));
 
@@ -61,7 +73,7 @@ describe('context provenance',()=>{
     const commit=ownGit('rev-parse','HEAD');
     const metadata=script=>JSON.parse(execFileSync(process.execPath,['--input-type=module','-e',
       "import { pathToFileURL } from 'node:url'; const m=await import(pathToFileURL(process.argv[1])); console.log(JSON.stringify(m.contextTool()));",script],{encoding:'utf8'}));
-    expect(metadata(file)).toEqual({name:'kit-context',commit,modified:false});
+    expect(metadata(file)).toEqual({name:'kit-context',commit,modified:false,sourceSha256:expect.any(String)});
     fs.appendFileSync(tool,'// Ordinary change.\n');
     expect(metadata(file).modified).toBe(true);
     ownGit('restore','kit.mjs');
@@ -76,9 +88,9 @@ describe('context provenance',()=>{
     const copy=path.join(repo,'copied/tools/kit-context/provenance.mjs');
     put(copy,fs.readFileSync(file));
     expect([...flagged,metadata(copy)]).toEqual([
-      {name:'kit-context',commit,modified:null},
-      {name:'kit-context',commit,modified:null},
-      {name:'kit-context',commit:null,modified:null},
+      {name:'kit-context',commit,modified:null,sourceSha256:expect.any(String)},
+      {name:'kit-context',commit,modified:null,sourceSha256:expect.any(String)},
+      {name:'kit-context',commit:null,modified:null,sourceSha256:expect.any(String)},
     ]);
     const unrelated=path.join(repo,'copied');
     const copyGit=(...args)=>git('-C',unrelated,...args);
@@ -87,7 +99,39 @@ describe('context provenance',()=>{
     put(path.join(unrelated,'.gitignore'),'kit.mjs\ntools/\n');
     copyGit('add','.gitignore');
     copyGit('commit','-qm','unrelated fixture');
-    expect(metadata(copy)).toEqual({name:'kit-context',commit:null,modified:null});
+    expect(metadata(copy)).toEqual({name:'kit-context',commit:null,modified:null,sourceSha256:expect.any(String)});
+  });
+
+  it('binds receipt verifier and reference scanner source to tool identity and focused continuations',()=>{
+    const repo=path.join(tmp,'producer-dependencies');
+    fs.mkdirSync(repo);
+    const ownGit=(...args)=>git('-C',repo,...args);
+    ownGit('init','-q');
+    const dependencies=['components/check-runner/receipt.ts','components/check-runner/tracked-source.ts','components/check-runner/check-runner.ts','tools/reuse-metrics/report.mjs'];
+    const modules=fs.readdirSync(import.meta.dirname).filter(file=>file.endsWith('.mjs')&&!file.endsWith('.test.mjs')).map(file=>'tools/kit-context/'+file);
+    for(const file of ['kit.mjs',...modules,...dependencies]) put(path.join(repo,file),fs.readFileSync(path.join(checkout,file)));
+    put(path.join(repo,'.gitignore'),'node_modules/\n');
+    fs.symlinkSync(path.join(checkout,'node_modules'),path.join(repo,'node_modules'),process.platform==='win32'?'junction':'dir');
+    ownGit('add','-A');ownGit('commit','-qm','producer dependencies');
+    const componentRoot=path.join(tmp,'dependency-contract');
+    put(path.join(componentRoot,'sample/component.json'),JSON.stringify({name:'sample',needs:[]}));
+    put(path.join(componentRoot,'sample/index.ts'),'export function move(value: number): number { return value; }\n');
+    put(path.join(componentRoot,'sample/README.md'),'# Sample\n## Rules for agents\n'+Array.from({length:30},(_,i)=>'Rule '+i+': '+('required contract words '.repeat(10))).join('\n\n')+'\n');
+    const run=(...flags)=>spawnSync(process.execPath,[path.join(repo,'tools/kit-context/context.mjs'),'sample','move','--root',componentRoot,'--focused','--max-chars','3000',...flags],{encoding:'utf8'});
+    const query=()=>{const result=run();expect(result.status,result.stderr).toBe(2);return JSON.parse(result.stdout);};
+    let previous=query();
+    expect(previous.tool.modified).toBe(false);
+    for(const file of dependencies) {
+      fs.appendFileSync(path.join(repo,file),'\n// Changed evidence dependency.\n');
+      const current=query();
+      expect(current.tool.modified).toBe(true);
+      expect(current.tool.sourceSha256).toEqual(expect.any(String));
+      expect(current.tool.sourceSha256).not.toBe(previous.tool.sourceSha256);
+      const stale=run('--cursor',previous.page.next);
+      expect(stale.status,stale.stderr).toBe(1);
+      expect(stale.stderr).toContain('context inputs changed');
+      previous=current;
+    }
   });
 
   it('uses the target pin for contracts and guides, with the existing lock and Git identities',()=>{
@@ -106,6 +150,40 @@ describe('context provenance',()=>{
       expect(packet.usage.find(row=>row.file==='guide.md').text).toContain('The '+guide+' pin');
       expect(query(root)).toEqual(packet);
     }
+  });
+  it('keeps focused continuations on each installed pin and rejects changed verified bytes',()=>{
+    for(const [tag,type] of [['v1','number'],['v2','string']]) {
+      const root=game(tag);
+      const packet=query(root,{focused:true,maxChars:6000});
+      expect(packet.provenance.target.commit).toBe(git('rev-parse',tag));
+      expect(packet.continuation).toMatchObject({root,source,focused:true});
+      expect(packet.guidance.status).toBe('unmapped');
+      expect(packet.contracts[0].signature).toContain('value: '+type);
+      fs.appendFileSync(path.join(root,'sample/guide.md'),'Changed mandatory guidance.\n');
+      expect(()=>query(root,{focused:true})).toThrow('changed kit/sample/guide.md');
+    }
+    const legacy=query(game('legacy'),{focused:true});
+    expect(legacy.provenance.status).toBe('partial');
+    expect(legacy.taskReadiness).toBe('not-assessed');
+  });
+  it('validates authored map hashes across real installed Markdown rendering at the exact pin',()=>{
+    for(const [tag,type] of [['mapped-v1','number'],['mapped-v2','string']]) {
+      const root=game(tag),readme=path.join(root,'sample/README.md');
+      const mapped=JSON.parse(fs.readFileSync(path.join(root,'sample/context.json'),'utf8'));
+      expect(createHash('sha256').update(fs.readFileSync(readme)).digest('hex')).not.toBe(mapped.sources['README.md']);
+      const packet=query(root,{focused:true});
+      expect(packet.provenance.target.commit).toBe(git('rev-parse',tag));
+      expect(packet.guidance).toMatchObject({status:'authored',renderedSources:['README.md']});
+      expect(packet.rules.map(row=>row.text).join('\n')).toContain('Use a '+type+'. Read [the recipe](../recipes/sample.md).');
+      expect(packet.contracts[0].signature).toContain('value: '+type);
+      expect(()=>contextPacket({root,component:'sample',symbol:'move',focused:true})).toThrow('guidance source changed');
+      fs.appendFileSync(readme,'Changed installed guidance.\n');
+      const lock=JSON.parse(fs.readFileSync(path.join(root,'kit.lock.json'),'utf8'));
+      lock.components.sample.files['kit/sample/README.md']=createHash('sha256').update(fs.readFileSync(readme)).digest('hex');
+      fs.writeFileSync(path.join(root,'kit.lock.json'),JSON.stringify(lock));
+      expect(()=>query(root,{focused:true})).toThrow('content differs from the tagged commit: kit/sample/README.md');
+    }
+    expect(()=>query(game('mapped-stale'),{focused:true})).toThrow('guidance source changed: README.md');
   });
   it('does not call a lock declaration or an unverified checkout verified',()=>{
     const root=game('v1');

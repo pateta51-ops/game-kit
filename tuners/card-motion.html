@@ -15976,6 +15976,7 @@ var PREVIEW = (() => {
     const id = (0, import_react.useId)();
     const layer = (0, import_react.useRef)(null);
     const box = (0, import_react.useRef)(null);
+    const keyHandler = (0, import_react.useRef)(() => void 0);
     const t0 = (0, import_react.useRef)(0);
     const drag = (0, import_react.useRef)(null);
     const [own, setLeaving] = (0, import_react.useState)(false);
@@ -16041,14 +16042,20 @@ var PREVIEW = (() => {
       behindRef.current = [...el?.parentElement?.children ?? []].filter((c) => c !== el && c instanceof HTMLElement && (!c.hasAttribute("inert") || holds.has(c)));
       hold(true);
       box.current?.focus({ preventScroll: true });
-      const key = (e) => {
-        if (e.key !== "Escape" || e.defaultPrevented || activeModal(document) !== box.current) return;
+      keyHandler.current = (e) => {
+        if (e.key !== "Escape" && e.key !== "Tab" || activeModal(document) !== box.current) return;
+        e.stopPropagation();
+        if (e.key !== "Escape" || e.defaultPrevented) return;
         e.preventDefault();
         req.current();
+      };
+      const key = (e) => {
+        if (box.current && !e.composedPath().includes(box.current)) keyHandler.current(e);
       };
       document.addEventListener("keydown", key, true);
       return () => {
         document.removeEventListener("keydown", key, true);
+        keyHandler.current = () => void 0;
         hold(false);
         const front = activeModal(document);
         if (from?.isConnected && (!front || composedContains(front, from))) from.focus?.({ preventScroll: true });
@@ -16092,6 +16099,7 @@ var PREVIEW = (() => {
           role: "dialog",
           "aria-modal": "true",
           "aria-labelledby": id,
+          onKeyDown: (event) => keyHandler.current(event),
           "data-testid": testId,
           style: { animationDuration: `${String(slideMs)}ms`, ...height ? { height } : {}, ...leaving ? { transition: `transform ${ms} ease-in`, transform: "translateY(105%)" } : {} },
           children: [

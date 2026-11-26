@@ -1324,7 +1324,10 @@
       "confirm",
       "box",
       "overlay",
-      "popup notice"
+      "popup notice",
+      "child consumed Escape",
+      "child consumed Tab",
+      "keyboard ownership"
     ],
     "looks": "A box over the board with a dimmed background and OK and Cancel buttons.",
     "visible": true,
@@ -1502,7 +1505,10 @@
       "zoom",
       "tap",
       "phone campaign panel",
-      "campaign panel tabs"
+      "campaign panel tabs",
+      "sheet keyboard ownership",
+      "sheet child keys",
+      "sheet Escape ownership"
     ],
     "looks": "A phone-sized layout with one bottom sheet and a second tap to confirm.",
     "visible": true,
@@ -1748,7 +1754,7 @@
   },
   "reference-game": {
     "mechanics": "none: test tooling",
-    "use": "Kit CI only: generated card and solo tactical references whose own checks verify the kit's compatibility contracts, shared courier assembly and bounded runtime/semantic rule evidence.",
+    "use": "Kit CI only: generated card and solo tactical references whose own checks verify shared compositions, delayed semantic oracles, paired hidden worlds, combat/exploration, save/replay and source failure controls.",
     "not": "Pulling into a game or copying as a starter; use scaffold for a new game.",
     "title": "Tiny sample game that tests the kit",
     "tags": [
@@ -1763,12 +1769,15 @@
       "tactical reference contract",
       "reference card acceptance",
       "courier shared compatibility",
-      "reference printed mutation controls"
+      "reference printed mutation controls",
+      "delayed reference card semantics",
+      "paired hidden-world reference",
+      "expedition combat exploration"
     ],
     "visible": false,
     "release": 1,
     "gameSupplies": "Nothing; it is for kit checks only.",
-    "exports": "`reference.test.ts`; template/ overlay for scaffold"
+    "exports": "`reference.test.ts`, `expedition.test.ts`; canonical scaffold card/courier overlays and separate expedition overlay"
   },
   "replay-cli": {
     "mechanics": "none: test tooling",
@@ -1920,7 +1929,7 @@
   },
   "scaffold": {
     "mechanics": "none: build, CI or repository tooling",
-    "use": "Start an empty working game repo, or use a declarative game spec to select components and generate a pinned scaffold. Run its Chromium browser smoke for the stub menu, setup, step and undo.",
+    "use": "Start an empty working game repo, or generate a pinned executable courier or bounded card composition from a declarative specification. Run its declared non-browser checks and separate Chromium acceptance.",
     "not": "Anything inside a running game; it is a generator run from the kit checkout.",
     "title": "Start a new game project",
     "tags": [
@@ -1932,11 +1941,17 @@
       "create",
       "repo",
       "starter",
-      "scaffold"
+      "scaffold",
+      "executable card composition",
+      "configured card game",
+      "generated acceptance receipt",
+      "scaffold browser smoke",
+      "stub chromium",
+      "step undo browser smoke"
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The game id and name.",
+    "gameSupplies": "The game id/name; for an executable composition, its approved supported records, independent rules and setup.",
     "exports": "`node kit.mjs new <dir> <id> \"<Name>\"`, `node kit.mjs spec resolve|generate`, `scaffold(options)` in scaffold.js"
   },
   "scaffold/spec": {
@@ -2921,5 +2936,15 @@
     "release": 1,
     "gameSupplies": "The recording adapter, engine, player view, boundaries and table.",
     "looks": "The game table shows recorded actions with playback controls."
+  },
+  "reference-game/campaign-continuation": {
+    "title": "Playable campaign continuation reference",
+    "tags": [
+      "four card campaign continuation",
+      "calendar changes playable scenario",
+      "campaign retry physical deck allocation"
+    ],
+    "use": "Prove ordered calendar choices, attendance/retirement, shared-copy deck exchanges, live save/restore and retry in two original four-card campaign configurations.",
+    "guide": "campaign-continuation/README.md"
   }
 }

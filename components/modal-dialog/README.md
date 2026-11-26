@@ -16,6 +16,7 @@ A React modal over the board and a confirm dialog built on it.
 4. Set the `--kc-modal-*` variables on `body` or an ancestor of the portal to match the game's look.
 5. Use `closeOnBackdrop={false}` where an accidental click must not dismiss.
 6. Keep nested dialogs in opening order. The last visible, non-inert dialog with `aria-modal="true"` owns Escape and Tab. Nonmodal dialogs leave this ownership with the modal. Escape also closes the modal from same-origin frames in its content, including nested frames and frames in open shadow roots. Cross-origin and sandboxed opaque-origin frames handle their own key events. Background prompt/play keys and armed board picks pause while it is open.
+7. Let child handlers consume their own keys first. Call `preventDefault()` in a child key handler to keep Escape from closing the modal or Tab from moving editor focus. Stopping propagation also prevents the modal fallback. The panel contains these keys before React ancestors and document shortcuts; events originating outside the panel use the active modal's capture fallback. The same child-first Escape handling applies inside same-origin frames.
 
 **Common mistakes:**
 - Leaving `open` true after `onConfirm`, `onCancel` or `onClose`: neither dialog closes itself, so it stays up.
