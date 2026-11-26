@@ -930,7 +930,10 @@
       "whole",
       "met",
       "missing",
-      "lacks"
+      "lacks",
+      "reject unread dice pattern fields",
+      "dice pattern unsupported key",
+      "dice pattern unknown option"
     ],
     "visible": false,
     "release": 1,
@@ -939,7 +942,7 @@
       "compile: test a dice pattern, a pair, a run or a sum, on the dice",
       "meaning: a pattern as a dice tray meaning",
       "smallest: the fewest dice that meet a pattern",
-      "checkPattern: check pattern data from content",
+      "checkPattern: check pattern data from content and reject fields its kind does not read",
       "missing: what a dice roll lacks to meet a pattern, as data"
     ]
   },

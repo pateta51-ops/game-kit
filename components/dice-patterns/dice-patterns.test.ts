@@ -366,6 +366,12 @@ describe('dice-patterns second review (K578)', () => {
 });
 
 describe('dice-patterns checkPattern', () => {
+  it('K622 does not silently accept an op that the selected kind never reads', () => {
+    const data = { kind: 'same' as const, n: 2, op: '<' as const };
+    const problem = 'pattern.op: not used by kind "same"';
+    expect(checkPattern(data)).toEqual([problem]);
+    expect(() => compile(data)).toThrow(problem);
+  });
   it('good data has no problems', () => {
     expect(checkPattern({ kind: 'all', of: [{ kind: 'same', n: 2 }, { kind: 'sum', op: '>', value: 7 }] })).toEqual([]);
   });
@@ -376,6 +382,71 @@ describe('dice-patterns checkPattern', () => {
     expect(checkPattern({ kind: 'any', of: [{ kind: 'run', n: 3 }, { kind: 'atLeast', n: 2 }] })).toEqual(['pattern.of[1].face: a whole number of 1 or more']);
     expect(checkPattern({ kind: 'all', of: [] })).toEqual(['pattern.of: a list of 1 or more patterns']);
     expect(checkPattern(null)).toEqual(['pattern: not an object']);
+  });
+});
+
+describe('dice-patterns unread fields (K622)', () => {
+  const valid: Pattern[] = [
+    { kind: 'same', n: 2 }, { kind: 'different', n: 2 }, { kind: 'run', n: 2 }, { kind: 'even', n: 2 }, { kind: 'odd', n: 2 },
+    { kind: 'count', n: 2, op: '=' }, { kind: 'atLeast', face: 3, n: 2 }, { kind: 'face', face: 3, n: 2 },
+    { kind: 'sum', op: '=', value: 6 }, { kind: 'max', op: '=', value: 6 }, { kind: 'spread', op: '=', value: 2 },
+    { kind: 'twoPair' }, { kind: 'all', of: [{ kind: 'same', n: 2 }] }, { kind: 'any', of: [{ kind: 'same', n: 2 }] },
+  ];
+  const fields = { n: 2, face: 3, op: '=', value: 6, of: [{ kind: 'same', n: 2 }] };
+  const unread = valid.flatMap(pattern => Object.entries(fields)
+    .filter(([key]) => !Object.hasOwn(pattern, key))
+    .map(([key, value]) => ({ kind: pattern.kind, key, data: { ...pattern, [key]: value } })));
+
+  it.each(valid)('accepts the documented keys of $kind', pattern => {
+    expect(checkPattern(pattern)).toEqual([]);
+  });
+  it.each(unread)('reports unread $key on $kind', ({ kind, key, data }) => {
+    expect(checkPattern(data)).toEqual([`pattern.${key}: not used by kind "${kind}"`]);
+  });
+  it('reports arbitrary extra fields on leaves and composites', () => {
+    expect(checkPattern({ kind: 'same', n: 2, label: 'pair', typo: true })).toEqual([
+      'pattern.label: not used by kind "same"', 'pattern.typo: not used by kind "same"',
+    ]);
+    expect(checkPattern({ kind: 'any', of: [{ kind: 'same', n: 2 }], fallback: true })).toEqual(['pattern.fallback: not used by kind "any"']);
+  });
+  it('keeps full nested paths and a caller-supplied root', () => {
+    expect(checkPattern({ kind: 'all', of: [{ kind: 'any', of: [{ kind: 'twoPair', op: '=' }] }] }, 'rules[3]')).toEqual([
+      'rules[3].of[0].of[0].op: not used by kind "twoPair"',
+    ]);
+  });
+  it('distinguishes literal unread keys from nested paths and escapes line breaks', () => {
+    expect(checkPattern({
+      kind: 'all', of: [{ kind: 'all', of: [{ kind: 'same', n: 2 }], extra: true }],
+      'of[0].extra': true, 'extra\n': true,
+    }, 'rules[3]')).toEqual([
+      'rules[3].of[0].extra: not used by kind "all"',
+      'rules[3]["of[0].extra"]: not used by kind "all"',
+      'rules[3]["extra\\n"]: not used by kind "all"',
+    ]);
+  });
+  it('retains required-value and unknown-kind diagnostics', () => {
+    expect(checkPattern({ kind: 'same', n: 0, op: '=' })).toEqual([
+      'pattern.n: a whole number of 1 or more', 'pattern.op: not used by kind "same"',
+    ]);
+    for (const kind of ['unknown', 'constructor', 'toString', '__proto__']) {
+      expect(checkPattern({ kind, op: '=' })).toEqual([`pattern: unknown kind "${kind}"`]);
+    }
+  });
+  it('checks unread keys by presence while allowing undefined for supported optional ops', () => {
+    expect(checkPattern({ kind: 'same', n: 2, op: undefined })).toEqual(['pattern.op: not used by kind "same"']);
+    for (const pattern of [{ kind: 'count', n: 2 }, { kind: 'max', value: 4 }, { kind: 'spread', value: 2 }]) {
+      expect(checkPattern(pattern)).toEqual([]);
+      expect(checkPattern({ ...pattern, op: undefined })).toEqual([]);
+    }
+  });
+  const helpers: [string, (pattern: Pattern) => unknown][] = [
+    ['compile', pattern => compile(pattern)], ['meaning', pattern => meaning('pair', pattern, 'pair')],
+    ['smallest', pattern => smallest(pattern, [4, 4])], ['missing', pattern => missing(pattern, [4, 4])],
+  ];
+  it.each(helpers)('%s rejects an unread key even inside an unused any branch', (_name, invoke) => {
+    const bad = { kind: 'same' as const, n: 2, op: '<' as const };
+    expect(() => invoke(bad)).toThrow('pattern.op: not used by kind "same"');
+    expect(() => invoke({ kind: 'any', of: [{ kind: 'same', n: 2 }, bad] })).toThrow('pattern.of[1].op: not used by kind "same"');
   });
 });
 

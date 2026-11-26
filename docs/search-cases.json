@@ -783,5 +783,8 @@
   {"q": "skipped animation leaves source visible", "first": "effect-library"},
   {"q": "observe actual animation actor start", "first": "motion-frame"},
   {"q": "actor start notification on soft skip", "first": "motion-frame"},
-  {"q": "custom motion controller actor lifecycle", "first": "motion-frame"}
+  {"q": "custom motion controller actor lifecycle", "first": "motion-frame"},
+  {"q": "reject unread dice pattern fields", "first": "dice-patterns"},
+  {"q": "dice pattern unsupported key", "first": "dice-patterns"},
+  {"q": "dice pattern unknown option", "first": "dice-patterns"}
 ]

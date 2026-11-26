@@ -21,16 +21,24 @@ export function checkPattern(data: unknown, at = 'pattern'): string[] {
   const num = (k: string) => { if (!whole(d[k])) p.push(`${at}.${k}: a whole number of 1 or more`); };
   const val = () => { if (typeof d.value !== 'number' || !Number.isFinite(d.value)) p.push(`${at}.value: a number`); };
   const op = (opt: boolean) => { if (!(opt && d.op === undefined) && !OPS.includes(d.op as Op)) p.push(`${at}.op: one of ${OPS.join(', ')}`); };
+  const keys = (...read: string[]) => {
+    for (const key of Object.keys(d)) {
+      if (key === 'kind' || read.includes(key)) continue;
+      const suffix = /^[A-Za-z_$][\w$]*$/.test(key) ? `.${key}` : `[${JSON.stringify(key)}]`;
+      p.push(`${at}${suffix}: not used by kind ${JSON.stringify(d.kind)}`);
+    }
+  };
   switch (d.kind) {
-    case 'same': case 'different': case 'run': case 'even': case 'odd': num('n'); break;
-    case 'count': op(true); num('n'); break;
-    case 'atLeast': case 'face': num('face'); num('n'); break;
-    case 'sum': op(false); val(); break;
-    case 'max': case 'spread': op(true); val(); break;
-    case 'twoPair': break;
+    case 'same': case 'different': case 'run': case 'even': case 'odd': num('n'); keys('n'); break;
+    case 'count': op(true); num('n'); keys('n', 'op'); break;
+    case 'atLeast': case 'face': num('face'); num('n'); keys('face', 'n'); break;
+    case 'sum': op(false); val(); keys('op', 'value'); break;
+    case 'max': case 'spread': op(true); val(); keys('op', 'value'); break;
+    case 'twoPair': keys(); break;
     case 'all': case 'any':
       if (!Array.isArray(d.of) || d.of.length === 0) p.push(`${at}.of: a list of 1 or more patterns`);
       else d.of.forEach((x, i) => p.push(...checkPattern(x, `${at}.of[${i}]`)));
+      keys('of');
       break;
     default: p.push(`${at}: unknown kind ${JSON.stringify(d.kind)}`);
   }
