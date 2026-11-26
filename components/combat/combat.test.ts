@@ -1,7 +1,8 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { describeEffect, effectTasks, expectVerbs, validateEffect, verbHandler } from '../card-language/index.ts';
 import { cardPack } from '../card-language/pack.ts';
-import { applyAction, draftOf, hashState, replay, type GameRules } from '../engine-core/kernel.ts';
+import { applyAction, draftOf, hashState, replay, type Ctx, type GameRules, type GameTypes } from '../engine-core/kernel.ts';
 import { cancelBatch, changeOccurrence, PASS, type Replacement, type TimingConfig, would } from '../engine-core/timed.ts';
 import { answer, startTimed, timedGame, type Timed } from '../engine-core/fake/timed.ts';
 import { combatDamageKind, combatHappen, combatKinds, combatVerbs, healthAdjustment, queueCombat, type CombatPolicy, type CombatStep, type Damage } from './index.ts';
@@ -52,6 +53,67 @@ const take = (game: GameRules<Timed>, pick = 'hit', state = startTimed(game)) =>
 };
 
 describe('K550 combat through card verbs and engine timing', () => {
+  it('matches an independent two-hit model for health, damage events, and defeat order', () => {
+    for (const armor of [0, 2, 5]) {
+      for (const damageType of [undefined, 'ember', 'piercing']) {
+        for (const first of [0, 2, 5, 10, 13]) {
+          for (const second of [0, 2, 5, 10, 13]) {
+            const nextType = damageType === 'piercing' ? 'ember' : 'piercing';
+            const game = battle([{ ...ATTACK, amount: first }, { ...HIT, amount: second, damageType: nextType }], {}, {
+              attack(_ctx, attack) {
+                return [{ ...attack, op: 'damage', amount: attack.amount!, ...(damageType === undefined ? {} : { damageType }) }];
+              },
+              armor: () => armor,
+              defeat(ctx, { target }) { ctx.emit({ type: 'dropped', ability: target, why: 'defeat' }); },
+            });
+            let hp = 10;
+            const expected = [];
+            for (const [incoming, type] of [[first, damageType], [second, nextType]] as const) {
+              const blocked = type === 'piercing' ? 0 : armor;
+              let through = 0;
+              for (let point = 1; point <= incoming; point++) {
+                if (point <= blocked) continue;
+                through++;
+                if (hp > 0) hp--;
+              }
+              if (through === 0) continue;
+              expected.push({ type: 'damaged', n: through, target: 'p2-unit' });
+              if (hp === 0) expected.push({ type: 'dropped', ability: 'p2-unit', why: 'defeat' });
+            }
+            const result = take(game);
+            const scenario = JSON.stringify({ armor, damageType, first, second });
+            expect(result.state.result, scenario).toEqual({ hp });
+            expect(result.events, scenario).toHaveLength(expected.length);
+            expect(result.events, scenario).toMatchObject(expected);
+          }
+        }
+      }
+    }
+  });
+
+  it('executes the README recipe through the real kernel and card adjustment', () => {
+    const readme = readFileSync(new URL('./README.md', import.meta.url), 'utf8').replaceAll('\r', '');
+    expect(readme).toContain(`const hit: Damage = { op: 'damage', source: 'p1-unit', target: 'p2-unit', player: 'p2', amount: 6, damageType: 'ember' };
+const occurrenceKind = combatDamageKind(hit.damageType);
+const hitTarget = <G extends GameTypes>(ctx: Ctx<G>) => queueCombat(ctx, [hit]);
+const takeThreeHealth = healthAdjustment('health', 3);`);
+    const hit: Damage = { op: 'damage', source: 'p1-unit', target: 'p2-unit', player: 'p2', amount: 6, damageType: 'ember' };
+    const occurrenceKind = combatDamageKind(hit.damageType);
+    const hitTarget = <G extends GameTypes>(ctx: Ctx<G>) => queueCombat(ctx, [hit]);
+    const takeThreeHealth = healthAdjustment('health', 3);
+    const base = battle([]);
+    const game: GameRules<Timed> = { ...base, handlers: { ...base.handlers, chosen(ctx) {
+      pack.verbs.adjust.run!(ctx, takeThreeHealth, { seat: hit.player });
+      ctx.then({ kind: 'end' });
+      expect(hitTarget(ctx)).toBeTypeOf('number');
+    } } };
+    const { state, events } = take(game);
+    expect(occurrenceKind).toBe('combat.damage.ember');
+    expect(state.timing?.occurrences).toMatchObject([{ kind: occurrenceKind, amount: 6, state: 'happened' }]);
+    expect(events).toMatchObject([{ type: 'damaged', n: 5, target: hit.target }]);
+    expect(state.result).toEqual({ hp: 2 });
+  });
+
   it('validates and prints data, runs a game-owned lower-wins comparison, and applies armor through real card adjust', () => {
     expectVerbs(verbs, [ATTACK, HIT, DEFEAT]);
     expect(describeEffect(verbs, [HIT])).toBe('Deal 6 damage to p2-unit.');
