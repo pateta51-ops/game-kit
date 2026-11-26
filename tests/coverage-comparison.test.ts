@@ -11,7 +11,7 @@ afterAll(() => fs.rmSync(temporary, { recursive: true, force: true }));
 const hash = (bytes: string) => createHash('sha256').update(bytes).digest('hex');
 const counts = (total: number, covered: number) => ({ total, covered });
 let sequence = 0;
-function fixture(compareScopes = false) {
+function fixture({ compareScopes = false, nestedConfig = false, extendedConfig = false } = {}) {
   const dir = path.join(temporary, 'source-' + String(++sequence));
   const baseline = path.join(temporary, 'baseline-' + String(sequence));
   fs.mkdirSync(dir); fs.mkdirSync(baseline);
@@ -22,7 +22,13 @@ function fixture(compareScopes = false) {
   put('vitest.config.ts', 'export default {};\n');
   put('tsconfig.json', '{"compilerOptions":{"jsx":"react-jsx"}}\n');
   put('components/engine-core/a.ts', 'export const value = 1;\n');
-  put('components/empty/a.ts', 'export const value = 1;\n');
+  const otherFile = nestedConfig ? 'components/empty/a.tsx' : 'components/empty/a.ts';
+  put(otherFile, nestedConfig ? 'export const value = <div />;\n' : 'export const value = 1;\n');
+  if (nestedConfig) {
+    const config = '{"compilerOptions":{"jsx":"react-jsx","jsxImportSource":"pkg-a"}}\n';
+    put('components/empty/tsconfig.json', extendedConfig ? '{"extends":"../../compiler-options.json"}\n' : config);
+    if (extendedConfig) put('compiler-options.json', config);
+  }
   if (compareScopes) for (const name of ['stable', 'denominator', 'omitted', 'unmeasured', 'newly-instrumented', 'removed']) {
     put('components/engine-core/' + name + '.ts', 'export const value = 1;\n');
   }
@@ -32,7 +38,7 @@ function fixture(compareScopes = false) {
   const summary = (engine = 4, other = 1, omit = false, current = false) => {
     const files = {
       [path.join(dir, 'components/engine-core/a.ts')]: { lines: counts(10, engine), branches: counts(4, 3) },
-      ...(!omit ? { [path.join(dir, 'components/empty/a.ts')]: { lines: counts(10, other), branches: counts(0, 0) } } : {}),
+      ...(!omit ? { [path.join(dir, otherFile)]: { lines: counts(10, other), branches: counts(0, 0) } } : {}),
       ...(compareScopes ? {
         [path.join(dir, 'components/engine-core/stable.ts')]: { lines: counts(10, current ? 7 : 8), branches: counts(0, 0) },
         [path.join(dir, 'components/engine-core/denominator.ts')]: { lines: counts(current ? 5 : 4, 2), branches: counts(current ? 3 : 2, current ? 2 : 1) },
@@ -75,7 +81,7 @@ function fixture(compareScopes = false) {
     expect(result.status, result.stdout + result.stderr).toBe(0);
     return read();
   };
-  return { dir, baseline, run, summary, report, put, git, selection, archive };
+  return { dir, baseline, run, summary, report, put, git, selection, archive, otherFile };
 }
 
 describe('verified ancestor coverage comparisons', () => {
@@ -134,6 +140,30 @@ describe('verified ancestor coverage comparisons', () => {
     f.git('add', '-A'); f.git('commit', '-qm', 'Change TypeScript transform configuration');
     expect(f.run('--capture', '.cache/start.json').status).toBe(0); f.summary();
     expect(f.report()).toMatchObject({ baseline: { status: 'incompatible' }, comparison: { status: 'unknown' } });
+  });
+
+  it.each(['nested', 'extended'] as const)('leaves coverage unknown when the %s TSX transform changes with unchanged source and counts', kind => {
+    const f = fixture({ nestedConfig: true, extendedConfig: kind === 'extended' });
+    const transform = () => execFileSync(process.execPath, ['--input-type=module', '-e',
+      'import fs from "node:fs"; import { transformWithOxc } from "vite"; const file = process.argv[1]; console.log((await transformWithOxc(fs.readFileSync(file, "utf8"), file)).code);',
+      path.join(f.dir, f.otherFile)], { cwd: source, encoding: 'utf8' });
+    expect(transform()).toContain('pkg-a/jsx-runtime');
+    f.put(kind === 'nested' ? 'components/empty/tsconfig.json' : 'compiler-options.json', '{"compilerOptions":{"jsx":"react-jsx","jsxImportSource":"pkg-b"}}\n');
+    f.git('add', '-A'); f.git('commit', '-qm', 'Change nearest JSX transform');
+    expect(transform()).toContain('pkg-b/jsx-runtime');
+    expect(f.git('diff', 'HEAD~2', 'HEAD', '--', f.otherFile)).toBe('');
+    expect(f.run('--capture', '.cache/start.json').status).toBe(0); f.summary();
+    expect(f.report()).toMatchObject({ baseline: { status: 'incompatible' }, comparison: { status: 'unknown' } });
+  });
+
+  it('keeps coverage comparable with an unchanged tracked nested transform config', () => {
+    const f = fixture({ nestedConfig: true });
+    expect(f.run('--capture', '.cache/start.json').status).toBe(0); f.summary();
+    const result = f.report();
+    expect(result.baseline.status).toBe('verified');
+    expect(result.comparison.components?.find(group => group.name === 'empty')).toMatchObject({
+      likeForLike: { lines: { status: 'compared', files: ['components/empty/a.tsx'], regressionEvidence: 'no-loss-observed' } },
+    });
   });
 
   it('rejects a baseline configuration omission even when that file is removed at current HEAD', () => {
@@ -213,7 +243,7 @@ describe('verified ancestor coverage comparisons', () => {
   });
 
   it('reports a like-for-like loss despite a gain from changed observed scope', () => {
-    const f = fixture(true);
+    const f = fixture({ compareScopes: true });
     expect(f.run('--capture', '.cache/start.json').status).toBe(0);
     f.summary(4, 1, false, true);
     const result = f.report();

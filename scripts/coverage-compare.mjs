@@ -6,7 +6,7 @@ import path from 'node:path';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const scope = 'components/**/*.ts and components/**/*.tsx; excludes tests and node_modules; only summary entries';
 export const coverageConfiguration = ['vitest.config.ts', 'package.json', 'package-lock.json', 'check-runner.config.json'];
-const sourceConfiguration = ['.github/workflows/ci.yml', '.npmrc', '.nvmrc', 'tests/setup-dom.ts', 'tsconfig.json'];
+const sourceConfiguration = ['.github/workflows/ci.yml', '.npmrc', '.nvmrc', 'tests/setup-dom.ts'];
 const sha = value => typeof value === 'string' && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value);
 const relative = value => typeof value === 'string' && /^[\w./-]+$/.test(value) && !value.startsWith('/') && !value.split('/').some(part => !part || part === '.' || part === '..');
 const git = (root, ...args) => execFileSync('git', args, { cwd: root, stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 32 * 1024 * 1024 });
@@ -33,6 +33,22 @@ function trackedSources(root, commit) {
     const file = /^(?:100644|100755) blob [a-f0-9]+\t(.+)$/.exec(entry)?.[1];
     return file && componentOf(file) ? [file] : [];
   }));
+}
+function configurationAt(root, commit) {
+  const known = sourceConfiguration.filter(file => git(root, 'ls-tree', '-z', commit, '--', file).length > 0);
+  const tsconfigs = new Set(git(root, 'ls-tree', '-r', '-z', '--name-only', commit).toString('utf8').split('\0')
+    .filter(file => /(?:^|\/)tsconfig\.json$/i.test(file)));
+  let unresolved;
+  const files = [...known, ...tsconfigs].sort().map(file => {
+    const bytes = blob(root, commit, file);
+    if (tsconfigs.has(file)) {
+      let config;
+      try { config = JSON.parse(bytes.toString('utf8')); } catch { config = null; }
+      if (!config || typeof config !== 'object' || Array.isArray(config) || Object.hasOwn(config, 'extends') || Object.hasOwn(config, 'references')) unresolved ??= file;
+    }
+    return { path: file, sha256: hash(bytes) };
+  });
+  return { files, unresolved };
 }
 function verify(root, evidence, bytes) {
   if (evidence?.version !== 1 || !sha(evidence.source?.commit) || !sha(evidence.source?.tree) || evidence.source.clean !== true
@@ -87,12 +103,12 @@ function verify(root, evidence, bytes) {
     const total = components.reduce((sum, group) => ({ total: sum.total + group[kind].total, covered: sum.covered + group[kind].covered }), { total: 0, covered: 0 });
     if (JSON.stringify(metric(total)) !== JSON.stringify(metric(summary.total?.[kind]))) throw new Error('Coverage total differs from component counts');
   }
+  const sourceConfig = configurationAt(root, evidence.source.commit);
   const configuration = {
     captured: [...evidence.configuration].sort((a, b) => a.path.localeCompare(b.path)),
-    sourceTree: sourceConfiguration.filter(file => git(root, 'ls-tree', '-z', evidence.source.commit, '--', file).length > 0)
-      .map(file => ({ path: file, sha256: hash(blob(root, evidence.source.commit, file)) })),
+    sourceTree: sourceConfig.files,
   };
-  return { components, byFile, tracked: trackedSources(root, evidence.source.commit), configuration };
+  return { components, byFile, tracked: trackedSources(root, evidence.source.commit), configuration, unresolvedConfiguration: sourceConfig.unresolved };
 }
 
 function componentScope(name, before, after) {
@@ -186,6 +202,8 @@ print(json.dumps(result))
     catch { return unknown('invalid', 'Selected baseline is not an available ancestor of the current source'); }
     const before = verify(root, baseline, baselineBytes);
     const after = verify(root, current, summaryBytes);
+    const unresolved = before.unresolvedConfiguration ?? after.unresolvedConfiguration;
+    if (unresolved) return unknown('incompatible', 'TypeScript transform configuration resolution is unsupported: ' + unresolved);
     if (baseline.tool.version !== current.tool.version || baseline.tool.sha256 !== current.tool.sha256 || JSON.stringify(before.configuration) !== JSON.stringify(after.configuration)
       || baseline.runtime?.node !== current.runtime?.node) return unknown('incompatible', 'Reporting tool, configuration, instrumentation dependencies or Node version changed');
     const addedFiles = [...after.byFile.keys()].filter(file => !before.byFile.has(file));
