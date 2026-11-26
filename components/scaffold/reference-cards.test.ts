@@ -61,6 +61,8 @@ describe('bounded reference card assembly', () => {
       { ...assembly, setup: { life: [10, 10], rounds: 0, level: 'normal' } },
       { ...assembly, cards: assembly.cards.map(card => card.id === 'rally' ? { ...card, effect: [{ op: 'boost', n: 2 }, { op: 'draw', n: 1 }] } : card) },
       { ...assembly, cards: assembly.cards.map(card => card.id === 'mend' ? { ...card, when: [{ on: 'damage', if: 'mine', optional: false, then: [{ op: 'heal', n: 1 }] }] } : card) },
+      { ...assembly, cards: assembly.cards.map(card => card.id === 'jab' ? { ...card, text: 'Deal 99 damage.' } : card) },
+      { ...assembly, cards: assembly.cards.map(card => card.id === 'ward' ? { ...card, text: 'Always prevent damage.' } : card) },
       { ...assembly, printed: assembly.printed.slice(1) },
       // Both sides are individually valid; only real semantic acceptance can reject this mismatch.
       { ...assembly, cards: assembly.cards.map(card => card.id === 'jab' ? { ...card, effect: [{ op: 'hit', n: 4 }] } : card) },
@@ -73,6 +75,18 @@ describe('bounded reference card assembly', () => {
       expect(fs.existsSync(dir)).toBe(false);
       expect(fs.readdirSync(tmp).filter(file => file.startsWith('.kit-spec-'))).toEqual([]);
     }
+  }, 60_000);
+
+  it('exercises hidden choices in a short configured game and derives player-facing card text', () => {
+    const { assembly } = examples.standard;
+    const cards = assembly.cards.map(({ text: _text, ...card }, index) => ({ ...card, copies: index === 0 ? 6 : 1 }));
+    const dir = generate('short', { ...examples.standard, assembly: { ...assembly, cards, setup: { ...assembly.setup, rounds: 1 } } });
+    const accepted = consumer(dir, 'tests/acceptance.ts');
+    expect(accepted.status, accepted.stdout + accepted.stderr).toBe(0);
+    expect(JSON.parse(accepted.stdout)).toMatchObject({ hidden: { problems: [], shapes: ['may:draw', 'may:heal', 'pick'], seats: ['0', '1'] } });
+    const text = consumer(dir, '--input-type=module', '-e', 'import { cardText } from "./src/engine/rules.ts"; console.log(JSON.stringify([cardText("jab"),cardText("ward")]));');
+    expect(text.status, text.stdout + text.stderr).toBe(0);
+    expect(JSON.parse(text.stdout)).toEqual(['Deal 2 damage.', 'Stays in play. If you would take damage, instead discard this.']);
   }, 60_000);
 
   it('runs configured content and setup through the same engine, store, simulation and hidden acceptance', () => {

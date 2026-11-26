@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from 'node:util';
-import { legalAnswers, playOne, type SimGame } from '../kit/sim-pool/index.ts';
+import { draftOf } from '../kit/engine-core/index.ts';
+import { legalAnswers, playOne, type SimGame, type SimRecord } from '../kit/sim-pool/index.ts';
 import { CONTENT, other, viewOf, type Ref, type RefState, type Seat } from '../src/engine/rules.ts';
 import { simGame } from '../src/engine/sim.ts';
 
@@ -25,14 +26,38 @@ function pairProblems(state: RefState, alternate: RefState, seat: Seat): string[
   return problems;
 }
 
+function withMend(game: SimGame<Ref>): SimGame<Ref> {
+  const cards = Object.keys(CONTENT.cards);
+  const mend = cards.find(card => CONTENT.cards[card] === 'mend')!;
+  const first = cards.find(card => card !== mend)!;
+  const second = cards.find(card => CONTENT.cards[card] !== CONTENT.cards[first] && CONTENT.cards[card] !== 'mend')!;
+  const deal = [mend, ...cards.filter(card => ![mend, first, second].includes(card)), first, second];
+  return {
+    ...game,
+    rules: { ...game.rules, setup(ctx) {
+      game.rules.setup?.(ctx);
+      const state = draftOf(ctx);
+      state.zones['hand:0']!.cards = deal.slice(0, CONTENT.hand);
+      state.zones['hand:1']!.cards = deal.slice(CONTENT.hand, 2 * CONTENT.hand);
+      state.zones.deck!.cards = deal.slice(2 * CONTENT.hand);
+    } },
+    driver(name, spec, content) {
+      const driver = game.driver(name, spec, content);
+      return { ...driver, choose(state, answers, rng) {
+        const pick = state.flow?.phase === 'draw' ? 'no' : state.prompt?.kind === 'pick' && state.prompt.seat === '0' ? mend : undefined;
+        return answers.find(answer => answer.picks.includes(pick ?? '')) ?? driver.choose(state, answers, rng);
+      } };
+    },
+  };
+}
+
 export function hiddenAcceptance(control: HiddenControl = 'normal') {
   const problems: string[] = [];
   const shapes = new Set<string>();
   const seats = new Set<string>();
-  const records = [];
-  for (const driver of ['opponent', 'random', 'automa']) {
-    for (let index = 0; index < (control === 'hidden-empty' ? 0 : 4); index++) {
-      const seed = `paired-${String(index)}`;
+  const records: (SimRecord & { paired: number; varied: number })[] = [];
+  const run = (driver: string, index: number, scenario = false) => {
+      const seed = scenario ? 'paired-mend' : `paired-${String(index)}`;
       let paired = 0, varied = 0;
       const candidate: SimGame<Ref> = {
         ...simGame,
@@ -49,7 +74,7 @@ export function hiddenAcceptance(control: HiddenControl = 'normal') {
           return alternate;
         },
       };
-      let game = candidate;
+      let game = scenario ? withMend(candidate) : candidate;
       if (control === 'hidden-policy') game = { ...candidate, driver: () => ({
         name: 'hidden-policy', reasons: () => [],
         choose: (state, answers) => answers[Number((state.zones.deck?.cards[0] ?? 'c0').slice(1)) % answers.length]!,
@@ -66,8 +91,9 @@ export function hiddenAcceptance(control: HiddenControl = 'normal') {
       if (record.result === null || record.actions === 0) problems.push(`${seed}/${driver}: no completed decision trace`);
       if (!paired || !varied) problems.push(`${seed}/${driver}: insufficient paired hidden variation (${String(varied)}/${String(paired)})`);
       records.push({ ...record, paired, varied });
-    }
-  }
+  };
+  if (control !== 'hidden-empty') for (const driver of ['opponent', 'random', 'automa']) for (let index = 0; index < 4; index++) run(driver, index);
+  if (control === 'normal' && !shapes.has('may:heal')) run('opponent', 4, true);
   for (const shape of ['pick', 'may:draw', 'may:heal']) if (!shapes.has(shape)) problems.push(`unexecuted prompt shape: ${shape}`);
   for (const seat of ['0', '1']) if (!seats.has(seat)) problems.push(`unexecuted deciding seat: ${seat}`);
   return {

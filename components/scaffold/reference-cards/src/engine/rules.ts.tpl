@@ -134,7 +134,7 @@ export const cardText = (d: string): string => {
   const c = CONTENT.defs[d];
   if (c === undefined) return '';
   const w = (c.when ?? []).map((x) => `When you take damage, ${x.optional === true ? 'you may: ' : ''}${describeEffect(VERBS, x.then)}`);
-  return [describeEffect(VERBS, c.effect), c.stay === true ? 'Stays in play.' : '', c.text ?? '', ...w].filter((x) => x !== '').join(' ');
+  return [describeEffect(VERBS, c.effect), c.stay === true ? 'Stays in play.' : '', d === 'ward' ? 'If you would take damage, instead discard this.' : '', ...w].filter((x) => x !== '').join(' ');
 };
 const DRAW: readonly RefStep[] = [{ op: 'may', then: [{ op: 'draw', count: 2 }] }];
 

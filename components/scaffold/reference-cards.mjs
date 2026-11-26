@@ -31,6 +31,7 @@ export function resolveCards(input) {
         && object(trigger) && Object.keys(trigger).length === 4 && trigger.on === 'damage' && trigger.if === 'mine' && trigger.optional === true && one(trigger.then,'heal',1)
     } else supported = one(card.effect,'hit') && card.stay === undefined && card.when === undefined
     if (!supported) throw new Error('reference-cards assembly has an unsupported card shape: '+card.id)
+    if (card.text !== undefined && (card.id !== 'ward' || card.text !== text.ward)) throw new Error('reference-cards assembly has unsupported display text: '+card.id)
   }
   for (const id of ['jab','blow','rally','ward','mend']) if (!ids.has(id)) throw new Error('reference-cards assembly requires '+id)
   const count = input.cards.reduce((sum,card)=>sum+card.copies,0)
