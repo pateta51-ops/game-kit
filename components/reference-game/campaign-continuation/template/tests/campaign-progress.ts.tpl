@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import type { CampaignSave } from '../kit/campaign/index.ts';
+import type { CampaignLog, CampaignSave } from '../kit/campaign/index.ts';
 import { hashState } from '../kit/engine-core/index.ts';
 import { CONFIGS, continueCampaign, finishScenario, newContinuation, restoreContinuation, retryContinuation, serializeContinuation, type ContinuedScenario } from '../src/engine/campaign-continuation.ts';
 
@@ -32,15 +32,23 @@ const observations = CONFIGS.map(config => {
     snapshots.push(name);
     return archive;
   };
-  const corrupt = (archive: string, name: string, change: (campaign: CampaignSave) => void, session?: ContinuedScenario) => {
+  const corrupt = (archive: string, name: string, change: (campaign: CampaignSave) => void, session?: ContinuedScenario, expected = /campaign progress/) => {
     const data = JSON.parse(archive) as { campaign: CampaignSave };
     change(data.campaign);
     const before = JSON.stringify(data.campaign);
-    assert.throws(() => restoreContinuation(config, JSON.stringify(data)), /campaign progress/, name);
-    assert.throws(() => serializeContinuation(config, data.campaign, session ? { ...session, campaign: data.campaign } : undefined, session ? '2026-01-01T00:00:00.000Z' : undefined), /campaign progress/, name + ' serialized');
+    assert.throws(() => restoreContinuation(config, JSON.stringify(data)), expected, name);
+    assert.throws(() => serializeContinuation(config, data.campaign, session ? { ...session, campaign: data.campaign } : undefined, session ? '2026-01-01T00:00:00.000Z' : undefined), expected, name + ' serialized');
     assert.equal(JSON.stringify(data.campaign), before, 'rejected progress changed its input');
     rejected.push(name);
   };
+  const calendarKey = 'game-kit:campaign-between-sessions';
+  const calendar = (log: CampaignLog) => {
+    const state = log[calendarKey];
+    assert(state?.calendar);
+    return { state, calendar: state.calendar };
+  };
+  const corruptCalendar = (archive: string, name: string, change: (campaign: CampaignSave) => void, session?: ContinuedScenario) =>
+    corrupt(archive, name, change, session, /campaign calendar/);
   const play = (campaign: CampaignSave, day: number) => {
     const result = continueCampaign(config, campaign, { day, answers: { route: 'rest' } });
     if (result.status !== 'playing') throw new Error('approved continuation did not start');
@@ -59,6 +67,16 @@ const observations = CONFIGS.map(config => {
   finish(playedArrival);
   const pending = finishScenario(config, playedArrival);
   const pendingArchive = roundTrip('pending-crossing', pending);
+  corruptCalendar(pendingArchive, 'ready-without-calendar-effects', save => {
+    const { state, calendar: saved } = calendar(save.log);
+    save.log[calendarKey] = { ...state, calendar: { ...saved, startedThrough: 2 } };
+    save.log.recorded.push('ready');
+    save.log.order.push('ready');
+  });
+  corruptCalendar(pendingArchive, 'reordered-calendar-entries', save => {
+    const { state, calendar: saved } = calendar(save.log);
+    save.log[calendarKey] = { ...state, calendar: { ...saved, entries: [...saved.entries].reverse() } };
+  });
   const arrivalRetry = retryContinuation(config, pending);
   assert.equal(arrivalRetry.history.length, 1, 'retry must retain completed attempt history');
   assert.deepEqual(arrivalRetry.position.done, []);
@@ -72,6 +90,16 @@ const observations = CONFIGS.map(config => {
   roundTrip('repeated-arrival-complete', afterRepeatedArrival);
   const crossing = play(afterRepeatedArrival, 2);
   const crossingArchive = roundTrip('active-crossing', crossing.campaign, crossing);
+  corruptCalendar(crossingArchive, 'invalid-route-bonus', save => { save.log.counts['lifeBonus'] = config.restBonus + 1; }, crossing);
+  corruptCalendar(crossingArchive, 'route-after-ready', save => {
+    save.log.order = ['arrived', 'finished-arrival', 'ready', 'rested'];
+  }, crossing);
+  corruptCalendar(crossingArchive, 'premature-snapshot-cursor', save => {
+    assert(save.attempt);
+    const log = save.attempt.logBefore;
+    const { state, calendar: saved } = calendar(log);
+    log[calendarKey] = { ...state, calendar: { ...saved, startedThrough: 1 } };
+  }, crossing);
 
   corrupt(crossingArchive, 'missing-arrival-completion', save => { save.position.done = []; }, crossing);
   corrupt(crossingArchive, 'premature-crossing-completion', save => { save.position.done.push('scenario:crossing'); }, crossing);
@@ -96,6 +124,11 @@ const observations = CONFIGS.map(config => {
   finish(replayedCrossing);
   const complete = finishScenario(config, replayedCrossing);
   const completeArchive = roundTrip('completed-campaign', complete);
+  corruptCalendar(completeArchive, 'inconsistent-retry-stock', save => {
+    const crossingAttempt = save.history.find(attempt => attempt.step.id === 'crossing');
+    assert(crossingAttempt);
+    crossingAttempt.logBefore.counts['supplies'] = 0;
+  });
   assert.equal(complete.status, 'over');
   assert.equal(complete.position.step, null);
   corrupt(completeArchive, 'completed-status-active', save => { save.status = 'active'; });

@@ -27,6 +27,9 @@ export const CONFIGS: readonly ContinuationConfig[] = [
     decks: { lead: ['jab', 'blow', 'rally', 'ward'], partner: ['jab', 'jab', 'blow', 'blow'], reserve: ['jab', 'rally', 'rally', 'mend'] }, life: [14, 10], restBonus: 4 },
 ];
 const STEPS: readonly Step[] = [{ kind: 'scenario', id: 'arrival' }, { kind: 'scenario', id: 'crossing' }];
+const CALENDAR_KEY = 'game-kit:campaign-between-sessions';
+const schedule = (log: CampaignLog) =>
+  ['stock', 'route', 'ready'].reduce((scheduled, id) => scheduleCalendarEntry(scheduled, 2, id), scheduleCalendarEntry(log, 1, 'arrival'));
 const FIELDS: readonly FieldDef[] = [
   { id: 'supplies', kind: 'count', label: 'Supplies' }, { id: 'lifeBonus', kind: 'count', label: 'Rest bonus' },
   ...['arrived', 'rested', 'pressed', 'ready', 'finished-arrival', 'finished-crossing'].map(id => ({ id, kind: 'key' as const, label: id })),
@@ -55,11 +58,23 @@ function gameLog(log: CampaignLog): ContinuationLog {
     || !Array.isArray(value.betweenSessions.notes) || !value.betweenSessions.notes.every(item => typeof item === 'string')) throw new Error('invalid game-owned campaign fields');
   return value;
 }
-function validateLog(config: ContinuationConfig, log: CampaignLog): void {
+function validateLog(config: ContinuationConfig, log: CampaignLog, completed: number, begun: boolean): void {
   gameLog(log);
   remainingCampaignCards(log, config.box);
   const problem = rosterProblem(campaignRoster(log));
   if (problem) throw new Error(problem);
+  const saved = log[CALENDAR_KEY]?.calendar;
+  const cursor = saved?.startedThrough;
+  if (!saved || cursor === undefined || cursor > STEPS.length || cursor < completed || cursor > completed + 1
+    || (begun && cursor !== completed + 1)) throw new Error('invalid continuation campaign calendar cursor');
+  const rules = instructions(config);
+  let expected = schedule(emptyLog());
+  if (cursor >= 1) expected = startCalendarDay(expected, 1, rules).log;
+  if (completed >= 1) expected = record(expected, key('finished-arrival'));
+  if (cursor === 2) expected = startCalendarDay(expected, 2, rules, { route: has(log, key('rested')) ? 'rest' : 'press' }).log;
+  if (completed === 2) expected = record(expected, key('finished-crossing'));
+  const evidence = (value: CampaignLog) => [value[CALENDAR_KEY]?.calendar, value.recorded, value.order, value.crossed, value.counts, value.changes];
+  if (hashValue(evidence(log)) !== hashValue(evidence(expected))) throw new Error('invalid continuation campaign calendar effects');
 }
 function canonicalStep(value: unknown): number {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return -1;
@@ -99,8 +114,8 @@ function validateSave(config: ContinuationConfig, save: CampaignSave): void {
   if (save.id !== config.id || save.version !== version(config) || save.status === 'incompatible' || !Array.isArray(save.history)
     || !Number.isSafeInteger(save.seed) || save.seed < 0 || save.seed >= Number.MAX_SAFE_INTEGER) throw new Error('continuation variant or configuration mismatch');
   validateProgress(save);
-  validateLog(config, save.log);
-  for (const attempt of [...save.history, ...(save.attempt ? [save.attempt] : [])]) validateLog(config, attempt.logBefore);
+  validateLog(config, save.log, save.position.done.length, save.attempt !== undefined);
+  for (const attempt of [...save.history, ...(save.attempt ? [save.attempt] : [])]) validateLog(config, attempt.logBefore, canonicalStep(attempt.step), true);
 }
 export function newContinuation(config: ContinuationConfig, seed: number): CampaignSave {
   if (!Number.isSafeInteger(seed) || seed < 0 || seed >= Number.MAX_SAFE_INTEGER || !config.life.every(value => Number.isSafeInteger(value) && value > 0) || !Number.isSafeInteger(config.restBonus) || config.restBonus < 0) throw new Error('invalid continuation setup');
@@ -110,9 +125,7 @@ export function newContinuation(config: ContinuationConfig, seed: number): Campa
     { kind: 'join', player: 'lead', deck: config.decks.lead }, { kind: 'join', player: 'partner', deck: config.decks.partner },
     { kind: 'join', player: 'reserve', deck: config.decks.reserve }, { kind: 'sitOut', player: 'reserve' },
   ], rosterRules(config));
-  log = scheduleCalendarEntry(log, 1, 'arrival');
-  for (const id of ['stock', 'route', 'ready']) log = scheduleCalendarEntry(log, 2, id);
-  return newCampaign(config.id, version(config), { kind: 'scenario', id: 'arrival' }, seed, log);
+  return newCampaign(config.id, version(config), { kind: 'scenario', id: 'arrival' }, seed, schedule(log));
 }
 export function editContinuationRoster(config: ContinuationConfig, save: CampaignSave, edits: readonly CampaignRosterEdit[]): CampaignSave {
   validateSave(config, save);
