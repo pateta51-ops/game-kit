@@ -46,6 +46,42 @@ beforeAll(()=>{
 afterAll(()=>fs.rmSync(tmp,{recursive:true,force:true}));
 
 describe('context provenance',()=>{
+  it('reports scoped producer changes and only identifies its own Git checkout',()=>{
+    const repo=path.join(tmp,'producer');
+    fs.mkdirSync(repo);
+    const ownGit=(...args)=>git('-C',repo,...args);
+    ownGit('init','-q');
+    const file=path.join(repo,'tools/kit-context/provenance.mjs');
+    put(file,fs.readFileSync(path.join(import.meta.dirname,'provenance.mjs')));
+    const tool=path.join(repo,'kit.mjs');
+    put(tool,'// Original verifier.\n');
+    put(path.join(repo,'.gitignore'),'copied/\n');
+    ownGit('add','-A');
+    ownGit('commit','-qm','producer fixture');
+    const commit=ownGit('rev-parse','HEAD');
+    const metadata=script=>JSON.parse(execFileSync(process.execPath,['--input-type=module','-e',
+      "import { pathToFileURL } from 'node:url'; const m=await import(pathToFileURL(process.argv[1])); console.log(JSON.stringify(m.contextTool()));",script],{encoding:'utf8'}));
+    expect(metadata(file)).toEqual({name:'kit-context',commit,modified:false});
+    fs.appendFileSync(tool,'// Ordinary change.\n');
+    expect(metadata(file).modified).toBe(true);
+    ownGit('restore','kit.mjs');
+    const flagged=[];
+    for(const flag of ['assume-unchanged','skip-worktree']) {
+      ownGit('update-index','--'+flag,'kit.mjs');
+      put(tool,'// Change covered by an index flag.\n');
+      flagged.push(metadata(file));
+      ownGit('update-index','--no-'+flag,'kit.mjs');
+      ownGit('restore','kit.mjs');
+    }
+    const copy=path.join(repo,'copied/tools/kit-context/provenance.mjs');
+    put(copy,fs.readFileSync(file));
+    expect([...flagged,metadata(copy)]).toEqual([
+      {name:'kit-context',commit,modified:null},
+      {name:'kit-context',commit,modified:null},
+      {name:'kit-context',commit:null,modified:null},
+    ]);
+  });
+
   it('uses the target pin for contracts and guides, with the existing lock and Git identities',()=>{
     for(const [tag,type,guide] of [['v1','number','first'],['v2','string','second']]) {
       const root=game(tag);

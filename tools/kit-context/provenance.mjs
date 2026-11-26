@@ -9,8 +9,12 @@ const git=(cwd,...args)=>execFileSync('git',['-C',cwd,...args],{encoding:'utf8',
 export function contextTool() {
   let commit=null,modified=null;
   try {
-    commit=git(checkout,'rev-parse','HEAD');
-    modified=!!git(checkout,'status','--porcelain','--untracked-files=all','--','kit.mjs','tools/kit-context/*.mjs');
+    if(fs.realpathSync(git(checkout,'rev-parse','--show-toplevel'))===fs.realpathSync(checkout)) {
+      commit=git(checkout,'rev-parse','HEAD');
+      const files=['kit.mjs','tools/kit-context/*.mjs'];
+      if(git(checkout,'status','--porcelain','--untracked-files=all','--',...files)) modified=true;
+      else if(!/^[a-zS] /m.test(git(checkout,'ls-files','-v','--',...files))) modified=false;
+    }
   } catch { /* A copied tool has no checkout revision to report. */ }
   return {name:'kit-context',commit,modified};
 }
