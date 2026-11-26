@@ -1,4 +1,4 @@
-import { validBetweenSessions, type CampaignBetweenSessions } from './between-state.ts';
+import { betweenSessionsKey, validBetweenSessions, type CampaignBetweenSessions } from './between-state.ts';
 
 export type FieldKind = 'key' | 'count' | 'set';
 export interface FieldDef { id: string; kind: FieldKind; label: string; scope?: 'shared' | 'player'; cite?: string; hidden?: boolean }
@@ -14,7 +14,7 @@ export interface CampaignLog {
   order: string[];
   changes: CountChange[];
   ledger: LedgerEntry[];
-  betweenSessions?: CampaignBetweenSessions;
+  [betweenSessionsKey]?: CampaignBetweenSessions;
 }
 
 export const emptyLog = (): CampaignLog => ({ v: 1, recorded: [], crossed: [], counts: {}, sets: {}, order: [], changes: [], ledger: [] });
@@ -112,6 +112,7 @@ export function visibleKeys(l: CampaignLog, fields: readonly FieldDef[] = []) {
 export function readLog(x: unknown): CampaignLog | undefined {
   if (typeof x !== 'object' || x === null) return undefined;
   const o = x as Partial<CampaignLog>;
-  if (o.v !== 1 || (o.betweenSessions !== undefined && !validBetweenSessions(o.betweenSessions))) return undefined;
+  const betweenSessions = o[betweenSessionsKey];
+  if (o.v !== 1 || (betweenSessions !== undefined && !validBetweenSessions(betweenSessions))) return undefined;
   return { ...emptyLog(), ...o };
 }

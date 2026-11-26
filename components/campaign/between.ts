@@ -1,4 +1,4 @@
-import { isCampaignDay, isCampaignId, type CampaignPlayer } from './between-state.ts';
+import { betweenSessionsKey, isCampaignDay, isCampaignId, type CampaignPlayer } from './between-state.ts';
 import { runBetween, type Instruction, type InstructionAsk, type Ran } from './graph.ts';
 import type { CampaignLog } from './log.ts';
 import type { CampaignSave } from './steps.ts';
@@ -8,13 +8,13 @@ export type { CalendarEntry, CampaignBetweenSessions, CampaignCalendar, Campaign
 export function scheduleCalendarEntry(log: CampaignLog, day: number, instruction: string): CampaignLog {
   if (!isCampaignDay(day)) throw new Error('campaign: calendar day must be a positive safe integer');
   if (!isCampaignId(instruction)) throw new Error('campaign: missing calendar instruction id');
-  const { startedThrough = 0, entries = [] } = log.betweenSessions?.calendar ?? {};
+  const { startedThrough = 0, entries = [] } = log[betweenSessionsKey]?.calendar ?? {};
   if (day <= startedThrough) throw new Error(`campaign: day ${day} has already started`);
   if (entries.some(e => e.day === day && e.instruction === instruction))
     throw new Error(`campaign: duplicate instruction ${instruction} for day ${day}`);
   return {
     ...log,
-    betweenSessions: { ...log.betweenSessions, calendar: { startedThrough, entries: [...entries, { day, instruction }] } },
+    [betweenSessionsKey]: { ...log[betweenSessionsKey], v: 1, calendar: { startedThrough, entries: [...entries, { day, instruction }] } },
   };
 }
 
@@ -33,7 +33,7 @@ export function startCalendarDay(
   save?: CampaignSave,
 ): CalendarDayResult {
   if (!isCampaignDay(day)) throw new Error('campaign: calendar day must be a positive safe integer');
-  const { startedThrough = 0, entries = [] } = log.betweenSessions?.calendar ?? {};
+  const { startedThrough = 0, entries = [] } = log[betweenSessionsKey]?.calendar ?? {};
   if (day <= startedThrough) return { log, ran: [] };
   const pending = entries.find(e => e.day > startedThrough && e.day < day);
   if (pending) throw new Error(`campaign: cannot skip pending day ${pending.day}`);
@@ -49,7 +49,7 @@ export function startCalendarDay(
     ...result,
     log: {
       ...result.log,
-      betweenSessions: { ...result.log.betweenSessions, calendar: { startedThrough: day, entries } },
+      [betweenSessionsKey]: { ...result.log[betweenSessionsKey], v: 1, calendar: { startedThrough: day, entries } },
     },
   };
 }
@@ -65,7 +65,7 @@ export interface CampaignRosterRules {
   allow?(before: readonly CampaignPlayer[], after: readonly CampaignPlayer[], edits: readonly CampaignRosterEdit[]): string | undefined;
 }
 
-export const campaignRoster = (log: CampaignLog): readonly CampaignPlayer[] => log.betweenSessions?.roster ?? [];
+export const campaignRoster = (log: CampaignLog): readonly CampaignPlayer[] => log[betweenSessionsKey]?.roster ?? [];
 
 /** The unused copies in a shared box. A card absent from the box has no copies. */
 export function remainingCampaignCards(log: CampaignLog, box: CampaignCardBox): Readonly<Record<string, number>> {
@@ -116,7 +116,7 @@ export function changeCampaignRoster(
     }
   }
   const roster = [...players.values()];
-  const next = { ...log, betweenSessions: { ...log.betweenSessions, roster } };
+  const next: CampaignLog = { ...log, [betweenSessionsKey]: { ...log[betweenSessionsKey], v: 1, roster } };
   remainingCampaignCards(next, rules.box);
   const reason = rules.allow?.(before, roster, edits);
   if (reason !== undefined) throw new Error(`campaign: ${reason}`);

@@ -14,7 +14,10 @@ export interface CampaignPlayer {
   readonly deck: readonly string[];
 }
 
+export const betweenSessionsKey = 'game-kit:campaign-between-sessions';
+
 export interface CampaignBetweenSessions {
+  readonly v: 1;
   readonly calendar?: CampaignCalendar;
   readonly roster?: readonly CampaignPlayer[];
 }
@@ -52,7 +55,7 @@ function validRoster(roster: unknown): boolean {
 }
 
 export function validBetweenSessions(value: unknown): boolean {
-  return isRecord(value) &&
+  return isRecord(value) && value['v'] === 1 &&
     (value['calendar'] === undefined || validCalendar(value['calendar'])) &&
     (value['roster'] === undefined || validRoster(value['roster']));
 }

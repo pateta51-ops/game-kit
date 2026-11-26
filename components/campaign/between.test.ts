@@ -124,9 +124,29 @@ describe('K595 campaign roster and shared card box', () => {
 });
 
 describe('K595 campaign save and step integration', () => {
+  it.each(['active', 'attempt', 'history'] as const)('preserves legacy game-owned betweenSessions data in %s', where => {
+    const legacy: CampaignLog & { betweenSessions: string[] } = { ...emptyLog(), betweenSessions: ['session recap'] };
+    const scenario: Step = { kind: 'scenario', id: 'outpost' };
+    const active = newCampaign('expedition', '1', scenario, 7, legacy);
+    const attempt = begin(active).save;
+    const snapshots = {
+      active,
+      attempt: { ...attempt, log: emptyLog() },
+      history: end(attempt, { log: emptyLog() }, () => null),
+    };
+    const saved = snapshots[where];
+    const loaded = readSave(JSON.parse(JSON.stringify(saved)) as unknown, '1');
+    expect(loaded).toEqual(saved);
+    if (!loaded) throw new Error('fixture save did not load');
+    if (where === 'active') expect(readLog(json(legacy))).toEqual(legacy);
+    else expect(retry(loaded).log).toEqual(legacy);
+  });
+
   it('rejects malformed extension data while an old log keeps its original shape', () => {
-    expect(readLog({ ...emptyLog(), betweenSessions: { calendar: { startedThrough: 0, entries: 'invalid' } } })).toBeUndefined();
-    expect(readLog({ ...emptyLog(), betweenSessions: { roster: [{ id: 'north', status: 'retired', deck: ['rope'] }] } })).toBeUndefined();
+    const key = 'game-kit:campaign-between-sessions';
+    expect(readLog({ ...emptyLog(), [key]: { v: 1, calendar: { startedThrough: 0, entries: 'invalid' } } })).toBeUndefined();
+    expect(readLog({ ...emptyLog(), [key]: { v: 1, roster: [{ id: 'north', status: 'retired', deck: ['rope'] }] } })).toBeUndefined();
+    expect(readLog({ ...emptyLog(), [key]: { v: 2 } })).toBeUndefined();
     const old = { ...emptyLog(), gameNote: 'retained' };
     expect(readLog(json(old))).toEqual(old);
     expect(campaignRoster(old)).toEqual([]);
@@ -138,7 +158,7 @@ describe('K595 campaign save and step integration', () => {
     const started = begin(base).save;
     const broken = {
       step: scenario, seed: 7,
-      logBefore: { ...emptyLog(), betweenSessions: { calendar: { startedThrough: 0, entries: 'invalid' } } },
+      logBefore: { ...emptyLog(), 'game-kit:campaign-between-sessions': { v: 1, calendar: { startedThrough: 0, entries: 'invalid' } } },
     };
     expect(readSave({ ...started, attempt: broken }, '1')).toBeUndefined();
     expect(readSave({ ...base, history: [broken] }, '1')).toBeUndefined();
@@ -148,8 +168,9 @@ describe('K595 campaign save and step integration', () => {
   it('starts a date before a normal step and does not apply it again after save, retry, or deterministic replay', () => {
     const scenario: Step = { kind: 'scenario', id: 'outpost' };
     const next: Step = { kind: 'scenario', id: 'ridge' };
+    const legacy: CampaignLog & { betweenSessions: string[] } = { ...emptyLog(), betweenSessions: ['session recap'] };
     const initial = scheduleCalendarEntry(
-      changeCampaignRoster(emptyLog(), [{ kind: 'join', player: 'north', deck: ['rope'] }], { box }),
+      changeCampaignRoster(legacy, [{ kind: 'join', player: 'north', deck: ['rope'] }], { box }),
       2, 'provision',
     );
     const day = startCalendarDay(initial, 2, lessons);
@@ -162,7 +183,9 @@ describe('K595 campaign save and step integration', () => {
     expect(finished.position.step).toEqual(next);
     const loaded = readSave(JSON.parse(JSON.stringify(finished)) as unknown, '1');
     if (!loaded) throw new Error('fixture save did not load');
+    expect(loaded.log).toMatchObject({ betweenSessions: legacy.betweenSessions });
     const retried = retry(loaded);
+    expect(retried.log).toMatchObject({ betweenSessions: legacy.betweenSessions });
     expect(retried.position.step).toEqual(scenario);
     expect(campaignRoster(retried.log).map(p => p.id)).toEqual(['north']);
     expect(startCalendarDay(retried.log, 2, lessons).ran).toEqual([]);
