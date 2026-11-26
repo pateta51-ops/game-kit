@@ -690,5 +690,11 @@
   { "q": "first download size", "first": "bundle-size" },
   { "q": "acceptance receipt", "first": "check-runner/receipts" },
   { "q": "verify check execution evidence", "first": "check-runner/receipts" },
-  { "q": "stale consumer acceptance", "first": "check-runner/receipts" }
+  { "q": "stale consumer acceptance", "first": "check-runner/receipts" },
+  { "q": "verified kit context pin", "first": "kit-context" },
+  { "q": "legacy lock context coverage", "first": "kit-context" },
+  { "q": "pinned component contract identity", "first": "kit-context" },
+  { "q": "generated worker brief", "first": "kit-context" },
+  { "q": "task-specific agent brief", "first": "kit-context" },
+  { "q": "brief stale script fingerprints", "first": "kit-context" }
 ]
