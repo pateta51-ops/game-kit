@@ -52,6 +52,8 @@ graph LR
   check_runner["check-runner"]
   ci_templates["ci-templates"]
   clock["clock"]
+  combat["combat"] --> engine_core["engine-core"]
+  combat["combat"] --> card_language["card-language"]
   content_pack["content-pack"] --> card_harness["card-harness"]
   content_pack["content-pack"] --> card_language["card-language"]
   content_pack["content-pack"] --> card_parts["card-parts"]
@@ -192,6 +194,7 @@ graph LR
 - `check-runner`
 - `ci-templates`
 - `clock`
+- `combat`
 - `content-pack`
 - `controls`
 - `coverage-report`
