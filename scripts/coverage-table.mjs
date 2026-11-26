@@ -11,7 +11,8 @@ const digest = value => createHash('sha256').update(value).digest('hex');
 const tool = { name: 'coverage-table', version: 1, sha256: createHash('sha256')
   .update(fs.readFileSync(new URL(import.meta.url)))
   .update(fs.readFileSync(new URL('../components/check-runner/tracked-source.ts', import.meta.url))).digest('hex') };
-const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }).trim();
+const gitOutput = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 });
+const git = (...args) => gitOutput(...args).trim();
 
 function identity() {
   try {
@@ -35,14 +36,63 @@ function flags(args) {
   return out;
 }
 
+function canonical(file) {
+  let ancestor = file;
+  while (!fs.lstatSync(ancestor, { throwIfNoEntry: false })) ancestor = path.dirname(ancestor);
+  return path.resolve(fs.realpathSync.native(ancestor), path.relative(ancestor, file));
+}
+
+function contains(parent, file) {
+  const relative = path.relative(parent, file);
+  return !path.isAbsolute(relative) && relative.split(path.sep, 1)[0] !== '..';
+}
+
+function isCapture(value) {
+  return value?.version === 1 && value.tool?.name === tool.name && value.tool?.version === tool.version
+    && typeof value.capturedAt === 'string' && Number.isFinite(Date.parse(value.capturedAt))
+    && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value.source?.commit ?? '')
+    && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value.source?.tree ?? '')
+    && /^[a-f0-9]{64}$/.test(value.tool.sha256 ?? '');
+}
+
 function capture(file) {
   const source = identity();
   if (!source.commit) throw new Error(source.reason);
-  const target = path.resolve(file);
-  if (target === directory || target.startsWith(directory + path.sep)) throw new Error('Capture context must be outside coverage, which Vitest replaces');
-  fs.rmSync(directory, { recursive: true, force: true });
+  const requested = path.resolve(file);
+  if (process.platform === 'win32' && /[ .](?:\\|$)|:/.test(requested.slice(path.parse(requested).root.length))) throw new Error('Capture context uses an ambiguous Windows path');
+  const target = canonical(requested), coverage = canonical(directory);
+  if (contains(directory, requested) || contains(coverage, target)) throw new Error('Capture context must be outside coverage, which Vitest replaces');
+  const existingCoverage = fs.lstatSync(directory, { throwIfNoEntry: false });
+  if (existingCoverage && !existingCoverage.isDirectory()) throw new Error('Coverage must be a real directory before capture');
+  const repo = canonical(git('rev-parse', '--show-toplevel'));
+  const tracked = [gitOutput('ls-files', '--cached', '--full-name', '-z'), gitOutput('ls-tree', '-rz', '--full-tree', '--name-only', source.commit)]
+    .flatMap(output => output.split('\0').filter(Boolean)).map(name => path.resolve(repo, name));
+  if (tracked.some(name => path.relative(name, target) === '' || contains(coverage, name))) throw new Error('Capture cannot overwrite or remove tracked source');
+  const gitDir = canonical(git('rev-parse', '--absolute-git-dir'));
+  const commonDir = canonical(path.resolve(git('rev-parse', '--git-common-dir')));
+  if ([gitDir, commonDir].some(dir => contains(dir, target) || contains(coverage, dir))) throw new Error('Capture cannot write to or remove Git internals');
+  const existing = fs.lstatSync(requested, { throwIfNoEntry: false });
+  if (existing) {
+    if (!existing.isFile() || existing.nlink !== 1) throw new Error('Capture context must be a regular file without aliases');
+    let previous;
+    try { previous = JSON.parse(fs.readFileSync(target, 'utf8')); } catch { /* Refuse invalid output. */ }
+    if (!isCapture(previous)) throw new Error('Capture can replace only a prior coverage context');
+  }
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, JSON.stringify({ version: 1, capturedAt: new Date().toISOString(), source, tool }, null, 2) + '\n');
+  const scratch = fs.mkdtempSync(path.join(path.dirname(target), '.coverage-context-'));
+  try {
+    const staged = path.join(scratch, 'context.json');
+    fs.writeFileSync(staged, JSON.stringify({ version: 1, capturedAt: new Date().toISOString(), source, tool }, null, 2) + '\n');
+    fs.renameSync(staged, target);
+    try {
+      fs.rmSync(directory, { recursive: true, force: true });
+    } catch (error) {
+      fs.rmSync(target, { force: true });
+      throw error;
+    }
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
   if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `commit=${source.commit}\n`);
   console.log(`Coverage context captured at ${source.commit}; previous coverage removed`);
 }
@@ -98,7 +148,7 @@ function binding(file, source, data, configuration) {
   let before;
   try { before = JSON.parse(fs.readFileSync(file, 'utf8')); }
   catch { return { status: 'invalid', reason: 'Malformed before-run source context' }; }
-  if (!before || before.version !== 1 || !Number.isFinite(Date.parse(before.capturedAt)) || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(before.source?.commit ?? '') || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(before.source?.tree ?? '') || !/^[a-f0-9]{64}$/.test(before.tool?.sha256 ?? '')) return { status: 'invalid', reason: 'Unsupported before-run source context' };
+  if (!isCapture(before)) return { status: 'invalid', reason: 'Unsupported before-run source context' };
   if (!before.source.clean || !source.clean) return { status: 'invalid', reason: 'Coverage source is dirty; it is not the recorded commit tree' };
   if (!/^[a-f0-9]{64}$/.test(before.source.workingSha256 ?? '')) return { status: 'invalid', reason: 'Before-run source context lacks a tracked working-byte fingerprint' };
   if (before.source.commit !== source.commit || before.source.tree !== source.tree || before.tool.sha256 !== tool.sha256) return { status: 'stale', reason: 'Source or reporting tool changed since capture' };

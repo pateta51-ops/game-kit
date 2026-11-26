@@ -81,6 +81,62 @@ describe('coverage history evidence', () => {
     expect(f.read().comparison.status).toBe('unknown');
   });
 
+  it.skipIf(process.platform !== 'win32')('rejects a case alias of the coverage directory before removing coverage', () => {
+    const f = fixture('capture-case-alias');
+    const summary = f.writeSummary();
+    expect(f.run('--capture', path.join(f.dir, 'COVERAGE/context.json')).status).toBe(1);
+    expect(fs.existsSync(summary)).toBe(true);
+  });
+
+  it('rejects a filesystem alias of the coverage directory before removing coverage', () => {
+    const f = fixture('capture-directory-alias');
+    const summary = f.writeSummary();
+    const alias = path.join(f.dir, 'coverage-alias');
+    fs.symlinkSync(path.dirname(summary), alias, process.platform === 'win32' ? 'junction' : 'dir');
+    expect(f.run('--capture', path.join(alias, 'context.json')).status).toBe(1);
+    expect(fs.existsSync(summary)).toBe(true);
+  });
+
+  it.each(['tracked input', 'unrelated output', 'hard-linked capture'])('preserves %s on rejected capture', kind => {
+    const f = fixture('capture-' + kind.replaceAll(' ', '-'));
+    const target = path.join(f.dir, kind === 'tracked input' ? 'components/engine-core/a.ts' : '.cache/target.json');
+    if (kind === 'unrelated output') {
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.writeFileSync(target, '{"existing":"unrelated"}\n');
+    }
+    if (kind === 'hard-linked capture') {
+      expect(f.run('--capture', f.start).status).toBe(0);
+      fs.linkSync(f.start, target);
+    }
+    const prior = fs.readFileSync(target);
+    const summary = f.writeSummary();
+    expect(f.run('--capture', target).status).toBe(1);
+    expect(fs.readFileSync(target)).toEqual(prior);
+    expect(fs.existsSync(summary)).toBe(true);
+  });
+
+  it('refuses to remove tracked source inside the coverage directory', () => {
+    const f = fixture('capture-tracked-coverage');
+    const summary = f.writeSummary();
+    const authored = path.join(f.dir, 'coverage/authored.md');
+    fs.writeFileSync(authored, 'This file is authored.\n');
+    f.git('add', '-f', 'coverage/authored.md');
+    f.git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Keep authored coverage-folder input');
+    expect(f.run('--capture', f.start).status).toBe(1);
+    expect(fs.existsSync(summary)).toBe(true);
+    expect(fs.readFileSync(authored, 'utf8')).toBe('This file is authored.\n');
+    expect(fs.existsSync(f.start)).toBe(false);
+  });
+
+  it('recaptures a prior context outside the coverage directory', () => {
+    const f = fixture('recapture');
+    expect(f.run('--capture', f.start).status).toBe(0);
+    const summary = f.writeSummary();
+    expect(f.run('--capture', f.start).status).toBe(0);
+    expect(fs.existsSync(summary)).toBe(false);
+    expect(JSON.parse(fs.readFileSync(f.start, 'utf8'))).toMatchObject({ source: { commit: f.git('rev-parse', 'HEAD') } });
+  });
+
   it('accepts a fresh summary with the same filesystem timestamp as its capture', () => {
     const f = fixture('capture-tick');
     expect(f.run('--capture', f.start).status).toBe(0);
