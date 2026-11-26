@@ -80,6 +80,14 @@ describe('context provenance',()=>{
       {name:'kit-context',commit,modified:null},
       {name:'kit-context',commit:null,modified:null},
     ]);
+    const unrelated=path.join(repo,'copied');
+    const copyGit=(...args)=>git('-C',unrelated,...args);
+    copyGit('init','-q');
+    put(path.join(unrelated,'kit.mjs'),'// Copied verifier.\n');
+    put(path.join(unrelated,'.gitignore'),'kit.mjs\ntools/\n');
+    copyGit('add','.gitignore');
+    copyGit('commit','-qm','unrelated fixture');
+    expect(metadata(copy)).toEqual({name:'kit-context',commit:null,modified:null});
   });
 
   it('uses the target pin for contracts and guides, with the existing lock and Git identities',()=>{

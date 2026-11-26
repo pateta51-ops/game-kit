@@ -10,10 +10,15 @@ export function contextTool() {
   let commit=null,modified=null;
   try {
     if(fs.realpathSync(git(checkout,'rev-parse','--show-toplevel'))===fs.realpathSync(checkout)) {
-      commit=git(checkout,'rev-parse','HEAD');
-      const files=['kit.mjs','tools/kit-context/*.mjs'];
-      if(git(checkout,'status','--porcelain','--untracked-files=all','--',...files)) modified=true;
-      else if(!/^[a-zS] /m.test(git(checkout,'ls-files','-v','--',...files))) modified=false;
+      const head=git(checkout,'rev-parse','HEAD');
+      const required=['kit.mjs','tools/kit-context/provenance.mjs'];
+      const tracked=git(checkout,'ls-tree','--name-only',head,'--',...required).split(/\r?\n/);
+      if(required.every(file=>tracked.includes(file))) {
+        commit=head;
+        const files=['kit.mjs','tools/kit-context/*.mjs'];
+        if(git(checkout,'status','--porcelain','--untracked-files=all','--',...files)) modified=true;
+        else if(!/^[a-zS] /m.test(git(checkout,'ls-files','-v','--',...files))) modified=false;
+      }
     }
   } catch { /* A copied tool has no checkout revision to report. */ }
   return {name:'kit-context',commit,modified};
