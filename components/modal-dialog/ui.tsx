@@ -17,6 +17,9 @@ const editable = (element: Element | null): boolean => {
 };
 const available = (el: HTMLElement): boolean => {
   if (el.matches(':disabled') || !isActiveElement(el)) return false;
+  for (let at: Element | null = el; at; at = at.parentElement) {
+    if (at.assignedSlot && !available(at.assignedSlot)) return false;
+  }
   for (let details = el.parentElement?.closest('details:not([open])'); details;
     details = details.parentElement?.closest('details:not([open])')) {
     if (!details.querySelector(':scope > summary')?.contains(el)) return false;

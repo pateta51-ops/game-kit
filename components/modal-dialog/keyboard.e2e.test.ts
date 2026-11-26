@@ -363,6 +363,30 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
     } finally { await page.close(); }
   });
 
+  it('skips hidden slotted controls and visits visible slotted controls in a ranked modal', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open ordered modal' }).click();
+      await page.getByRole('dialog', { name: 'Ordered decision' }).evaluate((el) => {
+        const host = document.createElement('div');
+        host.innerHTML = '<button slot="hidden">Hidden assigned control</button><button slot="visible">Visible assigned control</button>';
+        host.attachShadow({ mode: 'open' }).innerHTML =
+          '<div style="display:none"><slot name="hidden"></slot></div><slot name="visible"></slot><button>Visible shadow control</button>';
+        el.querySelector('.kc-modal-body')!.append(host);
+      });
+      await page.getByRole('button', { name: 'Default action' }).focus();
+      for (const [key, name] of [
+        ['Tab', 'Visible assigned control'], ['Tab', 'Visible shadow control'], ['Tab', 'First priority'],
+        ['Shift+Tab', 'Visible shadow control'], ['Shift+Tab', 'Visible assigned control'], ['Shift+Tab', 'Default action'],
+      ] as const) {
+        await page.keyboard.press(key);
+        expect(await page.getByRole('button', { name }).evaluate((el) =>
+          (el.getRootNode() as Document | ShadowRoot).activeElement === el), name).toBe(true);
+      }
+    } finally { await page.close(); }
+  });
+
   it('includes image-map links only when their image is visible in a ranked modal', async () => {
     const page = await browser.newPage();
     try {
