@@ -739,7 +739,7 @@
   },
   "check-runner": {
     "mechanics": "none: build, CI or repository tooling",
-    "use": "Running `npm run check` lanes in parallel with process-tree timeouts and a drift check.",
+    "use": "Running `npm run check` lanes in parallel with process-tree timeouts and a drift check; optionally recording and verifying acceptance receipts bound to the consumer, kit pin and authored inputs.",
     "not": "Writing the checks themselves.",
     "title": "Run all checks in parallel",
     "tags": [
@@ -756,6 +756,7 @@
     "gameSupplies": "The list of checks and their lanes.",
     "entry": [
       "check-runner.ts",
+      "receipt.ts",
       "gate-all.ts",
       "test-cost.ts"
     ]
@@ -2575,6 +2576,12 @@
     "entry": [
       "playtest.ts"
     ]
+  },
+  "check-runner/receipts": {
+    "title": "Acceptance receipts bound to source and inputs",
+    "tags": ["acceptance receipt", "verify check execution evidence", "stale consumer acceptance", "bound kit revision", "cancelled check evidence"],
+    "use": "Record the existing full check plan's commands and outcomes with consumer, kit lock, specification and acceptance-definition fingerprints; reject stale, missing, stopped, truncated or unfinished local evidence. Does not certify test quality or authenticate execution.",
+    "guide": "README.md"
   },
   "card-harness/mutations": {
     "title": "Semantic mutation tests for card clauses",

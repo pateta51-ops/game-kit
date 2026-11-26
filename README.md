@@ -24,7 +24,7 @@ Generated, never edited by hand: [docs/CATALOG.md](docs/CATALOG.md) and [docs/AR
 ## Layout
 
 - `kit.mjs` - pull, check (`--source`), outdated, list, search, new, state, next-id (`--reserve`), worktree, finish, teardown (no dependencies; usage at the top of the file).
-- `scripts/` - `catalog.mjs` (CATALOG and ARCHITECTURE), `plan.mjs` (PLAN from `docs/plan/K<n>.md`), `check-components.mjs`, `readme-examples.mjs`, `state.mjs`, `agent.mjs` (worker commands), `coverage-table.mjs` (`npm run coverage`: line coverage per component).
+- `scripts/` - `catalog.mjs` (CATALOG and ARCHITECTURE), `plan.mjs` (PLAN from `docs/plan/K<n>.md`), `check-components.mjs`, `readme-examples.mjs`, `state.mjs`, `agent.mjs` (worker commands), `coverage-table.mjs` (line and branch counts from the existing V8 summary, with source-bound history artifacts; [coverage policy](docs/recipes/agent-workflow.md#coverage-evidence)).
 - `components/<name>/` - one folder per component: code, tests, `component.json`.
 - `docs/SELECTION.md` - which game each component comes from, and why.
 - `docs/PLAN.md` - the batches that build the kit, and their state (generated from `docs/plan/K<n>.md`, one file per row, and `docs/plan/_template.md`).
