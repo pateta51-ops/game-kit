@@ -158,7 +158,7 @@ export async function run(args: readonly string[], io: Io = stdio, codecOverride
     const names = new Map<string, string>();
     const selected = Object.entries(index.defs).sort().map(([id, file]) => {
       const name = safeName(id);
-      if (!name || name === '.' || name === '..' || typeof file !== 'string' || !file) throw new Error(`invalid selected face: ${id}`);
+      if (!name || /^\.{1,2}$/.test(name) || typeof file !== 'string' || !file) throw new Error(`invalid selected face: ${id}`);
       const previous = names.get(name.toLowerCase());
       if (previous !== undefined) throw new Error(`filename collision: ${previous} and ${id} map to ${name}`);
       names.set(name.toLowerCase(), id);

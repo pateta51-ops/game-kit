@@ -12,7 +12,8 @@ export function publicationPath(path: string): string {
 
 export function withinPublicationPath(parent: string, path: string): boolean {
   const rel = relative(parent, path);
-  return rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+  const parentSegment = '.'.repeat(2);
+  return rel !== parentSegment && !rel.startsWith(parentSegment + sep) && !isAbsolute(rel);
 }
 
 function checkPaths(slots: readonly Slot[], marker: string): void {
