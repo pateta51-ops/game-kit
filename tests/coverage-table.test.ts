@@ -175,6 +175,22 @@ describe('coverage history evidence', () => {
     if (kind !== 'directory destination') expect(fs.readFileSync(markdown, 'utf8')).toBe(['hardlink', 'symlink'].includes(kind) ? original.toString('utf8') : 'previous Markdown');
   });
 
+  it.each(['hardlink', 'symlink'] as const)('reports a summary %s as invalid', kind => {
+    if (kind === 'symlink' && process.platform === 'win32') return;
+    const f = fixture('summary-' + kind);
+    expect(f.run('--capture', f.start).status).toBe(0);
+    const summary = f.writeSummary();
+    const payload = path.join(f.dir, '.cache/unrelated.json');
+    fs.renameSync(summary, payload);
+    const bytes = fs.readFileSync(payload);
+    if (kind === 'hardlink') fs.linkSync(payload, summary);
+    else fs.symlinkSync(payload, summary);
+    const result = f.run('--started', f.start, '--check-outcome', 'success');
+    expect(result.status).toBe(1);
+    expect(f.read()).toMatchObject({ summary: { status: 'invalid' }, execution: { binding: { status: 'unavailable' } } });
+    expect(fs.readFileSync(payload)).toEqual(bytes);
+  });
+
   it('rejects a cached tracked edit outside the files named in the coverage summary', () => {
     const f = fixture('cached-source');
     const script = path.join(f.dir, 'script.mjs');

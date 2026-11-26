@@ -106,8 +106,21 @@ function metric(value, label) {
 }
 
 function readSummary() {
-  if (!fs.existsSync(summaryFile)) return { summary: { status: 'unavailable', reason: 'No V8 coverage summary was produced' }, components: [], files: [] };
-  const bytes = fs.readFileSync(summaryFile);
+  const empty = (status, reason) => ({ summary: { status, reason }, components: [], files: [] });
+  const invalidFile = () => empty('invalid', 'Coverage summary must be a regular file without aliases');
+  let bytes, mtimeNs;
+  try {
+    const entry = fs.lstatSync(summaryFile, { bigint: true, throwIfNoEntry: false });
+    if (!entry) return empty('unavailable', 'No V8 coverage summary was produced');
+    if (!entry.isFile() || entry.nlink !== 1n) return invalidFile();
+    const fd = fs.openSync(summaryFile, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
+    try {
+      const opened = fs.fstatSync(fd, { bigint: true });
+      if (!opened.isFile() || opened.nlink !== 1n || opened.dev !== entry.dev || opened.ino !== entry.ino) return invalidFile();
+      bytes = fs.readFileSync(fd);
+      mtimeNs = opened.mtimeNs;
+    } finally { fs.closeSync(fd); }
+  } catch { return empty('invalid', 'Coverage summary could not be read'); }
   const sha256 = digest(bytes);
   try {
     const input = JSON.parse(bytes.toString('utf8'));
@@ -132,20 +145,20 @@ function readSummary() {
       groups.set(component, current);
       files.push({ path: relative, sha256: digest(fs.readFileSync(path.join(root, relative))) });
     }
-    if (!files.length) return { summary: { status: 'unavailable', sha256, reason: 'The V8 summary contains no component files' }, components: [], files: [] };
+    if (!files.length) return { summary: { status: 'unavailable', sha256, reason: 'The V8 summary contains no component files' }, components: [], files: [], mtimeNs };
     const components = [...groups.values()].sort((a, b) => a.name.localeCompare(b.name)).map(group => ({ name: group.name, lines: metric(group.lines, group.name), branches: metric(group.branches, group.name) }));
     for (const kind of ['lines', 'branches']) {
       const total = components.reduce((sum, group) => ({ total: sum.total + group[kind].total, covered: sum.covered + group[kind].covered }), { total: 0, covered: 0 });
       if (total.total !== input.total[kind].total || total.covered !== input.total[kind].covered) throw new Error('Coverage total does not match reported component ' + kind);
     }
-    return { summary: { status: 'reported', sha256 }, components, files: files.sort((a, b) => a.path.localeCompare(b.path)) };
+    return { summary: { status: 'reported', sha256 }, components, files: files.sort((a, b) => a.path.localeCompare(b.path)), mtimeNs };
   } catch (error) {
     const reason = error instanceof SyntaxError ? 'Malformed V8 coverage summary' : error.code === 'ENOENT' ? 'A covered source file is unavailable' : error.message;
-    return { summary: { status: 'invalid', sha256, reason }, components: [], files: [] };
+    return { summary: { status: 'invalid', sha256, reason }, components: [], files: [], mtimeNs };
   }
 }
 
-function binding(file, source, data, configuration) {
+function binding(file, source, data, configuration, mtimeNs) {
   if (!file) return { status: 'unavailable', reason: 'No before-run source context was supplied' };
   if (!fs.existsSync(file)) return { status: 'unavailable', reason: 'Before-run source context is missing' };
   let before;
@@ -156,8 +169,8 @@ function binding(file, source, data, configuration) {
   if (!/^[a-f0-9]{64}$/.test(before.source.workingSha256 ?? '')) return { status: 'invalid', reason: 'Before-run source context lacks a tracked working-byte fingerprint' };
   if (before.source.commit !== source.commit || before.source.tree !== source.tree || before.tool.sha256 !== tool.sha256) return { status: 'stale', reason: 'Source or reporting tool changed since capture' };
   if (before.source.workingSha256 !== source.workingSha256) return { status: 'stale', reason: 'Tracked working bytes changed since capture' };
-  if (!fs.existsSync(summaryFile)) return { status: 'unavailable', reason: 'No summary for the captured run' };
-  if (fs.statSync(summaryFile, { bigint: true }).mtimeNs < fs.statSync(file, { bigint: true }).mtimeNs) return { status: 'stale', reason: 'Coverage summary predates source capture' };
+  if (mtimeNs === undefined && data.summary.status === 'unavailable') return { status: 'unavailable', reason: 'No summary for the captured run' };
+  if (mtimeNs !== undefined && mtimeNs < fs.statSync(file, { bigint: true }).mtimeNs) return { status: 'stale', reason: 'Coverage summary predates source capture' };
   if (data.summary.status !== 'reported') return { status: 'unavailable', reason: 'No valid component summary for the captured run' };
   for (const entry of [...data.files, ...configuration]) {
     try {
@@ -210,7 +223,7 @@ function reportTargets(commit) {
 function report(options) {
   const source = identity();
   const targets = reportTargets(source.commit);
-  const data = readSummary();
+  const { mtimeNs, ...data } = readSummary();
   const configuration = ['vitest.config.ts', 'package.json', 'package-lock.json', 'check-runner.config.json'].filter(file => fs.existsSync(path.join(root, file))).map(file => ({ path: file, sha256: digest(fs.readFileSync(path.join(root, file))) }));
   const evidence = {
     version: 1, tool, createdAt: new Date().toISOString(), source,
@@ -218,7 +231,7 @@ function report(options) {
     runtime: { node: process.version },
     scope: 'components/**/*.ts and components/**/*.tsx; excludes tests and node_modules; only summary entries', ...data,
     execution: {
-      checkOutcome: options['--check-outcome'] ?? 'unknown', binding: binding(options['--started'], source, data, configuration),
+      checkOutcome: options['--check-outcome'] ?? 'unknown', binding: binding(options['--started'], source, data, configuration, mtimeNs),
       ...(process.env.GITHUB_RUN_ID ? { run: { id: process.env.GITHUB_RUN_ID, attempt: process.env.GITHUB_RUN_ATTEMPT ?? 'unknown', job: process.env.GITHUB_JOB ?? 'unknown' } } : {}),
     },
     baseline: { status: 'unavailable', reason: 'Automatic baseline selection and verification are not implemented' }, comparison: { status: 'unknown' },
