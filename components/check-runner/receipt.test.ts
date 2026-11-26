@@ -1,6 +1,6 @@
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, expect, it } from 'vitest';
@@ -97,6 +97,30 @@ it.each(['--assume-unchanged', '--skip-worktree'])('rejects tracked changes hidd
   expect(result.status).toBe(1);
   expect(JSON.parse(result.stdout)).toMatchObject({ status: 'stale' });
   expect(f.run().status).toBe(1);
+});
+
+it('rejects a same-size tracked edit with an unchanged cached timestamp', () => {
+  const f = fixture({ a: 'node check.cjs' });
+  const script = path.join(f.root, 'check.cjs');
+  const timestamp = new Date('2020-01-01T00:00:00Z');
+  f.git('config', 'core.trustctime', 'false');
+  f.git('config', 'core.checkStat', 'minimal');
+  writeFileSync(path.join(f.root, '.gitattributes'), 'check.cjs text eol=crlf\n');
+  writeFileSync(script, "console.log('first');\r\n");
+  utimesSync(script, timestamp, timestamp);
+  f.git('add', '.gitattributes', 'check.cjs');
+  f.git('-c', 'user.name=kit-tests', '-c', 'user.email=kit-tests@users.noreply.github.com', 'commit', '-qm', 'Add a CRLF consumer check');
+  expect(f.run().status).toBe(0);
+  expect(f.verify().status).toBe(0);
+  const prior = readFileSync(f.output);
+  writeFileSync(script, "console.log('other');\r\n");
+  utimesSync(script, timestamp, timestamp);
+  expect(f.git('status', '--porcelain')).toBe('');
+  const verify = f.verify();
+  expect(verify.status).toBe(1);
+  expect(JSON.parse(verify.stdout)).toMatchObject({ status: 'stale' });
+  expect(f.run().status).toBe(1);
+  expect(readFileSync(f.output)).toEqual(prior);
 });
 
 it('fails acceptance if a successful check changes a bound input while running', () => {

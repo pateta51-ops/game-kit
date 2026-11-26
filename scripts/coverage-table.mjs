@@ -2,20 +2,23 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { matchesTrackedTree } from '../components/check-runner/tracked-source.ts';
 
 const root = process.cwd();
 const directory = path.join(root, 'coverage');
 const summaryFile = path.join(directory, 'coverage-summary.json');
 const digest = value => createHash('sha256').update(value).digest('hex');
-const tool = { name: 'coverage-table', version: 1, sha256: digest(fs.readFileSync(fileURLToPath(import.meta.url))) };
+const tool = { name: 'coverage-table', version: 1, sha256: createHash('sha256')
+  .update(fs.readFileSync(new URL(import.meta.url)))
+  .update(fs.readFileSync(new URL('../components/check-runner/tracked-source.ts', import.meta.url))).digest('hex') };
 const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }).trim();
 
 function identity() {
   try {
-    const status = git('-c', 'core.fsmonitor=false', 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=none');
+    const status = git('--no-optional-locks', '-c', 'core.fsmonitor=false', 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=none');
     const hidden = git('ls-files', '-v', '-z').split('\0').some(record => /^[a-zS] /.test(record));
-    return { commit: git('rev-parse', 'HEAD'), tree: git('rev-parse', 'HEAD^{tree}'), clean: status === '' && !hidden, statusSha256: digest(status), diffSha256: digest(git('diff', '--binary', 'HEAD')) };
+    const commit = git('rev-parse', 'HEAD'), tree = git('rev-parse', commit + '^{tree}');
+    return { commit, tree, clean: status === '' && !hidden && matchesTrackedTree(root, tree), statusSha256: digest(status), diffSha256: digest(git('diff', '--binary', 'HEAD')) };
   } catch { return { status: 'unavailable', reason: 'Git source identity is unavailable' }; }
 }
 

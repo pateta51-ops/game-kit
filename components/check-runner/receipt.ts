@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
+import { matchesTrackedTree } from './tracked-source.ts';
 
 export interface ReceiptConfig {
   readonly output: string;
@@ -51,8 +52,10 @@ interface Receipt {
 class StaleBindingError extends Error {}
 const sha = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
 const git = (root: string, ...args: string[]): string => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }).trim();
+const parentPart = /^\.\.$/;
+const outside = (file: string): boolean => path.isAbsolute(file) || parentPart.test(file.split(path.sep, 1)[0] ?? '');
 function relative(file: string): string {
-  if (typeof file !== 'string' || !file || /[:\0]/.test(file) || path.isAbsolute(file) || file.split(/[\\/]/).some(p => p === '..' || p === ''))
+  if (typeof file !== 'string' || !file || /[:\0]/.test(file) || path.isAbsolute(file) || file.split(/[\\/]/).some(p => parentPart.test(p) || p === ''))
     throw new Error('receipt paths must be relative files inside the consumer');
   const normalized = path.posix.normalize(file.replace(/\\/g, '/'));
   if (normalized === '.') throw new Error('receipt paths must name files');
@@ -67,23 +70,26 @@ function target(root: string, file: string): string {
 function identity(root: string, file: string): FileIdentity {
   const name = relative(file), resolved = realpathSync(path.join(root, name));
   const from = path.relative(root, resolved);
-  if (from === '..' || from.startsWith('..' + path.sep) || path.isAbsolute(from)) throw new Error('receipt input escapes the consumer');
+  if (outside(from)) throw new Error('receipt input escapes the consumer');
   return { path: name, sha256: sha(readFileSync(resolved)) };
 }
 function binding(root: string, definition: Receipt['definition']): Binding {
   if (realpathSync(git(root, 'rev-parse', '--show-toplevel')) !== root) throw new Error('receipt needs the consumer repository root');
   if (git(root, 'ls-files', '-v', '-z').split('\0').some(record => /^[a-zS] /.test(record)))
     throw new StaleBindingError('receipt cannot verify source with assume-unchanged or skip-worktree entries');
-  if (git(root, '-c', 'core.fsmonitor=false', 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=none')) throw new StaleBindingError('receipt needs a clean consumer source tree');
+  const commit = git(root, 'rev-parse', 'HEAD');
+  const tree = git(root, 'rev-parse', commit + '^{tree}');
+  if (git(root, '--no-optional-locks', '-c', 'core.fsmonitor=false', 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=none') || !matchesTrackedTree(root, tree))
+    throw new StaleBindingError('receipt needs a clean consumer source tree');
   const kit = identity(root, definition.kitLock ?? 'kit/kit.lock.json');
   const lock = JSON.parse(readFileSync(path.join(root, kit.path), 'utf8')) as { commit?: unknown };
   if (typeof lock.commit !== 'string' || !/^(?:[a-f\d]{40}|[a-f\d]{64})$/.test(lock.commit)) throw new Error('receipt needs a full locked kit commit');
   return {
-    source: { commit: git(root, 'rev-parse', 'HEAD'), tree: git(root, 'rev-parse', 'HEAD^{tree}') },
+    source: { commit, tree },
     kit: { ...kit, commit: lock.commit },
     spec: identity(root, definition.spec), acceptance: identity(root, definition.acceptance),
     config: identity(root, definition.config), package: identity(root, 'package.json'),
-    producer: ['check-runner.ts', 'receipt.ts'].map(file => sha(readFileSync(path.join(import.meta.dirname, file)))),
+    producer: ['check-runner.ts', 'receipt.ts', 'tracked-source.ts'].map(file => sha(readFileSync(path.join(import.meta.dirname, file)))),
   };
 }
 function status(commands: readonly Command[]): Status {
@@ -102,14 +108,14 @@ export function acceptanceReceipt(config: ReceiptConfig, configFile: string, scr
   if (new Set(files.map(file => target(root, file))).size !== files.length)
     throw new Error('receipt output and bound inputs must be distinct files');
   const destination = path.relative(root, target(root, definition.output));
-  if (destination === '..' || destination.startsWith('..' + path.sep) || path.isAbsolute(destination)
+  if (outside(destination)
     || destination.split(path.sep).some(part => ['.git', 'node_modules'].includes(part)) || destination.split(path.sep)[0] === 'kit')
     throw new Error('receipt output must stay outside kit and repository internals');
   git(root, 'check-ignore', '--quiet', definition.output);
   const initial = binding(root, definition);
   mkdirSync(path.dirname(output), { recursive: true });
   const parent = path.relative(root, realpathSync(path.dirname(output)));
-  if (parent === '..' || parent.startsWith('..' + path.sep) || path.isAbsolute(parent) || existsSync(output) && lstatSync(output).isSymbolicLink())
+  if (outside(parent) || existsSync(output) && lstatSync(output).isSymbolicLink())
     throw new Error('receipt output escapes the consumer');
   const receipt: Receipt = { schemaVersion: 1, definition, binding: initial, startedAt: new Date().toISOString(), completedAt: null, cancelled: false,
     status: 'not-run', commands: order.map(script => ({ script, command: scripts[script] ?? '', status: 'not-run', code: null, ms: null, output: null })), problems: [] };

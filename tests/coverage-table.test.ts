@@ -92,6 +92,26 @@ describe('coverage history evidence', () => {
     expect(f.read().execution.binding.status).toBe('matched');
   });
 
+  it('rejects a cached tracked edit outside the files named in the coverage summary', () => {
+    const f = fixture('cached-source');
+    const script = path.join(f.dir, 'script.mjs');
+    const timestamp = new Date('2020-01-01T00:00:00Z');
+    f.git('config', 'core.trustctime', 'false');
+    f.git('config', 'core.checkStat', 'minimal');
+    fs.writeFileSync(script, "console.log('first');\n");
+    fs.utimesSync(script, timestamp, timestamp);
+    f.git('add', 'script.mjs');
+    f.git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Add uncovered tracked source');
+    expect(f.run('--capture', f.start).status).toBe(0);
+    fs.writeFileSync(script, "console.log('other');\n");
+    fs.utimesSync(script, timestamp, timestamp);
+    expect(f.git('status', '--porcelain')).toBe('');
+    f.writeSummary();
+    const result = f.run('--started', f.start, '--check-outcome', 'success');
+    expect(result.status).toBe(1);
+    expect(f.read()).toMatchObject({ source: { clean: false }, execution: { binding: { status: 'invalid' } } });
+  });
+
   it.each(['missing', 'malformed', 'bad-counts'] as const)('reports %s summary as unavailable or invalid, with no zero-coverage fiction', kind => {
     const f = fixture(kind);
     if (kind !== 'missing') {
