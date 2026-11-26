@@ -1,12 +1,12 @@
 import { useEffect, useEffectEvent, useId, useRef, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { activeOverlay, isActiveElement } from '../ui-helpers/promptKeys.ts';
+import { activeModal, isActiveElement } from '../ui-helpers/promptKeys.ts';
 import './modal-dialog.css';
 
+const NATIVE_SUBTREE = 'iframe, audio[controls], video[controls]';
 const FOCUSABLE =
-  'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex], [contenteditable]';
-const MODAL = '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]';
-const keyboardOwner = (): Element | null => activeOverlay(document, MODAL) as Element | null;
+  `a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex], [contenteditable], ${NATIVE_SUBTREE}`;
+const tabGuardStyle: CSSProperties = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' };
 const editable = (element: Element | null): boolean => {
   for (let at = element; at; at = at.parentElement) {
     const value = at.getAttribute('contenteditable')?.toLowerCase();
@@ -26,6 +26,7 @@ const available = (el: HTMLElement): boolean => {
 const tabStop = (el: HTMLElement): boolean => {
   if (!available(el)) return false;
   if (el.hasAttribute('tabindex') || el.matches('a[href], button, input, select, textarea')) return el.tabIndex >= 0;
+  if (el.matches(NATIVE_SUBTREE)) return true;
   if (el.matches('details > summary') && el.parentElement?.querySelector(':scope > summary') === el) return true;
   return editable(el) && !editable(el.parentElement);
 };
@@ -37,10 +38,13 @@ const sameGroup = (a: HTMLInputElement, b: Element | null): boolean =>
 function tabOrder(panel: HTMLElement, backwards = false): HTMLElement[] {
   const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(tabStop);
   const radios = items.filter(namedRadio);
+  const checked = Array.from(panel.ownerDocument.querySelectorAll<HTMLInputElement>('input[type="radio"]:checked'));
   return items.filter((el) => {
     if (!namedRadio(el)) return true;
+    const selected = checked.find((radio) => sameGroup(el, radio));
+    if (selected) return selected === el;
     const group = radios.filter((radio) => sameGroup(el, radio));
-    return el === (group.find((radio) => radio.checked) ?? (backwards ? group.at(-1) : group[0]));
+    return el === (backwards ? group.at(-1) : group[0]);
   }).sort((a, b) => tabRank(a) - tabRank(b));
 }
 let openCount = 0;
@@ -60,6 +64,12 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
   const dialog = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const close = useEffectEvent(onClose);
+  const wrap = (backwards: boolean) => {
+    const panel = dialog.current;
+    if (!panel || activeModal(document) !== panel) return;
+    const items = tabOrder(panel, backwards);
+    ((backwards ? items.at(-1) : items[0]) ?? panel).focus({ preventScroll: true });
+  };
 
   useEffect(() => {
     const panel = dialog.current;
@@ -77,7 +87,7 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
     if (!preferred) (tabOrder(panel)[0] ?? panel).focus({ preventScroll: true });
 
     const onKey = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || keyboardOwner() !== panel) return;
+      if (event.defaultPrevented || activeModal(document) !== panel) return;
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
@@ -85,6 +95,7 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
       } else if (event.key === 'Tab') {
         const backwards = event.shiftKey;
         const items = tabOrder(panel, backwards), at = document.activeElement;
+        if (at?.matches(NATIVE_SUBTREE)) return;
         const start = (backwards ? items.at(-1) : items[0]) ?? panel;
         const index = items.findIndex((el) => el === at || (namedRadio(el) && sameGroup(el, at)));
         const ordered = (items[0]?.tabIndex ?? 0) > 0;
@@ -110,7 +121,7 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
     return () => {
       document.removeEventListener('keydown', onKey, true);
       if (--openCount === 0) document.body.style.overflow = previousOverflow;
-      const front = keyboardOwner();
+      const front = activeModal(document) as Element | null;
       if (opener?.isConnected && (!front || front.contains(opener))) opener.focus({ preventScroll: true });
     };
   }, [open]);
@@ -127,9 +138,11 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
       }}
     >
       <div ref={dialog} className="kc-modal" tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <span tabIndex={0} aria-hidden="true" style={tabGuardStyle} onFocus={() => wrap(true)} />
         <h2 className="kc-modal-title" id={titleId}>{title}</h2>
         <div className="kc-modal-body">{children}</div>
         {actions == null ? null : <div className="kc-modal-actions">{actions}</div>}
+        <span tabIndex={0} aria-hidden="true" style={tabGuardStyle} onFocus={() => wrap(false)} />
       </div>
     </div>,
     document.body,

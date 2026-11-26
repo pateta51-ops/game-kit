@@ -11,7 +11,7 @@ const prompt = { id: 1, kind: 'move', min: 1, max: 1, options: [{ id: 'card', en
 function Board() {
   const [modal, setModal] = useState(false);
   const [ordered, setOrdered] = useState(false);
-  const [native, setNative] = useState<'radio' | 'disclosure' | null>(null);
+  const [native, setNative] = useState<'radio' | 'disclosure' | 'shared-radio' | 'frame' | null>(null);
   const [nested, setNested] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [numbers, setNumbers] = useState(0);
@@ -40,7 +40,11 @@ function Board() {
       <button tabIndex={2} onClick={() => setOrdered(true)}>Open ordered modal</button>
       <button onClick={() => setNative('radio')}>Open radio modal</button>
       <button onClick={() => setNative('disclosure')}>Open disclosure modal</button>
+      <button onClick={() => setNative('shared-radio')}>Open shared radio modal</button>
+      <button onClick={() => setNative('frame')}>Open frame modal</button>
       <button onClick={() => setSheet(true)}>Open sheet</button>
+      <label>Background choice <input type="radio" name="shared-choice" defaultChecked /></label>
+      <details><summary>Board disclosure</summary>Board explanation</details>
       <label>Board note <input aria-label="Board note" /></label>
       <output data-testid="numbers">{numbers}</output>
       <output data-testid="phases">{phases}</output>
@@ -58,6 +62,7 @@ function Board() {
     </main>
     {sheet && <Sheet title="Board sheet" slideMs={0} onClose={() => setSheet(false)}>
       <button onClick={() => setModal(true)}>Modal above sheet</button>
+      <section role="dialog" aria-modal="false" aria-label="Sheet support"><button>Sheet support action</button></section>
     </Sheet>}
     <Modal open={modal} title="Board decision" speed={0} onClose={() => setModal(false)}
       actions={<button onClick={() => setModal(false)}>Close modal</button>}>
@@ -86,6 +91,12 @@ function Board() {
       {native === 'radio' ? <>
         <label>First choice <input type="radio" name="modal-choice" defaultChecked /></label>
         <label>Second choice <input type="radio" name="modal-choice" /></label>
+      </> : native === 'shared-radio' ? <>
+        <button>Local action</button>
+        <label>Local choice <input type="radio" name="shared-choice" /></label>
+      </> : native === 'frame' ? <>
+        <button>Before frame</button>
+        <iframe title="Embedded controls" srcDoc="<button>Frame action</button>" />
       </> : <details><summary>Show explanation</summary><button>Hidden action</button></details>}
     </Modal>
   </>;

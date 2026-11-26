@@ -136,6 +136,60 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
     } finally { await page.close(); }
   });
 
+  it('wraps past an unchecked modal radio when its checked group member is on the background board', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open shared radio modal' }).click();
+      const local = page.getByRole('button', { name: 'Local action' });
+      await local.focus();
+      await page.keyboard.press('Tab');
+      expect(await local.evaluate((el) => el === document.activeElement)).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it('follows native Tab into a final iframe and wraps after its last control', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open frame modal' }).click();
+      const before = page.getByRole('button', { name: 'Before frame' });
+      const iframe = page.locator('iframe[title="Embedded controls"]');
+      const embedded = iframe.contentFrame().getByRole('button', { name: 'Frame action' });
+      await embedded.waitFor();
+      await before.focus();
+      await page.keyboard.press('Tab');
+      expect(await embedded.evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Tab');
+      expect(await before.evaluate((el) => el === document.activeElement)).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it('lets the enclosing sheet handle Escape from a nested nonmodal dialog', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open sheet', exact: true }).click();
+      await page.getByRole('button', { name: 'Sheet support action' }).focus();
+      await page.keyboard.press('Escape');
+      expect(await page.getByRole('dialog', { name: 'Board sheet', exact: true }).isVisible()).toBe(false);
+      expect(await page.getByTestId('clears').textContent()).toBe('0');
+    } finally { await page.close(); }
+  });
+
+  it('retains native Enter on a board disclosure when a board pick is armed', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Arm board pick' }).click();
+      await page.locator('summary').filter({ hasText: 'Board disclosure' }).focus();
+      await page.keyboard.press('Enter');
+      expect(await page.locator('details[open]').filter({ hasText: 'Board disclosure' }).count()).toBe(1);
+      expect(await page.getByTestId('answers').textContent()).toBe('0');
+      expect(await page.getByTestId('armed').textContent()).toBe('card');
+    } finally { await page.close(); }
+  });
+
   it('focuses the summary of a closed disclosure and tab-traps its visible controls', async () => {
     const page = await browser.newPage();
     try {

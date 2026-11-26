@@ -22,7 +22,7 @@ Small screen helpers with no look and no game types. The stores are zustand vani
 6. Keep every bind's returned unbind and call it on teardown (`bindPromptKeys`, `bindPlayKeys`, `bindLinkTooltip`).
 7. In `bindPlayKeys`, do not map the reserved keys 1-9, Enter, Escape, `?` or arrows in `board`: it throws. Pass `paused: () => help.getState().open` to `bindPromptKeys` so Escape closes help first.
 8. Keep the game's own words, keys, never-list, cost function and icon table out of the helpers: the game passes them in.
-9. Give custom overlays a dialog role or pass their selector as `overlay`. Only active overlays suppress board shortcuts: hidden, inert, aria-hidden and CSS-hidden ancestors are ignored. Use `activeOverlay` for other keyboard owners so they follow the same rule.
+9. Give custom overlays a dialog role or pass their selector as `overlay`. Only active overlays suppress board shortcuts: hidden, inert, aria-hidden and CSS-hidden ancestors are ignored. Use `activeOverlay` for other keyboard owners so they follow the same rule. Enter on a native disclosure summary keeps its own action.
 
 **Common mistakes:**
 - Searching rule ids with `sheetMatching`: it only sees printed words by design.

@@ -58,7 +58,7 @@ export const isTyping = (target: unknown): boolean =>
   ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag(target));
 
 export const isControl = (target: unknown): boolean => {
-  if (['BUTTON', 'A'].includes(tag(target))) return true;
+  if (['BUTTON', 'A', 'SUMMARY'].includes(tag(target))) return true;
   const get = (target as { getAttribute?: unknown } | null)?.getAttribute;
   return typeof get === 'function' && (get as (n: string) => unknown).call(target, 'role') === 'button';
 };
@@ -81,6 +81,10 @@ export function isActiveElement(node: unknown): boolean {
 export function activeOverlay(root: KeyRoot, selector = '[role="dialog"], [role="alertdialog"]'): unknown {
   const nodes = root.querySelectorAll ? Array.from(root.querySelectorAll(selector)) : [root.querySelector(selector)];
   return nodes.findLast(isActiveElement) ?? null;
+}
+
+export function activeModal(root: KeyRoot): unknown {
+  return activeOverlay(root, '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]');
 }
 
 /** Returns the unbind. */
