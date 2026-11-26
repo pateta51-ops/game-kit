@@ -11,6 +11,7 @@ const prompt = { id: 1, kind: 'move', min: 1, max: 1, options: [{ id: 'card', en
 function Board() {
   const [modal, setModal] = useState(false);
   const [ordered, setOrdered] = useState(false);
+  const [native, setNative] = useState<'radio' | 'disclosure' | null>(null);
   const [nested, setNested] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [numbers, setNumbers] = useState(0);
@@ -37,6 +38,8 @@ function Board() {
       </div>
       <button onClick={() => setModal(true)}>Open modal</button>
       <button tabIndex={2} onClick={() => setOrdered(true)}>Open ordered modal</button>
+      <button onClick={() => setNative('radio')}>Open radio modal</button>
+      <button onClick={() => setNative('disclosure')}>Open disclosure modal</button>
       <button onClick={() => setSheet(true)}>Open sheet</button>
       <label>Board note <input aria-label="Board note" /></label>
       <output data-testid="numbers">{numbers}</output>
@@ -49,7 +52,8 @@ function Board() {
       <HostStack host={<strong>Host</strong>} w={120} h={160} mode="fan" fanStep={0.4} ms={0}
         attachments={[{ key: 'read', node: <span>Readable attachment</span> },
           { key: 'child', node: <button onClick={() => setChildActions((n) => n + 1)}>Attachment action</button> },
-          { key: 'label', node: <label>Toggle attachment<input type="checkbox" onChange={() => setChildActions((n) => n + 1)} /></label> }]}
+          { key: 'label', node: <label>Toggle attachment<input type="checkbox" onChange={() => setChildActions((n) => n + 1)} /></label> },
+          { key: 'disclosure', node: <details><summary>Attachment details</summary>Details</details> }]}
         onRead={() => setReads((n) => n + 1)} />
     </main>
     {sheet && <Sheet title="Board sheet" slideMs={0} onClose={() => setSheet(false)}>
@@ -77,6 +81,12 @@ function Board() {
       <section role="dialog" aria-modal="false" aria-label="Supporting choices">
         <button tabIndex={1}>First priority</button>
       </section>
+    </Modal>
+    <Modal open={native !== null} title="Native controls" speed={0} onClose={() => setNative(null)}>
+      {native === 'radio' ? <>
+        <label>First choice <input type="radio" name="modal-choice" defaultChecked /></label>
+        <label>Second choice <input type="radio" name="modal-choice" /></label>
+      </> : <details><summary>Show explanation</summary><button>Hidden action</button></details>}
     </Modal>
   </>;
 }

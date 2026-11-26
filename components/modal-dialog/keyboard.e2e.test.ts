@@ -122,6 +122,65 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
     } finally { await page.close(); }
   });
 
+  it('wraps around the checked member of a radio group without leaving the modal', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open radio modal' }).click();
+      const checked = page.getByRole('radio', { name: 'First choice' });
+      await checked.focus();
+      await page.keyboard.press('Tab');
+      expect(await checked.evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Shift+Tab');
+      expect(await checked.evaluate((el) => el === document.activeElement)).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it('focuses the summary of a closed disclosure and tab-traps its visible controls', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open disclosure modal' }).click();
+      const summary = page.locator('summary').filter({ hasText: 'Show explanation' });
+      expect(await summary.evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Tab');
+      expect(await summary.evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Enter');
+      await page.keyboard.press('Tab');
+      expect(await page.getByRole('button', { name: 'Hidden action' }).evaluate((el) => el === document.activeElement)).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it('closes the active modal even when a later nonmodal dialog is visible', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      const opener = page.getByRole('button', { name: 'Open ordered modal' });
+      await opener.click();
+      await page.evaluate(() => {
+        const nonmodal = document.createElement('section');
+        nonmodal.setAttribute('role', 'dialog');
+        nonmodal.setAttribute('aria-modal', 'false');
+        nonmodal.textContent = 'External panel';
+        document.body.append(nonmodal);
+      });
+      await page.keyboard.press('Escape');
+      expect(await page.getByRole('dialog', { name: 'Ordered decision' }).isVisible()).toBe(false);
+      expect(await opener.evaluate((el) => el === document.activeElement)).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it('toggles a nested attachment disclosure without reading the attachment', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.locator('summary').filter({ hasText: 'Attachment details' }).focus();
+      await page.keyboard.press('Enter');
+      expect(await page.locator('details[open]').filter({ hasText: 'Attachment details' }).count()).toBe(1);
+      expect(await page.getByTestId('reads').textContent()).toBe('0');
+    } finally { await page.close(); }
+  });
+
   it('reads attachments once per key and leaves native nested button activation alone', async () => {
     const page = await browser.newPage();
     try {

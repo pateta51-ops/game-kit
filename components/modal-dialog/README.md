@@ -15,7 +15,7 @@ A React modal over the board and a confirm dialog built on it.
 3. Pass `speed` from settings (default 1, 0 = instant fade).
 4. Set the `--kc-modal-*` variables on `body` or an ancestor of the portal to match the game's look.
 5. Use `closeOnBackdrop={false}` where an accidental click must not dismiss.
-6. Keep nested dialogs in opening order. The last visible, non-inert modal owns Escape and Tab, including keys from a nonmodal dialog within it. Background prompt/play keys and armed board picks pause while it is open.
+6. Keep nested dialogs in opening order. The last visible, non-inert dialog with `aria-modal="true"` owns Escape and Tab. Nonmodal dialogs leave this ownership with the modal. Background prompt/play keys and armed board picks pause while it is open.
 
 **Common mistakes:**
 - Leaving `open` true after `onConfirm`, `onCancel` or `onClose`: neither dialog closes itself, so it stays up.

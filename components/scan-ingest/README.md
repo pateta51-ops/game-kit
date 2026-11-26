@@ -24,7 +24,7 @@ content pack. Real scans never enter the kit; the tests draw their own sheets.
 6. Real scans never enter the kit (its tests draw their own sheets); keep the game's plug-in and tools in the game, outside `kit/`.
 7. For printed boards (`index.ts`, `ui.ts`) pass the game's scan, box list and state: `ScanBoard` draws the scan and calls `render(id, sizePx)` in each box; frames and colours stay in the game.
 8. Tesseract is optional and only for reading print; without it callers get None and one warning.
-9. Treat `loadGeometry` returning `null` as an unsuccessful attempt: keep fallback geometry and call again when the image is available. Concurrent calls share one attempt; only successful geometry is cached. Change the key when the scan or its asks change.
+9. Treat `loadGeometry` returning `null` as an unsuccessful attempt: keep fallback geometry and call again when the image is available. Concurrent calls share one attempt; only successful geometry is cached. A failed optional store read falls back to decoding, and a failed store write leaves decoded geometry usable. Change the key when the scan or its asks change.
 
 **Common mistakes:**
 - A `--plugin` class that is not a `Plugin` subclass: refused.

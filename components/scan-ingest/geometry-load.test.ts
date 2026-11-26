@@ -81,4 +81,18 @@ describe('loadGeometry', () => {
     images[0]!.onload();
     expect((await next)?.scanW).toBe(3);
   });
+
+  it.each(['get', 'set'] as const)('keeps successful geometry when store.%s throws synchronously', async (method) => {
+    const { images } = decoder();
+    const fail = (): never => { throw new Error('store unavailable'); };
+    const store: GeometryStore = { get: () => Promise.resolve(undefined), set: () => Promise.resolve(), [method]: fail };
+    const key = `sync-${method}`;
+    const pending = loadGeometry('/scan.png', key, { boxes: [] }, store);
+    await vi.waitFor(() => { expect(images).toHaveLength(1); }, { interval: 5, timeout: 150 });
+    images[0]!.onload();
+    const geometry = await pending;
+    expect(geometry?.scanW).toBe(3);
+    expect(await loadGeometry('/scan.png', key, { boxes: [] }, store)).toBe(geometry);
+    expect(images).toHaveLength(1);
+  });
 });

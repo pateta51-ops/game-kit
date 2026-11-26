@@ -4,12 +4,9 @@ import { activeOverlay, isActiveElement } from '../ui-helpers/promptKeys.ts';
 import './modal-dialog.css';
 
 const FOCUSABLE =
-  'a[href], button, input:not([type="hidden"]), select, textarea, [tabindex], [contenteditable]';
+  'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex], [contenteditable]';
 const MODAL = '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]';
-const keyboardOwner = (): Element | null => {
-  const active = activeOverlay(document) as Element | null;
-  return active?.closest(MODAL) ?? active;
-};
+const keyboardOwner = (): Element | null => activeOverlay(document, MODAL) as Element | null;
 const editable = (element: Element | null): boolean => {
   for (let at = element; at; at = at.parentElement) {
     const value = at.getAttribute('contenteditable')?.toLowerCase();
@@ -18,12 +15,34 @@ const editable = (element: Element | null): boolean => {
   }
   return false;
 };
-const tabStop = (el: HTMLElement): boolean => {
+const available = (el: HTMLElement): boolean => {
   if (el.matches(':disabled') || !isActiveElement(el)) return false;
+  for (let details = el.parentElement?.closest('details:not([open])'); details;
+    details = details.parentElement?.closest('details:not([open])')) {
+    if (!details.querySelector(':scope > summary')?.contains(el)) return false;
+  }
+  return true;
+};
+const tabStop = (el: HTMLElement): boolean => {
+  if (!available(el)) return false;
   if (el.hasAttribute('tabindex') || el.matches('a[href], button, input, select, textarea')) return el.tabIndex >= 0;
+  if (el.matches('details > summary') && el.parentElement?.querySelector(':scope > summary') === el) return true;
   return editable(el) && !editable(el.parentElement);
 };
 const tabRank = (el: HTMLElement): number => el.tabIndex > 0 ? el.tabIndex : Number.MAX_SAFE_INTEGER;
+const namedRadio = (el: Element | null): el is HTMLInputElement =>
+  el instanceof HTMLInputElement && el.type === 'radio' && el.name !== '';
+const sameGroup = (a: HTMLInputElement, b: Element | null): boolean =>
+  namedRadio(b) && a.name === b.name && a.form === b.form;
+function tabOrder(panel: HTMLElement, backwards = false): HTMLElement[] {
+  const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(tabStop);
+  const radios = items.filter(namedRadio);
+  return items.filter((el) => {
+    if (!namedRadio(el)) return true;
+    const group = radios.filter((radio) => sameGroup(el, radio));
+    return el === (group.find((radio) => radio.checked) ?? (backwards ? group.at(-1) : group[0]));
+  }).sort((a, b) => tabRank(a) - tabRank(b));
+}
 let openCount = 0;
 let previousOverflow = '';
 
@@ -50,14 +69,12 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
       previousOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
     }
-    const controls = () => Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(tabStop)
-      .sort((a, b) => tabRank(a) - tabRank(b));
     const preferred = Array.from(panel.querySelectorAll<HTMLElement>('[data-autofocus]')).some((el) => {
-      if (el.matches(':disabled') || !isActiveElement(el)) return false;
+      if (!available(el)) return false;
       el.focus({ preventScroll: true });
       return document.activeElement === el;
     });
-    if (!preferred) (controls()[0] ?? panel).focus({ preventScroll: true });
+    if (!preferred) (tabOrder(panel)[0] ?? panel).focus({ preventScroll: true });
 
     const onKey = (event: KeyboardEvent) => {
       if (event.defaultPrevented || keyboardOwner() !== panel) return;
@@ -66,10 +83,10 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
         event.stopPropagation();
         close();
       } else if (event.key === 'Tab') {
-        const items = controls(), at = document.activeElement;
         const backwards = event.shiftKey;
+        const items = tabOrder(panel, backwards), at = document.activeElement;
         const start = (backwards ? items.at(-1) : items[0]) ?? panel;
-        const index = at instanceof HTMLElement ? items.indexOf(at) : -1;
+        const index = items.findIndex((el) => el === at || (namedRadio(el) && sameGroup(el, at)));
         const ordered = (items[0]?.tabIndex ?? 0) > 0;
         let next: HTMLElement | undefined;
         if (at === null || at === panel || !panel.contains(at)) next = start;
