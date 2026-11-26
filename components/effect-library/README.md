@@ -132,6 +132,11 @@ See [Effects by group](#effects-by-group) for available effects and variants, an
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `hideSource` + `hideParts`: choose beat-start or actual actor-start hiding, optionally for selected descendants; restore the source when the run ends
+<!-- /hooks -->
+
 **What it does:** Director-spec effects for the motion frame: registered DOM effects (move, lift, flip, glow, text and more), canvas effects with a particle kit, `countUp`, ambience and many opt-in extras. Browser only.
 - An object option given as `{}` or `true` takes its defaults.
 
@@ -149,6 +154,8 @@ See [Effects by group](#effects-by-group) for available effects and variants, an
 11. To watch every effect play before choosing it, open `gallery/effects.html` in the game-kit checkout (K502). After changing `catalog.json` or this component's code, run `node gallery/build.mjs` and commit the page: `tests/gallery.test.ts` fails when it is stale or misses an entry.
     To see an effect as one picture before choosing it: `gallery/strips/<id>.png` (five frames with the time under each) and `gallery/strips/group-<group>.png` (one sheet per group); a new effect arrives with its strip (`node gallery/build.mjs --strips`).
 12. K506: specs use the new ids; an old id (table "Old ids" below, `OLD_IDS`) stays registered forever beside its new id (both in `names()`) and plays the same kit verb with every option. Change a name in a spec only when you edit that spec for another reason. The last registration of a name wins, as before: a game's own verb under an old id registered after `registerEffects` wins for that old id; one under a new id registered before `registerEffects` is kept (the old id still plays the kit's). `catalog.json` entries also carry `notThis` (look-alikes, each `{ id, diff }`), `pairs` (effects that go with it) and `impactMs` (when the hit lands, `null` for none; 0 to `ms`); ids there may add an option after `--` as strip names do. `node kit.mjs effects --used <folder>...` prints `id: N uses, M registrations` for each id and old id in a game's specs and code.
+
+13. (K329) Set per-actor `hideSource` to `'step'` when the live source must stay visible until that actor starts, or `'start'` to hide it for the whole beat. Pass those actors to `layer.start(run, actors)` from `onBeatStart`; `hideParts` restricts the hide to matching descendants. The layer follows the player's `onActorStart` dispatch subscription automatically. A soft skip never hides an actor whose step did not start, and `onCut: 'run'` hides at its rescheduled start. Keep `layer.end(run)` in `onBeatEnd` so normal completion and skips restore the original visibility and priority.
 
 **Common mistakes:**
 - Reading `style.transform` for `move` or `scale`: they animate `translate` and `scale`.
@@ -267,7 +274,9 @@ Look file (opt-in): `looks/rise-pulse.css`, class `fx-rise-pulse` on a positione
   `holdMs` delays the turn and the face swaps at the edge. `squash: false` swaps immediately.
 - `shake-group` accepts `actors` (ids of beat actors, animated as clones; K460: an id the spec did not declare gets its own stand-in at the step's rect) or a CSS `selector` (live elements). `amplitude` and `crossAmplitude` are horizontal and vertical offsets in pixels, and `frames` sets the number of keyframes.
 - `unroll` reveals an actor from scale zero on `axis: 'x'` or `'y'` with a CSS `origin` (left for x, top for y by default).
-- Pass the actors to `layer.start(run, actors)` in `onBeatStart`. An `EffectActor` with `hideSource: 'start'` hides its resolved source at beat start. With `hideSource: 'step'`, it hides the source at the actor's first step. `layer.end(run)` or `layer.clear()` restores the source.
+- Pass the actors to `layer.start(run, actors)` in `onBeatStart`. An `EffectActor` with `hideSource: 'start'` hides its resolved source at beat start. With `hideSource: 'step'`, it hides the source immediately before the actor's first actual registered verb dispatch. A cancelled future step or a missing verb never hides the source; a rescheduled `onCut: 'run'` step hides it when it really starts. `layer.end(run)` or `layer.clear()` restores sources and unsubscribes pending starts. Overlapping runs keep a source hidden until every run that hid it releases it.
+
+K329's original `hideSourceUntil: 'start'` proposal is delivered through the existing `hideSource: 'step'` API: the source remains visible before takeoff and hidden while its stand-in plays. A committed redraw (`whenReady` or `awaitRects`) may start with an empty timeline; the step policy waits for dispatch, then resolves and clones the now-drawn source. Ordinary runs retain their pre-commit clones. Existing beat-start behavior is unchanged. For compatibility, a manually constructed `Run` without `onActorStart` retains the old timer at the first timeline call. That fallback cannot know when a custom controller cancels or reschedules a call. A custom controller can supply the optional subscription and emit each actor's first registered verb dispatch itself to use actual-start timing; unsubscribe must remove the listener. Actors with no timeline step are never hidden by the step policy.
 
 The game passes its flight and look settings with each step. The defaults are game-free. The [motion lab](fake/retrofit/index.html?flights) supplies neutral demo values.
 

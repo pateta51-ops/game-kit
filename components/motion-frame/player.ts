@@ -17,6 +17,8 @@ export interface Run<C = undefined> {
   data?: unknown;
   /** set for a beat of `playRun`: its place, and k of n for a chip ("2 of 3") */
   place?: RunPlace;
+  /** First actual registered-verb dispatch for each actor; returns an unsubscribe. The player supplies this before onBeatStart. */
+  onActorStart?(listener: (actor: string) => void): () => void;
 }
 export interface RunPlace {
   at: Place;
@@ -145,6 +147,7 @@ interface Current<C> {
   run: Run<C>;
   timers: Set<Timer>;
   open: Set<() => void>;
+  actorStarts: Set<(actor: string) => void>;
   leaving: boolean;
   waiting: Set<() => void>;
   after?: () => void;
@@ -266,6 +269,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
   const makeRun = (item: Item, timeline: Timeline): Run<C> => ({
     id: ++runs, timeline, context: o.context, ...(item.place && { place: item.place }),
     ...(item.data !== undefined && { data: item.data }),
+    onActorStart: () => () => undefined,
   });
   const emptyTimeline = (id: string): Timeline => ({ id, ms: 0, calls: [], actors: [], cues: [] });
   const variant = (item: Item): MotionSpec =>
@@ -322,6 +326,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     c.timers.forEach((t) => {
       clearTimeout(t);
     });
+    c.actorStarts.clear();
     commit(c.item);
     c.open.forEach((f) => {
       safe(`${c.run.timeline.id} finish`, f);
@@ -337,8 +342,10 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     const run = makeRun(item, redraw ? emptyTimeline(spec.id) : build());
     const timers = new Set<Timer>();
     const open = new Set<() => void>();
+    const actorStarts = new Set<(actor: string) => void>(), startedActors = new Set<string>();
+    run.onActorStart = listener => { actorStarts.add(listener); return () => { actorStarts.delete(listener); }; };
     const fired = new Set<number>();
-    const me: Current<C> = { item, run, timers, open, leaving: false, waiting: new Set(), drop: (w) => drop(spec, w, fired) };
+    const me: Current<C> = { item, run, timers, open, actorStarts, leaving: false, waiting: new Set(), drop: (w) => drop(spec, w, fired) };
     live.add(me);
     if (!parallel) cur = me;
     const at = (ms: number, f: () => void): Timer => {
@@ -391,7 +398,15 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
         atT(off + call.t + base, () => {
           step.started = true;
           safe(`${spec.id} ${call.verb}`, () => {
-            done = o.verbs.get(call.verb)?.(call, run);
+            const verb = o.verbs.get(call.verb);
+            if (typeof verb === 'function' && !startedActors.has(call.actor)) {
+              startedActors.add(call.actor);
+              for (const listener of [...actorStarts]) {
+                if (!live.has(me)) return;
+                if (actorStarts.has(listener)) safe(`${spec.id} actor ${call.actor}`, () => listener(call.actor));
+              }
+            }
+            if (live.has(me)) done = verb?.(call, run);
           });
           if (done === undefined) return;
           open.add(done);
