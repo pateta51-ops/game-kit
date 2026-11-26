@@ -42,21 +42,22 @@ const namedRadio = (el: Element | null): el is HTMLInputElement =>
   el?.matches('input[type="radio"]') === true && (el as HTMLInputElement).name !== '';
 const sameGroup = (a: HTMLInputElement, b: Element | null): boolean =>
   namedRadio(b) && a.name === b.name && a.form === b.form && a.getRootNode() === b.getRootNode();
+function* focusTree(parent: ParentNode, includeShadows = false): Generator<HTMLElement> {
+  const assigned = (parent as HTMLSlotElement).assignedElements?.({ flatten: true });
+  for (const child of assigned?.length ? assigned : parent.children) {
+    const el = child as HTMLElement;
+    yield el;
+    if (!el.shadowRoot) yield* focusTree(el, includeShadows);
+    else if (includeShadows && available(el)) yield* focusTree(el.shadowRoot, includeShadows);
+  }
+}
 function tabOrder(panel: HTMLElement | ShadowRoot, backwards = false): HTMLElement[] {
   const items: HTMLElement[] = [];
-  const collect = (parent: ParentNode) => {
-    const assigned = (parent as HTMLSlotElement).assignedElements?.({ flatten: true });
-    for (const child of assigned?.length ? assigned : parent.children) {
-      const el = child as HTMLElement;
-      if (el.shadowRoot) {
-        if (available(el) && (!el.hasAttribute('tabindex') || el.tabIndex >= 0)) items.push(el);
-      } else {
-        if (el.matches(FOCUSABLE) && tabStop(el)) items.push(el);
-        collect(el);
-      }
-    }
-  };
-  collect(panel);
+  for (const el of focusTree(panel)) {
+    if (el.shadowRoot) {
+      if (available(el) && (!el.hasAttribute('tabindex') || el.tabIndex >= 0)) items.push(el);
+    } else if (el.matches(FOCUSABLE) && tabStop(el)) items.push(el);
+  }
   const radios = items.filter(namedRadio);
   const checked = [...new Set(radios.map((el) => el.getRootNode() as Document | ShadowRoot))]
     .flatMap((root) => Array.from(root.querySelectorAll<HTMLInputElement>('input[type="radio"]:checked')));
@@ -77,11 +78,11 @@ function scopeOwner(el: HTMLElement): HTMLElement {
   const root = (el.assignedSlot ?? el).getRootNode();
   return 'host' in root ? scopeOwner((root as ShadowRoot).host as HTMLElement) : el;
 }
-function focusTarget(el: HTMLElement, backwards: boolean): void {
+function focusTarget(el: HTMLElement, backwards: boolean, options?: FocusOptions): void {
   const body = el.localName === 'iframe' ? (el as HTMLIFrameElement).contentDocument?.body : undefined;
   const entry = body && tabOrder(body, backwards).at(backwards ? -1 : 0);
-  if (entry) focusTarget(entry, backwards);
-  else el.focus();
+  if (entry) focusTarget(entry, backwards, options);
+  else el.focus(options);
 }
 let openCount = 0;
 let previousOverflow = '';
@@ -115,12 +116,13 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
       previousOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
     }
-    const preferred = Array.from(panel.querySelectorAll<HTMLElement>('[data-autofocus]')).some((el) => {
-      if (!available(el)) return false;
-      el.focus({ preventScroll: true });
-      return document.activeElement === el;
+    const options = { preventScroll: true };
+    const preferred = Array.from(focusTree(panel, true)).some((el) => {
+      if (!el.hasAttribute('data-autofocus') || !available(el)) return false;
+      focusTarget(el, false, options);
+      return deepActiveElement(document) === el || (el.getRootNode() as Document | ShadowRoot).activeElement === el;
     });
-    if (!preferred) (tabOrder(panel)[0] ?? panel).focus({ preventScroll: true });
+    if (!preferred) focusTarget(tabOrder(panel)[0] ?? panel, false, options);
 
     const frameGuards = new Map<HTMLIFrameElement, [HTMLSpanElement, HTMLSpanElement]>();
     let enteringFrame = false;

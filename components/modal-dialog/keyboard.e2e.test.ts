@@ -103,6 +103,47 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
     } finally { await page.close(); }
   });
 
+  it('focuses the first reachable control when initial Tab order starts with a frame', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      const control = page.frameLocator('iframe[title="First focus frame"]').locator('button');
+      await control.waitFor({ state: 'attached' });
+      await page.getByRole('button', { name: 'Open frame-first modal' }).click();
+      expect(await control.evaluate((el) => document.activeElement === el && document.hasFocus())).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it.for([false, true])('uses the frame fallback when initial focus has no reachable control (opaque: %s)', async (opaque) => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      const frame = page.locator('iframe[title="First focus frame"]');
+      await frame.evaluate((el: HTMLIFrameElement, sandboxed) => {
+        if (sandboxed) el.setAttribute('sandbox', '');
+        el.srcdoc = '<p>No reachable control</p>';
+      }, opaque);
+      await frame.contentFrame().locator('p').waitFor({ state: 'attached' });
+      await page.getByRole('button', { name: 'Open frame-first modal' }).click();
+      expect(await frame.evaluate((el) => document.activeElement === el)).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it('prefers an explicit heading in an open shadow root over the first ordinary tab stop', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.locator('.kc-modal').filter({ hasText: 'Ordered decision' }).evaluate((el) => {
+        el.querySelector('[data-autofocus]')!.removeAttribute('data-autofocus');
+        const host = document.createElement('div');
+        host.attachShadow({ mode: 'open' }).innerHTML = '<h3 tabindex="-1" data-autofocus>Shadow introduction</h3>';
+        el.querySelector('.kc-modal-body')!.append(host);
+      });
+      await page.getByRole('button', { name: 'Open ordered modal' }).click();
+      expect(await page.getByRole('heading', { name: 'Shadow introduction' }).evaluate(ownsShadowFocus)).toBe(true);
+    } finally { await page.close(); }
+  });
+
   it('restores the open-shadow opener when a nested modal closes', async () => {
     const page = await browser.newPage();
     try {
