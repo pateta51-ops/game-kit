@@ -160,4 +160,14 @@ describe('bounded worker briefs',()=>{
     const missing=run({...task,escalation:{owner:'architect'}});
     expect(missing.status).toBe(1);expect(missing.stderr).toContain('escalation.stop');
   });
+  it('requires a line range even when a planning reference is named through an alias',()=>{
+    const {game,task,run}=fixture();
+    const file=process.platform==='win32'?'docs/plan.md':'docs/overview.md';
+    if(process.platform!=='win32') fs.symlinkSync('PLAN.md',path.join(game,file));
+    const whole=run({...task,reads:[{file}]});
+    expect(whole.status).toBe(1);
+    expect(whole.stderr).toContain('requires a line range');
+    const ranged=run({...task,reads:[{file,from:2,to:3}]});
+    expect(ranged.status,ranged.stderr).toBe(0);
+  });
 });
