@@ -69,13 +69,13 @@ function compare(expected, declared, project) {
   return { status: semver.subset(offered, required) ? 'compatible' : 'overlap' }
 }
 
-function plan(dir) {
+export function packagePlan(dir, target) {
   const lock = readObject(fs.readFileSync(path.join(dir, 'kit/kit.lock.json'), 'utf8'), 'kit.lock.json')
   if (typeof lock.ref !== 'string' || !lock.ref || typeof lock.commit !== 'string' || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(lock.commit) ||
       !object(lock.components) || !Object.keys(lock.components).length) {
     throw new Error('kit.lock.json must name a single pinned kit commit and its installed components')
   }
-  const { ref, commit, components } = lock
+  const { ref, commit, components } = target ?? lock
   const kit = path.resolve(import.meta.dirname, '../..')
   const git = (...args) => execFileSync('git', ['--no-replace-objects', '-C', kit, ...args], {
     encoding: 'utf8',
@@ -115,10 +115,12 @@ function plan(dir) {
   return { version: 1, pin: { ref, commit }, project, packages }
 }
 
-if (process.argv.length !== 3) {
-  console.error('usage: node tools/package-plan/plan.mjs <game-dir>')
-  process.exitCode = 2
-} else {
-  try { console.log(JSON.stringify(plan(fs.realpathSync(process.argv[2])), null, 2)) }
-  catch (e) { console.error('package-plan: ' + e.message); process.exitCode = 1 }
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === import.meta.filename) {
+  if (process.argv.length !== 3) {
+    console.error('usage: node tools/package-plan/plan.mjs <game-dir>')
+    process.exitCode = 2
+  } else {
+    try { console.log(JSON.stringify(packagePlan(fs.realpathSync(process.argv[2])), null, 2)) }
+    catch (e) { console.error('package-plan: ' + e.message); process.exitCode = 1 }
+  }
 }
