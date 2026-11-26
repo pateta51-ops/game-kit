@@ -81,6 +81,19 @@ describe('context provenance',()=>{
     fs.writeFileSync(path.join(root,'kit.lock.json'),JSON.stringify(lock));
     expect(()=>query(root)).toThrow('content differs from the tagged commit: kit/sample/README.md');
   });
+  it('rejects a kit linked from another game before certifying source provenance',()=>{
+    const donor=game('v1');
+    const recipient=fs.mkdtempSync(path.join(tmp,'recipient-'));
+    const linked=path.join(recipient,'kit');
+    fs.symlinkSync(donor,linked,process.platform==='win32'?'junction':'dir');
+    expect(()=>query(linked)).toThrow('cannot verify a linked kit directory');
+  });
+  it('can verify a game reached through an alias when kit is local to that game',()=>{
+    const root=game('v1');
+    const alias=path.join(tmp,'game-alias');
+    fs.symlinkSync(path.dirname(root),alias,process.platform==='win32'?'junction':'dir');
+    expect(query(path.join(alias,'kit')).provenance.status).toBe('verified');
+  });
   it('rejects a different pin and never executes the installed verifier',()=>{
     const root=game('v1');
     const lock=JSON.parse(fs.readFileSync(path.join(root,'kit.lock.json'),'utf8'));

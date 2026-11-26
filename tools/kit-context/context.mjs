@@ -34,6 +34,7 @@ function readComponentFile(dir, name) {
 }
 function compilerHost(dir, options, projection) {
   const host=ts.createCompilerHost(options);
+  if(projection) projection=new Map(Array.from(projection,([file,text])=>[path.resolve(file),text]));
   const libDir=real(path.dirname(host.getDefaultLibFileName(options)));
   const libFile=f=>libDir && path.dirname(f)===libDir && /^lib(?:\.[\w.-]+)?\.d\.ts$/.test(path.basename(f));
   const file=f=>{
@@ -214,7 +215,7 @@ export function contextPacket({root=defaultRoot,component,symbol,entry='index.ts
   if (!inside(base,dir)||dir===base) throw new Error('component escapes root');
   const identity=provenance||source!==undefined?{
     schemaVersion:1,tool:{...contextTool(),typescript:ts.version},scope:'api-contract',taskReadiness:'not-assessed',
-    provenance:sourceProvenance({root:base,component,source}),
+    provenance:sourceProvenance({root:path.resolve(root),component,source}),
   }:{};
   const manifestText=readComponentFile(dir,'component.json');
   let manifest;

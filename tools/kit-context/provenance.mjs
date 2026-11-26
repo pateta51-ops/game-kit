@@ -19,6 +19,7 @@ export function sourceProvenance({root,component,source}) {
   if(source===undefined) return {status:'unverified',method:null};
   if(typeof source!=='string'||!source.trim()) throw new Error('source must name a game-kit checkout');
   if(path.basename(root)!=='kit') throw new Error('--source requires --root to name a game\'s vendored kit directory');
+  if(fs.lstatSync(root).isSymbolicLink()) throw new Error('cannot verify a linked kit directory');
   const file=path.join(root,'kit.lock.json');
   const bytes=fs.readFileSync(file);
   let lock;

@@ -152,9 +152,10 @@ describe('bounded worker briefs',()=>{
   });
   it('rejects escaping read symlinks and incomplete decision inputs',()=>{
     const {game,task,run}=fixture();
-    put(path.join(tmp,'outside.md'),'Outside.');
-    fs.symlinkSync(path.join(tmp,'outside.md'),path.join(game,'outside.md'));
-    const outside=run({...task,reads:[{file:'outside.md'}]});
+    const outsideDir=path.join(tmp,'outside');
+    put(path.join(outsideDir,'guide.md'),'Outside.');
+    fs.symlinkSync(outsideDir,path.join(game,'outside'),process.platform==='win32'?'junction':'dir');
+    const outside=run({...task,reads:[{file:'outside/guide.md'}]});
     expect(outside.status).toBe(1);expect(outside.stderr).toContain('escapes game');
     const missing=run({...task,escalation:{owner:'architect'}});
     expect(missing.status).toBe(1);expect(missing.stderr).toContain('escalation.stop');
