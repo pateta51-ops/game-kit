@@ -243,6 +243,12 @@ describe('explicit plan applicability', () => {
     expect(result.code, result.output).toBe(0);
   });
 
+  it('does not let a fenced literal comment opener swallow live phases', () => {
+    const text = PLAN.replace('## 3. Implementation phases', '```html\n<!--\n```\n\n## 3. Implementation phases');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
   it('preserves legacy scenario mentions outside phase blocks', () => {
     const text = PLAN.replace('### Phase 1', 'Overview: SC-02.\n\n### Phase 1').replace('SC-01, SC-02. Implement', 'SC-01. Implement');
     const result = run({ text, noProfile: true, flags: ['--cards-optional', '--depth-optional'] });

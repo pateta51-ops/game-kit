@@ -186,15 +186,24 @@ def applicability() -> dict | None:
 
 def prose(text: str) -> str:
     out, fence = [], None
-    for line in re.sub(r"<!--.*?(?:-->|$)", "", text, flags=re.S).splitlines():
+    comment = False
+    for line in text.splitlines():
         mark = re.match(r"^\s*(`{3,}|~{3,})(.*)$", line)
         if fence is not None:
             if mark and mark.group(1)[0] == fence[0] and len(mark.group(1)) >= fence[1] and not mark.group(2).strip():
                 fence = None
-        elif mark:
+        elif mark and not comment:
             fence = (mark.group(1)[0], len(mark.group(1)))
         else:
-            out.append(line)
+            visible = []
+            for part in re.split(r"(<!--|-->)", line):
+                if part == "<!--":
+                    comment = True
+                elif part == "-->" and comment:
+                    comment = False
+                elif not comment:
+                    visible.append(part)
+            out.append("".join(visible))
     return "\n".join(out)
 
 
