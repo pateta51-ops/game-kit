@@ -1590,7 +1590,7 @@ Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `
 
 ## scaffold
 
-One command makes a working, empty game repo from the kit (K204). Run it from the game-kit checkout; the game's repo does not carry this component.
+Generate an empty starter or a supported, explicitly configured game slice from the kit. Run it from the game-kit checkout; the game's repo does not carry this component.
 
 - **Also called:** Start a new game project
 - **Words:** new, game, start, project, setup, create, repo, starter, scaffold
@@ -1608,6 +1608,13 @@ One command makes a working, empty game repo from the kit (K204). Run it from th
 - **Also called:** Declarative game starter
 - **Words:** declarative game starter, game spec scaffold, pinned declarative project scaffold
 - **Use it when:** Resolve component profiles and generate a pinned, retryable local scaffold from a game specification.
+- **Guide:** [README.md](../components/scaffold/README.md)
+
+### scaffold/courier
+
+- **Also called:** Playable courier assembly
+- **Words:** courier game assembly, playable tactical starter, generate courier rules store simulation, courier plan gates, generated courier acceptance, courier executable rule inventory
+- **Use it when:** Generate the original courier rules, store, public-view UI and simulation from a pinned, bounded configuration; wire its strict non-card plan, executable rule inventory, text and theme gates. Execute the generated acceptance before claiming the game slice passed.
 - **Guide:** [README.md](../components/scaffold/README.md)
 
 ## scan-ingest

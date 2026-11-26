@@ -726,5 +726,11 @@
   { "q": "board pick keyboard", "first": "prompt-host" },
   { "q": "strict noncard plan", "first": "plan-checker/applicability" },
   { "q": "noncard plan applicability", "first": "plan-checker/applicability" },
-  { "q": "validate plan applicability", "first": "plan-checker/applicability" }
+  { "q": "validate plan applicability", "first": "plan-checker/applicability" },
+  { "q": "courier game assembly", "first": "scaffold/courier" },
+  { "q": "playable tactical starter", "first": "scaffold/courier" },
+  { "q": "generate courier rules store simulation", "first": "scaffold/courier" },
+  { "q": "courier plan gates", "first": "scaffold/courier" },
+  { "q": "generated courier acceptance", "first": "scaffold/courier" },
+  { "q": "courier executable rule inventory", "first": "scaffold/courier" }
 ]
