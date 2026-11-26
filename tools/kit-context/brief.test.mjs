@@ -190,4 +190,14 @@ describe('bounded worker briefs',()=>{
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('edit file has multiple hardlinks');
   });
+  it('requires a line range when a planning file is read through a hardlink',()=>{
+    const {game,task,run}=fixture();
+    const file='docs/linked-plan.md';
+    fs.linkSync(path.join(game,'docs','PLAN.md'),path.join(game,file));
+    const whole=run({...task,reads:[{file}]});
+    expect(whole.status).toBe(1);
+    expect(whole.stderr).toContain('requires a line range');
+    const ranged=run({...task,reads:[{file,from:2,to:3}]});
+    expect(ranged.status,ranged.stderr).toBe(0);
+  });
 });

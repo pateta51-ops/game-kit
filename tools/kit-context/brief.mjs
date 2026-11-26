@@ -35,11 +35,12 @@ function gameFile(root,file) {
 function readReference(root,ref) {
   object(ref,['file','from','to'],'read');
   const file=gameFile(root,ref.file);
-  if(!fs.statSync(file,{throwIfNoEntry:false})?.isFile()) throw new Error('read file is missing: '+ref.file);
-  const bytes=fs.readFileSync(file);
+  const stat=fs.statSync(file,{throwIfNoEntry:false});
+  if(!stat?.isFile()) throw new Error('read file is missing: '+ref.file);
   const range=ref.from!==undefined||ref.to!==undefined;
+  if(!range&&(stat.nlink>1||[ref.file,file].some(name=>/^(?:PLAN|CATALOG|SELECTION)\.md$/i.test(path.basename(name))))) throw new Error(ref.file+' requires a line range');
+  const bytes=fs.readFileSync(file);
   if(range&&(!Number.isSafeInteger(ref.from)||!Number.isSafeInteger(ref.to)||ref.from<1||ref.to<ref.from||ref.to>bytes.toString('utf8').split(/\r?\n/).length)) throw new Error('invalid line range: '+ref.file);
-  if(!range&&[ref.file,file].some(name=>/^(?:PLAN|CATALOG|SELECTION)\.md$/i.test(path.basename(name)))) throw new Error(ref.file+' requires a line range');
   return {...ref,sha256:sha(bytes)};
 }
 
