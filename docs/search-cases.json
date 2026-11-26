@@ -786,5 +786,8 @@
   {"q": "custom motion controller actor lifecycle", "first": "motion-frame"},
   {"q": "reject unread dice pattern fields", "first": "dice-patterns"},
   {"q": "dice pattern unsupported key", "first": "dice-patterns"},
-  {"q": "dice pattern unknown option", "first": "dice-patterns"}
+  {"q": "dice pattern unknown option", "first": "dice-patterns"},
+  {"q": "source-bound coverage comparison", "first": "coverage-table"},
+  {"q": "retained coverage baseline", "first": "coverage-table"},
+  {"q": "like-for-like coverage regression", "first": "coverage-table"}
 ]
