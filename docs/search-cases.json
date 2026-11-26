@@ -675,5 +675,8 @@
   { "q": "pinned component contract identity", "first": "kit-context" },
   { "q": "generated worker brief", "first": "kit-context" },
   { "q": "task-specific agent brief", "first": "kit-context" },
-  { "q": "brief stale script fingerprints", "first": "kit-context" }
+  { "q": "brief stale script fingerprints", "first": "kit-context" },
+  { "q": "media cap", "first": "bundle-size" },
+  { "q": "follow imports", "first": "bundle-size" },
+  { "q": "first download size", "first": "bundle-size" }
 ]
