@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSy
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { crc32 } from 'node:zlib';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { run as check } from '../tooling-scripts/art-check.ts';
 import { run as publish } from './art-publish.ts';
@@ -13,6 +14,9 @@ let dir: string;
 const messages: string[] = [];
 const io = { out: (s: string) => { messages.push(s); }, err: (s: string) => { messages.push(s); } };
 const picture = encodePng({ width: 1, height: 1, data: Buffer.from([1, 2, 3, 255]) });
+const badDeflate = Buffer.from(picture);
+badDeflate.fill(0, 41, badDeflate.length - 16);
+badDeflate.writeUInt32BE(crc32(badDeflate.subarray(37, -16)), badDeflate.length - 16);
 const put = (name: string, value: unknown) => {
   const file = join(dir, name);
   mkdirSync(dirname(file), { recursive: true });
@@ -65,6 +69,46 @@ describe('publication preserves usable art', () => {
     expect(result.status).toBe(2);
     expect(result.stderr).toContain('not a valid .png image');
     expect(snapshot()).toEqual(old);
+  });
+
+  it.each([
+    ['png', Buffer.concat([picture.subarray(0, 33), picture.subarray(-12)])],
+    ['png', badDeflate],
+    ['webp', Buffer.from('524946461600000057454250565038580a00000000000000000000000000', 'hex')],
+  ] as const)('preserves the old release when a .%s contains no valid image data', (ext, contents) => {
+    const old = snapshot();
+    put(`source/fresh.${ext}`, contents);
+    index({ old: `fresh.${ext}` });
+    config({ ext });
+    const result = cli();
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain(`not a valid .${ext} image`);
+    expect(snapshot()).toEqual(old);
+  });
+
+  it.each([
+    ['png', 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACAQMAAABIeJ9nAAAAA1BMVEUAAACnej3aAAAADElEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC'],
+    ['png', 'iVBORw0KGgoAAAANSUhEUgAAAAUAAAAHCAAAAAGSy+ikAAAANklEQVR4nAXBCQJAIAAAwXUViaKEkPT/R5oBWvxBTUDpmZQLVcM4se28H52Q/YCxy+o443U/Py8mAlQLCEpKAAAAAElFTkSuQmCC'],
+    ['webp', 'UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoCAAIAAUAmJaQAA3AA/v02aAA='],
+    ['webp', 'UklGRhoAAABXRUJQVlA4TA4AAAAvAUAAAAcQEf0PRET/Aw=='],
+    ['webp', 'UklGRq4AAABXRUJQVlA4WAoAAAACAAAAAQAAAQAAQU5JTQYAAAAAAAAAAABBTk1GMAAAAAAAAAAAAAEAAAEAAMgAAAJWUDggGAAAADABAJ0BKgIAAgABQCYlpAADcAD+/TZoAEFOTUZKAAAAAAAAAAAAAQAAAQAAyAAAAFZQOCAyAAAANAEAnQEqAgACAAAAJiWgAANwAP7y63//+bA/9vP/BHoB///S4P/+lwf/9Lg/9KQAAAA='],
+  ])('accepts real indexed, lossy, lossless and animated image variants (%s)', (ext, contents) => {
+    const bytes = Buffer.from(contents, 'base64');
+    put(`source/fresh.${ext}`, bytes);
+    index({ old: `fresh.${ext}` });
+    config({ ext });
+    const result = cli();
+    expect(result.status, result.stderr).toBe(0);
+    expect(readFileSync(join(dir, `public/art/old.${ext}`))).toEqual(bytes);
+  });
+
+  it('normalizes the codec format for an uppercase output suffix', () => {
+    put('source/extensionless', picture);
+    index({ old: 'extensionless' });
+    config({ ext: 'PNG' });
+    const result = cli();
+    expect(result.status, result.stderr).toBe(0);
+    expect(readFileSync(join(dir, 'public/art/old.PNG'))).toEqual(picture);
   });
 
   it.each([[{}], [[]], [null]])('refuses an empty or malformed selection without clearing the prior release: %j', async (defs) => {
