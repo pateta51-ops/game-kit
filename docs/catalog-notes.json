@@ -2326,7 +2326,10 @@
     "visible": false,
     "release": 1,
     "gameSupplies": "The art config: sources, ids and output.",
-    "exports": "Scripts: `art-index`, `art-fetch`, `art-extract`, `art-render-pdf`, `art-ci-cache`, `art-publish`; `lib`: `cellBox`, `decodePng`, `encodePng`, `imageSize`, `codec`"
+    "exports": "Scripts: `art-index`, `art-fetch`, `art-extract`, `art-render-pdf`, `art-ci-cache`, `art-publish`; `lib`: `cellBox`, `decodePng`, `encodePng`, `imageSize`, `codec`",
+    "hooks": [
+      "art-publish: publish art with filename collision checks and recover interrupted replacement"
+    ]
   },
   "tooling-scripts": {
     "mechanics": "none: build, CI or repository tooling",
@@ -2354,7 +2357,10 @@
     "visible": false,
     "release": 1,
     "gameSupplies": "Each script takes its own paths and flags.",
-    "exports": "Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`, `launch`"
+    "exports": "Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`, `launch`",
+    "hooks": [
+      "art-check: check the output manifest against sources and independently required logical art ids"
+    ]
   },
   "traceability": {
     "mechanics": "none: test tooling",

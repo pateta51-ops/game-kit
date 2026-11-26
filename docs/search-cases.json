@@ -679,6 +679,12 @@
   { "q": "runtime card tests", "first": "card-harness" },
   { "q": "test loaded card pack", "first": "card-harness" },
   { "q": "runtime card clauses", "first": "card-harness" },
+  { "q": "art pipeline manifest", "first": "art-pipeline" },
+  { "q": "art pipeline quality", "first": "art-pipeline" },
+  { "q": "art pipeline sources", "first": "art-pipeline" },
+  { "q": "check output manifest", "first": "tooling-scripts" },
+  { "q": "required logical art ids", "first": "tooling-scripts" },
+  { "q": "output manifest logical ids", "first": "tooling-scripts" },
   { "q": "media cap", "first": "bundle-size" },
   { "q": "follow imports", "first": "bundle-size" },
   { "q": "first download size", "first": "bundle-size" }
