@@ -22,7 +22,11 @@ export function checkPattern(data: unknown, at = 'pattern'): string[] {
   const val = () => { if (typeof d.value !== 'number' || !Number.isFinite(d.value)) p.push(`${at}.value: a number`); };
   const op = (opt: boolean) => { if (!(opt && d.op === undefined) && !OPS.includes(d.op as Op)) p.push(`${at}.op: one of ${OPS.join(', ')}`); };
   const keys = (...read: string[]) => {
-    for (const key of Object.keys(d)) if (key !== 'kind' && !read.includes(key)) p.push(`${at}.${key}: not used by kind ${JSON.stringify(d.kind)}`);
+    for (const key of Object.keys(d)) {
+      if (key === 'kind' || read.includes(key)) continue;
+      const suffix = /^[A-Za-z_$][\w$]*$/.test(key) ? `.${key}` : `[${JSON.stringify(key)}]`;
+      p.push(`${at}${suffix}: not used by kind ${JSON.stringify(d.kind)}`);
+    }
   };
   switch (d.kind) {
     case 'same': case 'different': case 'run': case 'even': case 'odd': num('n'); keys('n'); break;

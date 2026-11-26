@@ -414,6 +414,16 @@ describe('dice-patterns unread fields (K622)', () => {
       'rules[3].of[0].of[0].op: not used by kind "twoPair"',
     ]);
   });
+  it('distinguishes literal unread keys from nested paths and escapes line breaks', () => {
+    expect(checkPattern({
+      kind: 'all', of: [{ kind: 'all', of: [{ kind: 'same', n: 2 }], extra: true }],
+      'of[0].extra': true, 'extra\n': true,
+    }, 'rules[3]')).toEqual([
+      'rules[3].of[0].extra: not used by kind "all"',
+      'rules[3]["of[0].extra"]: not used by kind "all"',
+      'rules[3]["extra\\n"]: not used by kind "all"',
+    ]);
+  });
   it('retains required-value and unknown-kind diagnostics', () => {
     expect(checkPattern({ kind: 'same', n: 0, op: '=' })).toEqual([
       'pattern.n: a whole number of 1 or more', 'pattern.op: not used by kind "same"',
