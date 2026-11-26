@@ -312,6 +312,7 @@ The size gate for a vite build: gzips `index.html` and what it loads at once, an
 - **Use it when:** A vite build must stay under a first-load size limit.
 - **Not for:** Runtime performance (perf).
 - **Key exports:** `initialFiles`, `staticImports`, `cssUrls`, `measureBuild`, `formatSize`, `run`, `Limits`, `FileSize`, `SizeReport`, `SizeIo`
+- **Hook:** measureBuild + run: check a media cap for images, fonts and audio, including the first download; follow imports for initial accounting
 - **Needs:** nothing
 - **Came from:** ebr
 - **Docs:** [README](../components/bundle-size/README.md) ([rules for agents](../components/bundle-size/README.md#rules-for-agents))
