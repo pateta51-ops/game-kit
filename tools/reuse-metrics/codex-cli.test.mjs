@@ -10,12 +10,12 @@ function fixture() {
   const meta=(type,payload,timestamp=started)=>({timestamp,type,payload});
   const rollout=[
     meta('session_meta',{id:'thread-one',cli_version:'0.166.0',model_provider:'openai'}),
-    meta('turn_context',{turn_id:'turn-one',model:'test-model',effort:'medium'}),
-    meta('event_msg',{type:'task_started',turn_id:'turn-one'}),
-    meta('token_usage_record',{thread_id:'thread-one',turn_id:'turn-one',response_id:'one',usage:usage(10,0,3),turn_token_usage:usage(10,0,3)},'2026-01-01T10:00:01.000Z'),
+    meta('event_msg',{type:'task_started',turn_id:'turn-one',root_turn_id:'turn-one'}),
+    meta('turn_context',{turn_id:'turn-one',root_turn_id:'turn-one',model:'test-model',effort:'medium'}),
+    meta('token_usage_record',{thread_id:'thread-one',session_id:'thread-one',turn_id:'turn-one',root_turn_id:'turn-one',response_id:'one',usage:usage(10,0,3),turn_token_usage:usage(10,0,3)},'2026-01-01T10:00:01.000Z'),
     meta('response_item',{type:'function_call',call_id:'one-tool'}),
-    meta('token_usage_record',{thread_id:'thread-one',turn_id:'turn-one',response_id:'two',usage:usage(15,7,2),turn_token_usage:totals},'2026-01-01T10:00:02.000Z'),
-    meta('event_msg',{type:'task_complete',turn_id:'turn-one'},finished),
+    meta('token_usage_record',{thread_id:'thread-one',session_id:'thread-one',turn_id:'turn-one',root_turn_id:'turn-one',response_id:'two',usage:usage(15,7,2),turn_token_usage:totals},'2026-01-01T10:00:02.000Z'),
+    meta('event_msg',{type:'task_complete',turn_id:'turn-one',root_turn_id:'turn-one'},finished),
   ];
   return {events,rollout,read:()=>codexCliUsage(rows(events),rows(rollout))};
 }
@@ -44,4 +44,21 @@ it('rejects conflicting totals, repeated responses, mismatched threads, failed t
   expect(f.read).toThrow(/completed/);
   f=fixture();
   expect(()=>codexCliUsage(rows(f.events).subarray(0,-2),rows(f.rollout))).toThrow(/truncated/);
+});
+it('fails closed on detached usage and counts tools only inside the actual turn',()=>{
+  let f=fixture();
+  f.rollout[3].payload.root_turn_id='unrelated-turn';
+  expect(f.read).toThrow(/different thread/);
+  f=fixture();
+  f.rollout[3].payload.session_id='unrelated-session';
+  expect(f.read).toThrow(/different thread/);
+  f=fixture();
+  f.rollout.splice(3,0,f.rollout.pop());
+  expect(f.read).toThrow(/bounds|out of order|outside/);
+  f=fixture();
+  f.rollout[6].timestamp='2026-01-32T10:00:03.000Z';
+  expect(f.read).toThrow(/bounds/);
+  f=fixture();
+  f.rollout.push({type:'response_item',timestamp:'2099-01-01T10:00:00.000Z',payload:{type:'function_call',call_id:'off-turn'}});
+  expect(f.read().toolCalls).toBe(1);
 });

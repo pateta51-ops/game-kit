@@ -5,7 +5,11 @@ import { pathToFileURL } from 'node:url';
 const fields={input_tokens:'inputTokens',cached_input_tokens:'cachedInputTokens',output_tokens:'outputTokens'};
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 const text=value=>typeof value==='string'&&value.length>0;
-const occurred=value=>typeof value==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(value)&&Number.isFinite(Date.parse(value));
+function occurred(value){
+  const match=typeof value==='string'&&/^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,3}))?Z$/.exec(value);
+  const at=Date.parse(value);
+  return !!match&&Number.isFinite(at)&&new Date(at).toISOString()===match[1]+'.'+(match[2]??'').padEnd(3,'0')+'Z';
+}
 
 function readRows(bytes,label){
   const content=new TextDecoder('utf-8',{fatal:true}).decode(bytes);
@@ -40,24 +44,30 @@ export function codexCliUsage(eventsBytes,rolloutBytes){
   const endEvent=only(events,row=>row.type==='turn.completed','completed CLI turn');
   if(!(events.indexOf(thread)<events.indexOf(startEvent)&&events.indexOf(startEvent)<events.indexOf(endEvent))||events.some(row=>row.type==='turn.failed'))
     throw new Error('CLI turn did not complete in order');
-  const session=only(rollout,row=>row.type==='session_meta','rollout session').payload;
-  const context=only(rollout,row=>row.type==='turn_context','rollout turn context').payload;
+  const sessionRow=only(rollout,row=>row.type==='session_meta','rollout session');
+  const contextRow=only(rollout,row=>row.type==='turn_context','rollout turn context');
+  const {payload:session}=sessionRow,{payload:context}=contextRow;
   if(!text(thread.thread_id)||session?.id!==thread.thread_id) throw new Error('CLI and rollout refer to a different thread');
   if(session.cli_version!=='0.166.0'||session.model_provider!=='openai') throw new Error('Unsupported CLI export or provider');
-  if(!text(context?.turn_id)||!text(context.model)||!text(context.effort)) throw new Error('Missing model or reasoning configuration');
+  if(!text(context?.turn_id)||context.root_turn_id!==context.turn_id||!text(context.model)||!text(context.effort)) throw new Error('Missing fresh root turn or model configuration');
   const begin=only(rollout,row=>row.type==='event_msg'&&row.payload?.type==='task_started','rollout task start');
   const end=only(rollout,row=>row.type==='event_msg'&&row.payload?.type==='task_complete','completed rollout task');
-  if(begin.payload.turn_id!==context.turn_id||end.payload.turn_id!==context.turn_id||!occurred(begin.timestamp)||!occurred(end.timestamp)||Date.parse(begin.timestamp)>Date.parse(end.timestamp))
+  const first=rollout.indexOf(begin),last=rollout.indexOf(end),model=rollout.indexOf(contextRow);
+  if(rollout.indexOf(sessionRow)>first||first>=last||model<=first||model>=last||
+    [begin,end].some(row=>row.payload.turn_id!==context.turn_id||row.payload.root_turn_id!==context.turn_id||!occurred(row.timestamp))||
+    Date.parse(begin.timestamp)>Date.parse(end.timestamp))
     throw new Error('Rollout turn bounds are invalid');
   const responses=new Set(),sums={},missing=new Set();
   let previous=Date.parse(begin.timestamp);
-  for(const row of rollout.filter(row=>row.type==='token_usage_record')){
+  for(const [i,row] of rollout.entries()){
+    if(row.type!=='token_usage_record') continue;
     const record=row.payload;
-    if(record?.thread_id!==thread.thread_id||record.turn_id!==context.turn_id) throw new Error('Usage references a different thread or turn');
+    if(record?.thread_id!==thread.thread_id||record.session_id!==session.id||record.turn_id!==context.turn_id||record.root_turn_id!==context.turn_id)
+      throw new Error('Usage references a different thread, session or turn');
     if(!text(record.response_id)||responses.has(record.response_id)) throw new Error('Missing or duplicate provider response identity');
     responses.add(record.response_id);
     const at=Date.parse(row.timestamp);
-    if(!occurred(row.timestamp)||at<previous||at>Date.parse(end.timestamp)) throw new Error('Usage timestamps are out of order or outside the turn');
+    if(i<=model||i>=last||!occurred(row.timestamp)||at<previous||at>Date.parse(end.timestamp)) throw new Error('Usage records are out of order or outside the turn');
     previous=at;
     const values=counts(record.usage), cumulative=counts(record.turn_token_usage);
     for(const key of Object.keys(fields)) {
@@ -75,11 +85,14 @@ export function codexCliUsage(eventsBytes,rolloutBytes){
     usage[metric]=sums[key];
   }
   if(!Object.hasOwn(usage,'inputTokens')) delete usage.cachedInputTokens;
-  const toolIds=rollout.filter(row=>row.type==='response_item'&&['function_call','custom_tool_call'].includes(row.payload?.type)).map(row=>row.payload.call_id);
+  const calls=rollout.slice(first+1,last).filter(row=>row.type==='response_item'&&['function_call','custom_tool_call'].includes(row.payload?.type));
+  const toolIds=new Set(calls.map(row=>row.payload.call_id));
+  const validCalls=toolIds.size===calls.length&&calls.every(row=>text(row.payload.call_id)&&occurred(row.timestamp)&&
+    Date.parse(row.timestamp)>=Date.parse(begin.timestamp)&&Date.parse(row.timestamp)<=Date.parse(end.timestamp));
   return {version:1,sourceFormat:'codex-cli-0.166.0-single-turn',cliVersion:session.cli_version,model:context.model,reasoning:context.effort,
     at:end.timestamp,evidence:{eventsSha256:digest(eventsBytes),rolloutSha256:digest(rolloutBytes)},usage,
     ...(Object.hasOwn(usage,'inputTokens')?{inputIncludesCached:true}:{}),modelInvocations:responses.size,
-    toolCalls:toolIds.every(text)?new Set(toolIds).size:null,missing:[...Object.values(fields),'costUsd'].filter(key=>!Object.hasOwn(usage,key))};
+    toolCalls:validCalls?toolIds.size:null,missing:[...Object.values(fields),'costUsd'].filter(key=>!Object.hasOwn(usage,key))};
 }
 
 if(process.argv[1]&&pathToFileURL(process.argv[1]).href===import.meta.url){
