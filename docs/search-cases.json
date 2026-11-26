@@ -777,5 +777,11 @@
   {"q": "independent playable effort measurement", "first": "reuse-metrics"},
   {"q": "four card campaign continuation", "first": "reference-game/campaign-continuation"},
   {"q": "calendar changes playable scenario", "first": "reference-game/campaign-continuation"},
-  {"q": "campaign retry physical deck allocation", "first": "reference-game/campaign-continuation"}
+  {"q": "campaign retry physical deck allocation", "first": "reference-game/campaign-continuation"},
+  {"q": "keep the real piece visible until takeoff", "first": "effect-library"},
+  {"q": "hide source when its actor starts", "first": "effect-library"},
+  {"q": "skipped animation leaves source visible", "first": "effect-library"},
+  {"q": "observe actual animation actor start", "first": "motion-frame"},
+  {"q": "actor start notification on soft skip", "first": "motion-frame"},
+  {"q": "custom motion controller actor lifecycle", "first": "motion-frame"}
 ]

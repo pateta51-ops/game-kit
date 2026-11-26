@@ -885,12 +885,13 @@ Director-spec DOM and canvas effects for the motion frame.
 
 - **Also called:** Visual effects for cards and pieces
 - **Looks like:** A set of motions and effects: moving, flipping, fading, sparks, glows and screen layers.
-- **Words:** effects, animation, particles, flip, move, fade, glow, screen, release-1.1
+- **Words:** effects, animation, particles, flip, move, fade, glow, screen, release-1.1, hideSourceUntil, keep the real piece visible until takeoff, hide source when its actor starts, skipped animation leaves source visible
 - **Release:** 1.1; seen on screen
 - **The game supplies:** The motion specs and the elements to move.
-- **Use it when:** Release 1.1 visual effects: registered effects listed in the component README, plus particles, ambience, canvas layers and an opt-in logo glitch.
+- **Use it when:** Release 1.1 visual effects: registered effects listed in the component README, plus particles, ambience, canvas layers and an opt-in logo glitch. Per-actor source visibility follows actual playback.
 - **Not for:** Deciding which effect plays (the game's motion specs and motion-frame).
 - **Key exports:** `startPulse`, `startIdle`, `registerGlEffect`, `crumpleStill`, `MISSION_SHINE`, `MISSION_MS`, `missionSparks`, `decorativeCopy`, `endOnFinished`, `flushEnds`, `place`, `createEffectLayer`, `registerEffect`, `BUILT_IN`, and 156 more
+- **Hook:** hideSource + hideParts: choose beat-start or actual actor-start hiding, optionally for selected descendants; restore the source when the run ends
 - **Needs:** [`motion-frame`](#motion-frame), [`board-registry`](#board-registry)
 - **Came from:** stcc
 - **Docs:** [README](../components/effect-library/README.md) ([rules for agents](../components/effect-library/README.md#rules-for-agents))
@@ -1200,7 +1201,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 
 - **Also called:** Motion player
 - **Looks like:** Plays a director motion file on the screen, step by step.
-- **Words:** motion, play, animation, spec, beats, director, timeline, sound cue timing, check game uses kit hooks, no bypass, game bypasses the kit, beat from engine events, events, sound cue, cue sound from events, event order, after the animation step, timer hold, hold until, auto continue, animation queue, event queue for animations
+- **Words:** motion, play, animation, spec, beats, director, timeline, sound cue timing, check game uses kit hooks, no bypass, game bypasses the kit, beat from engine events, events, sound cue, cue sound from events, event order, after the animation step, timer hold, hold until, auto continue, animation queue, event queue for animations, observe actual animation actor start, actor start notification on soft skip, custom motion controller actor lifecycle
 - **Release:** 1.1; seen on screen
 - **The game supplies:** The motion spec files and the elements they name.
 - **Use it when:** Playing the director's motion specs (JSON beats) on the screen.
@@ -1212,6 +1213,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 - **Hook:** parallel: run a beat at the same time as the one before it
 - **Hook:** play: queue a beat and apply the next game state with commit
 - **Hook:** onBeatStart + onBeatEnd: set and clear screen state for one beat
+- **Hook:** onActorStart: observe an actor's first actual registered verb dispatch within a run
 - **Hook:** skipAll: drop every queued beat on undo, load or leaving the screen
 - **Hook:** skipOnInput + hurryOnInput: skip or hurry the animation on a click or key
 - **Hook:** withReducedMotion + withAutomationOff: the motion speed setting, still in tests and under reduced motion
