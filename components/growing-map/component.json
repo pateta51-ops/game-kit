@@ -1,0 +1,10 @@
+{
+  "name": "growing-map",
+  "source": {
+    "game": "none (written for the kit)",
+    "commit": "none",
+    "paths": []
+  },
+  "needs": ["board-model", "engine-core"],
+  "packages": []
+}
