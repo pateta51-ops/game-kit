@@ -9,12 +9,13 @@ const directory = path.join(root, 'coverage');
 const summaryFile = path.join(directory, 'coverage-summary.json');
 const digest = value => createHash('sha256').update(value).digest('hex');
 const tool = { name: 'coverage-table', version: 1, sha256: digest(fs.readFileSync(fileURLToPath(import.meta.url))) };
-const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }).trim();
 
 function identity() {
   try {
-    const status = git('status', '--porcelain', '--untracked-files=all');
-    return { commit: git('rev-parse', 'HEAD'), tree: git('rev-parse', 'HEAD^{tree}'), clean: status === '', statusSha256: digest(status), diffSha256: digest(git('diff', '--binary', 'HEAD')) };
+    const status = git('-c', 'core.fsmonitor=false', 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=none');
+    const hidden = git('ls-files', '-v', '-z').split('\0').some(record => /^[a-zS] /.test(record));
+    return { commit: git('rev-parse', 'HEAD'), tree: git('rev-parse', 'HEAD^{tree}'), clean: status === '' && !hidden, statusSha256: digest(status), diffSha256: digest(git('diff', '--binary', 'HEAD')) };
   } catch { return { status: 'unavailable', reason: 'Git source identity is unavailable' }; }
 }
 
@@ -97,7 +98,7 @@ function binding(file, source, data, configuration) {
   if (!before.source.clean || !source.clean) return { status: 'invalid', reason: 'Coverage source is dirty; it is not the recorded commit tree' };
   if (before.source.commit !== source.commit || before.source.tree !== source.tree || before.tool.sha256 !== tool.sha256) return { status: 'stale', reason: 'Source or reporting tool changed since capture' };
   if (!fs.existsSync(summaryFile)) return { status: 'unavailable', reason: 'No summary for the captured run' };
-  if (fs.statSync(summaryFile).mtimeMs < Date.parse(before.capturedAt)) return { status: 'stale', reason: 'Coverage summary predates source capture' };
+  if (fs.statSync(summaryFile, { bigint: true }).mtimeNs < fs.statSync(file, { bigint: true }).mtimeNs) return { status: 'stale', reason: 'Coverage summary predates source capture' };
   if (data.summary.status !== 'reported') return { status: 'unavailable', reason: 'No valid component summary for the captured run' };
   for (const entry of [...data.files, ...configuration]) {
     try {

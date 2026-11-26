@@ -50,7 +50,7 @@ interface Receipt {
 }
 class StaleBindingError extends Error {}
 const sha = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
-const git = (root: string, ...args: string[]): string => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+const git = (root: string, ...args: string[]): string => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }).trim();
 function relative(file: string): string {
   if (typeof file !== 'string' || !file || /[:\0]/.test(file) || path.isAbsolute(file) || file.split(/[\\/]/).some(p => p === '..' || p === ''))
     throw new Error('receipt paths must be relative files inside the consumer');
@@ -72,7 +72,9 @@ function identity(root: string, file: string): FileIdentity {
 }
 function binding(root: string, definition: Receipt['definition']): Binding {
   if (realpathSync(git(root, 'rev-parse', '--show-toplevel')) !== root) throw new Error('receipt needs the consumer repository root');
-  if (git(root, 'status', '--porcelain', '--untracked-files=all')) throw new StaleBindingError('receipt needs a clean consumer source tree');
+  if (git(root, 'ls-files', '-v', '-z').split('\0').some(record => /^[a-zS] /.test(record)))
+    throw new StaleBindingError('receipt cannot verify source with assume-unchanged or skip-worktree entries');
+  if (git(root, '-c', 'core.fsmonitor=false', 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=none')) throw new StaleBindingError('receipt needs a clean consumer source tree');
   const kit = identity(root, definition.kitLock ?? 'kit/kit.lock.json');
   const lock = JSON.parse(readFileSync(path.join(root, kit.path), 'utf8')) as { commit?: unknown };
   if (typeof lock.commit !== 'string' || !/^(?:[a-f\d]{40}|[a-f\d]{64})$/.test(lock.commit)) throw new Error('receipt needs a full locked kit commit');

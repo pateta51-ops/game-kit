@@ -81,6 +81,17 @@ describe('coverage history evidence', () => {
     expect(f.read().comparison.status).toBe('unknown');
   });
 
+  it('accepts a fresh summary with the same filesystem timestamp as its capture', () => {
+    const f = fixture('capture-tick');
+    expect(f.run('--capture', f.start).status).toBe(0);
+    const summary = f.writeSummary();
+    const tick = new Date(Math.floor(fs.statSync(f.start).mtimeMs / 1000) * 1000 - 1000);
+    fs.utimesSync(f.start, tick, tick);
+    fs.utimesSync(summary, tick, tick);
+    expect(f.run('--started', f.start, '--check-outcome', 'success').status).toBe(0);
+    expect(f.read().execution.binding.status).toBe('matched');
+  });
+
   it.each(['missing', 'malformed', 'bad-counts'] as const)('reports %s summary as unavailable or invalid, with no zero-coverage fiction', kind => {
     const f = fixture(kind);
     if (kind !== 'missing') {

@@ -83,6 +83,22 @@ it('invalidates evidence after source, specification, acceptance or kit changes'
   }
 });
 
+it.each(['--assume-unchanged', '--skip-worktree'])('rejects tracked changes hidden by %s', (flag) => {
+  const f = fixture({ a: 'node check.cjs' });
+  const script = path.join(f.root, 'check.cjs');
+  writeFileSync(script, "console.log('original check');\n");
+  f.git('add', 'check.cjs');
+  f.git('-c', 'user.name=kit-tests', '-c', 'user.email=kit-tests@users.noreply.github.com', 'commit', '-qm', 'Add a consumer check');
+  expect(f.run().status).toBe(0);
+  f.git('update-index', flag, 'check.cjs');
+  writeFileSync(script, "console.log('changed check');\n");
+  expect(f.git('status', '--porcelain')).toBe('');
+  const result = f.verify();
+  expect(result.status).toBe(1);
+  expect(JSON.parse(result.stdout)).toMatchObject({ status: 'stale' });
+  expect(f.run().status).toBe(1);
+});
+
 it('fails acceptance if a successful check changes a bound input while running', () => {
   const f = fixture({ a: 'node -e "require(\'fs\').writeFileSync(\'game-spec.json\', \'{}\')"' });
   expect(f.run().status).toBe(1);
