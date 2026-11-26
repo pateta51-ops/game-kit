@@ -128,7 +128,7 @@ async function lane(request: RunRequest, names: readonly string[], next: () => G
           if (m.type === 'ready') portGame = m.engine === 'port';
           if (m.type === 'record') {
             const r = m.record;
-            const current = portGame ? r.portExecution === 1 : r.triggerCapChecked === true;
+            const current = portGame ? r.portExecution === 1 && r.portChecks?.invariants === input.invariants && r.portChecks.view === (request.view === true) : r.triggerCapChecked === true;
             collect(!current && r.error === undefined && !r.violations?.length
               ? crashRecord(r, new Error(portGame ? 'worker lacks current EnginePort execution evidence; rebuild the worker bundle' : 'worker lacks trigger-cap validation; rebuild the worker bundle'))
               : r);

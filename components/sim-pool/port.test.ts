@@ -55,8 +55,9 @@ describe('K645 EnginePort simulations', () => {
     const ports = specs.map(spec => playOne(portGame, content, spec));
     for (let i = 0; i < kernel.length; i++) {
       const { triggerCapChecked, ...expected } = kernel[i]!;
-      const { portExecution, ...actual } = ports[i]!;
+      const { portExecution, portChecks, ...actual } = ports[i]!;
       expect(triggerCapChecked).toBe(true); expect(portExecution).toBe(1);
+      expect(portChecks).toEqual({ invariants: false, view: false });
       expect(actual).toEqual(expected);
     }
     expect(wholeGame({ records: ports, findings: [] })).toEqual(wholeGame({ records: kernel, findings: [] }));
@@ -161,19 +162,24 @@ describe('K645 EnginePort simulations', () => {
     expect(changed).toHaveBeenCalledWith('opaque', undefined, false, content);
   });
 
-  it('reports a noncanonical answer before applying it and keeps the replayable prefix', async () => {
+  it.each([
+    { kind: 'bigint', metadata: 1n },
+    { kind: 'Map', metadata: new Map([['value', 1]]) },
+    { kind: 'Date', metadata: new Date(0) },
+  ])('reports a noncanonical $kind answer before applying it and keeps the replayable prefix', async ({ metadata }) => {
     const content = await simGame.content();
     const game: PortSimGame<PortGame> = {
       ...simGame,
       driver: () => ({
         name: 'noncanonical', reasons: () => [],
-        choose: (_state, valid) => valid[0]!.promptId === 'choose:0' ? valid[0]! : { ...valid[0]!, metadata: 1n },
+        choose: (_state, valid) => valid[0]!.promptId === 'choose:0' ? valid[0]! : { ...valid[0]!, metadata },
       }),
     };
     const record = playOne(game, content, specs[0]!);
     expect(record).toMatchObject({ result: null, actions: 1, summary: { phase: 1 }, log: [{ promptId: 'choose:0' }] });
-    expect(record.error).toContain('unsupported value of type bigint');
+    expect(record.error).toContain('EnginePort answer must be lossless JSON data');
     expect(record.hash).toBe(hashValue(record.log));
+    expect(playOne(game, content, specs[0]!, 1)).toEqual(record);
   });
 
   it('refuses missing capabilities and kernel-only options before running the engine', async () => {

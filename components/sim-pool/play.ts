@@ -225,6 +225,8 @@ export interface SimRecord<S = unknown> {
   readonly triggerCapChecked?: true;
   /** Current foreign-port execution protocol; does not claim kernel trigger-cap diagnostics. */
   readonly portExecution?: 1;
+  /** Requested validation modes for port checkpoint eligibility. Executed view evidence is separate. */
+  readonly portChecks?: { readonly invariants: boolean; readonly view: boolean };
   /** The actions, kept only when the game failed (for replay). */
   readonly log?: readonly unknown[];
   readonly summary?: S;

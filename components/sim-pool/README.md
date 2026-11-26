@@ -90,7 +90,7 @@ The port factory receives the full `GameSpec`, including settings; content loads
 
 Optional observation, prompt, summary, trace and changed-clause hooks work on the game's actual state. `transitionInvariants(before, after, answer, content)` runs alongside state invariants when invariant checks are enabled. A port may bind different per-spec content; its state invariant callback always receives that `port.content`, while sim-pool callbacks receive the content returned by the module's `content()`.
 
-The port path supports serial play, workers, fresh workers, checkpoints, view validation, whole-game clause reports and fuzz replay with `--seed`/`--until`. Its independent execution evidence does not certify kernel trigger-cap or undo checks. Engine-specific diagnostics belong in the port's invariants or the transition hook. It rejects requested hidden-shuffle, debug, hasten and `undoCheck` modes because `EnginePort` does not define those capabilities. Existing `SimGame` modules retain their original path and capabilities.
+The port path supports serial play, workers, fresh workers, checkpoints, view validation, whole-game clause reports and fuzz replay with `--seed`/`--until`. Port checkpoints replay records from a different invariant or view mode. Its independent execution evidence does not certify kernel trigger-cap or undo checks. Engine-specific diagnostics belong in the port's invariants or the transition hook. It rejects requested hidden-shuffle, debug, hasten and `undoCheck` modes because `EnginePort` does not define those capabilities. Existing `SimGame` modules retain their original path and capabilities.
 
 ## Run a simulation
 

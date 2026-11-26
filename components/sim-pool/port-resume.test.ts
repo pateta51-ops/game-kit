@@ -46,6 +46,27 @@ it('refuses unsupported port options even with completed checkpoint records', as
   expect(played).toEqual([]);
 });
 
+it('matches the requested invariant mode before reusing a port checkpoint', async () => {
+  const request = { module, specs: [{ ...spec, seed: 'bad-step' }] };
+  const file = join(dir, 'invariant-mode.jsonl');
+  const [unchecked] = await runResumable({ ...request, invariants: false }, 1, file, 'fixture');
+  expect(unchecked?.result).toMatchObject({ winner: 'actor' });
+  const [checked] = await runResumable(request, 2, file, 'fixture');
+  expect(checked).toMatchObject({ result: null, actions: 1, violations: [expect.objectContaining({ id: 'port-state' })] });
+  expect(await runResumable({ ...request, invariants: false }, 1, file, 'fixture')).toEqual([unchecked]);
+});
+
+it('keeps a checkpoint from substituting a different port view validation mode', async () => {
+  const request = { module, specs: [{ ...spec, seed: 'leak' }] };
+  const file = join(dir, 'view-mode.jsonl');
+  const [unchecked] = await runResumable(request, 1, file, 'fixture');
+  expect(unchecked?.result).toMatchObject({ winner: 'actor' });
+  const [checked] = await runResumable({ ...request, view: true }, 2, file, 'fixture');
+  expect(checked?.result).toBeNull();
+  expect(checked?.error).toContain('view leak');
+  expect(await runResumable(request, 1, file, 'fixture')).toEqual([unchecked]);
+});
+
 it('replays a port checkpoint with only kernel evidence and a kernel checkpoint with only port evidence', async () => {
   const legacy = { ...spec, result: 'not checked', actions: 2, hash: 'legacy' };
   const played: SimRecord[] = [];

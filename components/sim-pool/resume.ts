@@ -53,7 +53,9 @@ export async function runResumable(request: RunRequest, workers: number, file: s
   const specs = request.specs.filter((s) => {
     const r = cp.done.get(specKey(s));
     if (r === undefined) return true;
-    if (engine === 'port' ? r.portExecution !== 1 : engine !== 'kernel' || r.triggerCapChecked !== true) return true;
+    if (engine === 'port') {
+      if (r.portExecution !== 1 || r.portChecks?.invariants !== (request.invariants ?? true) || r.portChecks.view !== (request.view === true)) return true;
+    } else if (engine !== 'kernel' || r.triggerCapChecked !== true) return true;
     if (request.view && r.result !== null && !hasExecutedViewValidation(r))
       throw new Error('checkpoint lacks executed view checks for the current scope; start a new checkpoint to validate its views');
     old.push({ ...r, index: s.index });

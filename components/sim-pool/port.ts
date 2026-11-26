@@ -1,4 +1,4 @@
-import { canonicalJson, hashValue, isChecking, StateInvariantError, type EnginePort, type InvariantViolation, type PortAnswer, type PortTypes } from '../engine-core/index.ts';
+import { hashValue, isChecking, StateInvariantError, type EnginePort, type InvariantViolation, type PortAnswer, type PortTypes } from '../engine-core/index.ts';
 import type { Bot } from './bot.ts';
 import { jsonView, leaks, readDriverView, viewEvidence, withDriverViewValidation, type GameSpec, type PlayOptions, type ResolvedTrace, type SimRecord } from './play.ts';
 import type { DriverRng } from './rng.ts';
@@ -77,6 +77,7 @@ export function portBotDriver<G extends PortTypes, V>(bot: Bot<V, PortAnswer>, v
 /** Internal port path for playOne; records use the same pool, reports and command exit handling. */
 export function playPortOne<G extends PortTypes, S, O>(game: PortSimGame<G, S, O>, content: G['content'], spec: GameSpec,
   until: number | undefined, opts: PlayOptions): SimRecord<S> {
+  const invariantMode = isChecking();
   const actions: PortAnswer[] = [], violations: InvariantViolation[] = [];
   let state: G['state'] | undefined, started = false, result: unknown = null, seen: O | undefined, summary: S | undefined;
   let error: string | undefined, errorName: string | undefined, resolvedDriver: string | undefined;
@@ -123,7 +124,7 @@ export function playPortOne<G extends PortTypes, S, O>(game: PortSimGame<G, S, O
     seen = game.observation?.(spec, content);
     let s = port.settle(port.start(spec.seed));
     state = s; started = true; judge();
-    if (isChecking()) violations.push(...(port.invariants?.(s, port.content) ?? []));
+    if (invariantMode) violations.push(...(port.invariants?.(s, port.content) ?? []));
     result = port.result(s) ?? null; render(s);
     const driver = game.driver(spec.driver, spec, content);
     resolvedDriver = driver.name || registration || spec.driver;
@@ -145,18 +146,19 @@ export function playPortOne<G extends PortTypes, S, O>(game: PortSimGame<G, S, O
         catch (cause) { rejection ??= cause instanceof Error ? cause : new Error(String(cause)); throw cause; }
       } : undefined);
       if (rejection !== undefined) throw rejection;
+      try { jsonView(action); }
+      catch (cause) { throw new TypeError('EnginePort answer must be lossless JSON data', { cause }); }
       if (action.kind !== 'answer') throw new Error('EnginePort simulation only supports PortAnswer actions');
       ms.choose = performance.now() - t - ms.view;
       if (until !== undefined && actions.length >= until) break;
       const recorded = structuredClone(action);
-      canonicalJson(recorded);
       actions.push(recorded);
       t = performance.now(); judge();
-      const before = (isChecking() && game.transitionInvariants) || game.changed ? structuredClone(s) : undefined;
+      const before = (invariantMode && game.transitionInvariants) || game.changed ? structuredClone(s) : undefined;
       const applied = port.apply(s, action);
       if (applied instanceof Error) throw applied;
       s = port.settle(applied); state = s;
-      if (isChecking()) {
+      if (invariantMode) {
         violations.push(...(port.invariants?.(s, port.content) ?? []));
         if (game.transitionInvariants) violations.push(...game.transitionInvariants(before, s, recorded, content));
       }
@@ -174,7 +176,7 @@ export function playPortOne<G extends PortTypes, S, O>(game: PortSimGame<G, S, O
   const failed = error !== undefined || violations.length > 0;
   return {
     index: spec.index, seed: spec.seed, driver: spec.driver, ...(spec.settings ? { settings: spec.settings } : {}),
-    result: failed ? null : result, actions: actions.length, hash: hashValue(actions), portExecution: 1,
+    result: failed ? null : result, actions: actions.length, hash: hashValue(actions), portExecution: 1, portChecks: { invariants: invariantMode, view: opts.view === true },
     ...(failed ? { log: actions } : {}), ...(error === undefined ? {} : { error }), ...(errorName === undefined ? {} : { errorName }),
     ...(violations.length ? { violations } : {}), ...(summary === undefined ? {} : { summary }),
     ...(viewBytes === undefined ? {} : { viewBytes }), viewValidation: viewEvidence(viewStatus, checked),
