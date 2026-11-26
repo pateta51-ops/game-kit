@@ -789,5 +789,8 @@
   {"q": "dice pattern unknown option", "first": "dice-patterns"},
   {"q": "source-bound coverage comparison", "first": "coverage-table"},
   {"q": "retained coverage baseline", "first": "coverage-table"},
-  {"q": "like-for-like coverage regression", "first": "coverage-table"}
+  {"q": "like-for-like coverage regression", "first": "coverage-table"},
+  {"q": "monotonic check duration", "first": "check-runner/receipts"},
+  {"q": "receipt negative elapsed time", "first": "check-runner/receipts"},
+  {"q": "clock adjustment receipt duration", "first": "check-runner/receipts"}
 ]

@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterAll, expect, it } from 'vitest';
 
 const tmp = mkdtempSync(path.join(os.tmpdir(), 'acceptance-receipt-'));
@@ -47,6 +48,45 @@ it('writes executed acceptance evidence bound to the clean consumer, kit lock, s
   }, commands: [{ script: 'a', command: 'node -e "console.log(\'accepted\')"', status: 'passed', code: 0 }] });
   expect(JSON.stringify(receipt)).not.toContain(f.root);
   expect(f.verify().status).toBe(0);
+});
+
+it('records nonnegative command and wall durations when Date.now goes backwards in parallel lanes', () => {
+  const f = fixture({ a: 'node -e "console.log(1)"', b: 'node -e "console.log(2)"' }, { lanes: [['a'], ['b']] });
+  const clock = path.join(f.root, 'evidence', 'clock.mjs');
+  mkdirSync(path.dirname(clock), { recursive: true });
+  writeFileSync(clock, 'let wall = Date.now(); Date.now = () => (wall -= 10000);\n');
+  const result = spawnSync(process.execPath, ['--import', pathToFileURL(clock).href, runner], { cwd: f.root, encoding: 'utf8' });
+  expect(result.status, result.stderr).toBe(0);
+  const verified = f.verify();
+  expect(JSON.parse(verified.stdout)).toMatchObject({ status: 'passed', problems: [] });
+  expect(verified.status).toBe(0);
+  const receipt = f.read();
+  expect(receipt.startedAt).toMatch(/Z$/);
+  expect(receipt.completedAt).toMatch(/Z$/);
+  expect(receipt.commands).toMatchObject([{ script: 'a', code: 0 }, { script: 'b', code: 0 }]);
+  expect((receipt.commands as { ms: number }[]).every(row => Number.isSafeInteger(row.ms) && row.ms >= 0)).toBe(true);
+  expect(result.stdout).toMatch(/wall \d+\.\d s, checks added up \d+\.\d s/);
+});
+
+it('fails finalization when a successful check has a reversed receipt UTC window', () => {
+  const f = fixture();
+  const clock = path.join(f.root, 'evidence', 'clock.mjs');
+  mkdirSync(path.dirname(clock), { recursive: true });
+  const startedAt = '2026-01-02T03:04:05.000Z', completedAt = '2026-01-02T03:03:55.000Z';
+  writeFileSync(clock, `const observed = [Date.parse('${startedAt}'), Date.parse('${completedAt}')];
+let wall = observed[0];
+globalThis.Date = class extends Date {
+  constructor(...args) { super(...(args.length ? args : [observed.shift() ?? wall])); }
+  static now() { return wall -= 10000; }
+};\n`);
+  const result = spawnSync(process.execPath, ['--import', pathToFileURL(clock).href, runner], { cwd: f.root, encoding: 'utf8' });
+  expect(result.stdout).toContain('accepted');
+  expect(result.status, result.stderr).toBe(1);
+  expect(f.read()).toMatchObject({ startedAt, completedAt, status: 'invalid', problems: ['receipt completion time is invalid'],
+    commands: [{ script: 'a', status: 'passed', code: 0 }] });
+  const verified = f.verify();
+  expect(verified.status).toBe(1);
+  expect(JSON.parse(verified.stdout)).toMatchObject({ status: 'invalid', problems: ['receipt completion time is invalid'] });
 });
 
 it('keeps failed and unrun checks separate and rejects a removed command in recorded evidence', () => {
