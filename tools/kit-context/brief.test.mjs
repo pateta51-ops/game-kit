@@ -170,4 +170,24 @@ describe('bounded worker briefs',()=>{
     const ranged=run({...task,reads:[{file,from:2,to:3}]});
     expect(ranged.status,ranged.stderr).toBe(0);
   });
+  it.skipIf(process.platform!=='win32')('rejects mixed-case Windows aliases for protected directories',()=>{
+    const {game,task,run}=fixture();
+    fs.renameSync(path.join(game,'kit'),path.join(game,'kit-original'));
+    fs.renameSync(path.join(game,'kit-original'),path.join(game,'KIT'));
+    const vendored=run({...task,files:[{file:'KIT/sample/index.ts',action:'edit'}]});
+    expect(vendored.status).toBe(1);
+    expect(vendored.stderr).toContain('owned files must be outside kit');
+    put(path.join(game,'.GIT','notes.md'),'Repository internals.');
+    const internal=run({...task,reads:[{file:'.GIT/notes.md'}]});
+    expect(internal.status).toBe(1);
+    expect(internal.stderr).toContain('invalid game-relative path');
+  });
+  it('rejects editing a hardlink that also names an installed kit file',()=>{
+    const {game,task,run}=fixture();
+    fs.mkdirSync(path.join(game,'src','engine'),{recursive:true});
+    fs.linkSync(path.join(game,'kit','sample','index.ts'),path.join(game,'src','engine','adapter.ts'));
+    const result=run({...task,files:[{file:'src/engine/adapter.ts',action:'edit'}]});
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('edit file has multiple hardlinks');
+  });
 });

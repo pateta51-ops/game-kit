@@ -21,14 +21,15 @@ const inside=(root,file)=>{
   const rel=path.relative(root,file);
   return rel!=='..'&&!rel.startsWith('..'+path.sep)&&!path.isAbsolute(rel);
 };
+const internal=part=>['.git','node_modules'].includes(part.toLowerCase());
 function gameFile(root,file) {
   text(file,'file');
-  if(path.isAbsolute(file)||/[:\\\0]/.test(file)||file.split('/').some(p=>!p||['.','..','.git','node_modules'].includes(p))) throw new Error('invalid game-relative path: '+file);
+  if(path.isAbsolute(file)||/[:\\\0]/.test(file)||file.split('/').some(p=>!p||p==='.'||p==='..'||internal(p)||(process.platform==='win32'&&/[ .]$/.test(p)))) throw new Error('invalid game-relative path: '+file);
   const target=path.resolve(root,file);
   let parent=target;
   while(!fs.lstatSync(parent,{throwIfNoEntry:false})) parent=path.dirname(parent);
   const canonical=path.resolve(fs.realpathSync(parent),path.relative(parent,target));
-  if(!inside(root,canonical)||path.relative(root,canonical).split(path.sep).some(p=>['.git','node_modules'].includes(p))) throw new Error(file+' escapes game');
+  if(!inside(root,canonical)||path.relative(root,canonical).split(path.sep).some(internal)) throw new Error(file+' escapes game');
   return canonical;
 }
 function readReference(root,ref) {
@@ -60,10 +61,11 @@ export function workerBrief({game,source,task,maxChars=24000}) {
   for(const item of task.files) {
     object(item,['file','action'],'owned file');
     const file=gameFile(root,item.file);
-    if(path.relative(root,file).split(path.sep)[0]==='kit') throw new Error('owned files must be outside kit: '+item.file);
+    if([item.file.split('/')[0],path.relative(root,file).split(path.sep)[0]].some(part=>part.toLowerCase()==='kit')) throw new Error('owned files must be outside kit: '+item.file);
     if(!['create','edit'].includes(item.action)) throw new Error('owned file action must be create or edit');
     const stat=fs.statSync(file,{throwIfNoEntry:false});
     if(item.action==='edit'&&!stat?.isFile()) throw new Error('edit file is missing: '+item.file);
+    if(item.action==='edit'&&stat.nlink>1) throw new Error('edit file has multiple hardlinks: '+item.file);
     if(item.action==='create'&&stat) throw new Error('create file already exists: '+item.file);
     ownedFiles.push({file:item.file,status:stat?'existing':'missing',sha256:stat?sha(fs.readFileSync(file)):null});
   }
