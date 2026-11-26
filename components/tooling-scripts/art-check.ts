@@ -2,8 +2,8 @@
 // outputs (bytes, and SHA-256 when recorded), every id the game needs has an output, and the sizes stay under the caps.
 // Exit codes: 0 clean, 1 findings, 2 usage or a missing manifest or folder.
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 import { flags, isMain, stdio, type Io } from './args.ts';
 
 export interface ArtEntry {
@@ -42,8 +42,16 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
   const errors: string[] = [];
   let skipped = 0;
   const manifest = JSON.parse(readFileSync(c.manifest, 'utf8')) as Record<string, ArtEntry>;
+  const manifestPath = realpathSync(c.manifest);
+  const manifestIn = (dir: string) => {
+    const actual = existsSync(dir) ? realpathSync(dir) : dir;
+    return (file: string) => !relative(join(dir, file), c.manifest) || !relative(join(actual, file), manifestPath);
+  };
+  const sourceManifest = manifestIn(c.sources);
+  const outputManifest = manifestIn(c.out);
   const ids = new Set<string>();
   for (const file of readdirSync(c.sources).sort()) {
+    if (sourceManifest(file)) continue;
     const m = c.sourceId.exec(file);
     const id = m?.[1] ?? m?.[0];
     if (id === undefined) continue;
@@ -59,13 +67,13 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
     if (c.noEnlarge !== false && (entry.width === undefined || entry.height === undefined || entry.sourceWidth === undefined || entry.sourceHeight === undefined)) skipped += 1;
     if (c.noEnlarge !== false && entry.width !== undefined && entry.height !== undefined && entry.sourceWidth !== undefined && entry.sourceHeight !== undefined && entry.width * entry.height > entry.sourceWidth * entry.sourceHeight)
       errors.push(`${id}: enlarged: the output is ${String(entry.width)}x${String(entry.height)}, the source ${String(entry.sourceWidth)}x${String(entry.sourceHeight)}`);
-    if (!existsSync(out)) errors.push(`${id}: the output ${id}.${c.ext} is missing`);
+    if (outputManifest(`${id}.${c.ext}`) || !existsSync(out)) errors.push(`${id}: the output ${id}.${c.ext} is missing`);
     else if (statSync(out).size !== entry.bytes || (entry.outSha256 !== undefined && entry.outSha256 !== sha256(out)))
       errors.push(`${id}: the output ${id}.${c.ext} differs from the manifest`);
   }
   if (ids.size === 0) errors.push(`no source file in ${c.sources} matched ${String(c.sourceId)}`);
   for (const id of Object.keys(manifest)) if (!ids.has(id)) errors.push(`${id}: in the manifest but has no source`);
-  for (const id of new Set(c.need)) if (!existsSync(join(c.out, `${id}.${c.ext}`))) errors.push(`${id}: needed by the game but has no ${id}.${c.ext}`);
+  for (const id of new Set(c.need)) if (outputManifest(`${id}.${c.ext}`) || !existsSync(join(c.out, `${id}.${c.ext}`))) errors.push(`${id}: needed by the game but has no ${id}.${c.ext}`);
   const logical = new Map<string, string>();
   for (const [name, entry] of Object.entries(manifest)) {
     const id = entry.id ?? name;
@@ -78,7 +86,7 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
   }
   let total = 0;
   for (const f of existsSync(c.out) ? readdirSync(c.out).sort() : []) {
-    if (!f.endsWith(`.${c.ext}`)) continue;
+    if (!f.endsWith(`.${c.ext}`) || outputManifest(f)) continue;
     const size = statSync(join(c.out, f)).size;
     total += size;
     if (c.maxFileBytes !== undefined && size > c.maxFileBytes) errors.push(`${f}: ${String(size)} bytes is over the file cap of ${String(c.maxFileBytes)}`);
