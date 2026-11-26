@@ -184,94 +184,103 @@ def applicability() -> dict | None:
     return data
 
 
-def unquote(body: str) -> tuple[str, int]:
-    depth = 0
-    while marker := re.match(r"^ {0,3}> ?", body):
-        body, depth = body[marker.end():], depth + 1
-    return body, depth
+QUOTE = re.compile(r"^ {0,3}> ?")
+ITEM = re.compile(r"^ {0,3}(?:[-+*]|\d{1,9}[.)])( +)")
+BLOCK_START = re.compile(r"^ {0,3}(?:#{1,6}(?:[ \t]|$)|`{3,}[^`]*$|~{3,}|<!--|>|"
+                         r"(?:[-+*]|1[.)])[ \t]|(?:=+|-+)[ \t]*$|(?:\*[ \t]*){3,}$|(?:_[ \t]*){3,}$)")
 
 
-def inline_code_end(lines: list[str], row: int, start: int, ticks: int, quote: int, width: int) -> tuple[int, int] | None:
+def match_containers(raw: str, containers: list[int | None]) -> tuple[str, int]:
+    body = raw.expandtabs(4)
+    for depth, width in enumerate(containers):
+        if width is None:
+            marker = QUOTE.match(body)
+            if not marker:
+                return body, depth
+            body = body[marker.end():]
+        elif body.startswith(" " * width) or not body.strip():
+            body = body[width:]
+        else:
+            return body, depth
+    return body, len(containers)
+
+
+def inline_end(lines: list[str], row: int, start: int, ticks: int, containers: list[int | None]) -> tuple[int, int] | None:
     runs = re.compile(r"`+")
-    interrupt = re.compile(r"^ {0,3}(?:#{1,6}(?:[ \t]|$)|`{3,}[^`]*$|~{3,}|<!--|\||"
-                           r"(?:[-+*]|1[.)])[ \t]|(?:=+|-+)[ \t]*$|(?:\*[ \t]*){3,}$|(?:_[ \t]*){3,}$)")
     for i in range(row, len(lines)):
         raw = lines[i]
         if i != row:
-            body, depth = unquote(raw.expandtabs(4))
-            if width:
-                if body.startswith(" " * width):
-                    body, extra = unquote(body[width:])
-                    depth += extra
-                elif re.match(r"^ {0,3}\d{1,9}[.)](?:[ \t]|$)", body):
-                    break
-            if not body.strip() or depth > quote or interrupt.match(body):
+            body, depth = match_containers(raw, containers)
+            if (not body.strip() or BLOCK_START.match(body) or body.lstrip().startswith("|")
+                    or (depth < len(containers) and ITEM.match(body))):
                 break
-        for run in runs.finditer(raw, start if i == row else 0):
-            if len(run[0]) == ticks:
-                return i, run.end()
+        offset = start if i == row else 0
+        if ticks:
+            for run in runs.finditer(raw, offset):
+                if len(run[0]) == ticks:
+                    return i, run.end()
+        elif (end := raw.find("-->", offset)) >= 0:
+            return i, end + 3
     return None
 
 
 def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, str]], bool]:
-    out, blocks, content, lists = [], [], [], []
-    fence, comment = None, None
+    out, blocks, content = [], [], []
+    containers: list[int | None] = []
+    fence, comment_depth = None, None
     paragraph, unclosed = False, False
-    list_quote = 0
     inline = re.compile(r"(\\*)(<!--|`+)")
     span_row, span_end = -1, 0
+    comment_row, comment_end = -1, 0
     for i, raw in enumerate(lines):
-        expanded = raw.expandtabs(4)
-        body, quote = unquote(expanded)
-        if quote != list_quote:
-            lists.clear()
-            list_quote = quote
-            paragraph = False
-        margin = len(body) - len(body.lstrip(" "))
-        while lists and body.strip() and margin < lists[-1]:
-            lists.pop()
-        width = lists[-1] if lists else 0
-        body, extra = unquote(body[width:])
-        quote += extra
-        if comment:
-            retained_width = max(width, len(expanded) - len(expanded.lstrip(" "))) if quote else width
-            if quote < comment[0] or retained_width < comment[1]:
-                comment = None
-        if not (comment or fence) and (item := re.match(r"^ {0,3}(?:[-+*]|\d{1,9}[.)])( +)", body)):
-            spaces = len(item.group(1))
-            width += item.start(1) + (spaces if spaces <= 4 else 1)
-            lists.append(width)
-            body = body[item.start(1) + (spaces if spaces <= 4 else 1):]
-            body, extra = unquote(body)
-            quote += extra
-            paragraph = False
-        mark = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", body)
-        if fence and body.strip() and (quote != fence[3] or (not quote and width < fence[4])):
+        body, depth = match_containers(raw, containers)
+        if comment_depth is not None and depth < comment_depth:
+            comment_depth = None
+        if fence and depth < fence[3]:
             unclosed, fence = True, None
+        if i > max(span_row, comment_row):
+            del containers[depth:]
+            while comment_depth is None and fence is None:
+                if marker := QUOTE.match(body):
+                    containers.append(None)
+                    body = body[marker.end():]
+                elif item := ITEM.match(body):
+                    spaces = len(item[1])
+                    width = item.start(1) + (spaces if spaces <= 4 else 1)
+                    containers.append(width)
+                    body = body[width:]
+                else:
+                    break
+                paragraph = False
+        mark = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", body)
         if fence:
             if mark and mark.group(1)[0] == fence[0][0] and len(mark.group(1)) >= len(fence[0]) and not mark.group(2).strip():
                 blocks.append((fence[1], fence[2], "\n".join(content)))
                 fence = None
             else:
-                content.append(raw if not quote and not width else body)
+                content.append(body if containers else raw)
             out.append(" " * len(raw))
             continue
-        if not comment and mark and (mark.group(1)[0] == "~" or "`" not in mark.group(2)):
-            fence = (mark.group(1), i, mark.group(2).strip(), quote, width)
+        if comment_depth is None and i > max(span_row, comment_row) and mark and (mark.group(1)[0] == "~" or "`" not in mark.group(2)):
+            fence = (mark.group(1), i, mark.group(2).strip(), len(containers))
             content = []
             paragraph = False
             out.append(" " * len(raw))
             continue
-        if not comment and not paragraph and body.startswith("    "):
+        if comment_depth is None and i > max(span_row, comment_row) and not paragraph and body.startswith("    "):
             out.append(" " * len(raw))
             continue
         pos = len(raw) if i < span_row else span_end if i == span_row else 0
         visible = list(raw)
         while pos < len(raw):
-            if comment:
+            if i <= comment_row:
+                stop = comment_end if i == comment_row else len(raw)
+                visible[pos:stop] = " " * (stop - pos)
+                pos, comment_row = stop, -1 if i == comment_row else comment_row
+            elif comment_depth is not None:
                 end = raw.find("-->", pos)
                 if end >= 0:
-                    comment = None
+                    comment_depth = None
                 stop = len(raw) if end < 0 else end + 3
                 visible[pos:stop] = " " * (stop - pos)
                 pos = stop
@@ -280,9 +289,13 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
                 pos = match.end()
                 if match[2] == "<!--":
                     if not escaped:
-                        comment = (quote, width) if body.lstrip(" ").startswith("<!--") else (0, 0)
-                        pos = match.start(2)
-                elif (width_of_span := len(match[2]) - escaped) and (end_of_span := inline_code_end(lines, i, pos, width_of_span, quote, width)):
+                        if body.lstrip(" ").startswith("<!--"):
+                            comment_depth = len(containers)
+                            pos = match.start(2)
+                        elif end_of_comment := inline_end(lines, i, pos, 0, containers):
+                            comment_row, comment_end = end_of_comment
+                            pos = match.start(2)
+                elif (width_of_span := len(match[2]) - escaped) and (end_of_span := inline_end(lines, i, pos, width_of_span, containers)):
                     span_row, span_end = end_of_span
                     pos = span_end if i == span_row else len(raw)
             else:
@@ -296,16 +309,17 @@ def strict_inventory(rules: str, scenarios: list[list[str]], defined: set[str]) 
     problems, ids = [], set()
     for line in rules.splitlines():
         match = re.match(rf"^\s*[-*]\s+\*\*({ID})\*\*\s*(.*)$", line)
-        cells = [c.strip() for c in table_cells(line)] if line.lstrip().startswith("|") else []
         if match:
             rule, text = match.groups()
-        elif len(cells) >= 2 and (match := re.fullmatch(rf"\**({ID})\**", cells[0])):
-            rule, text = match.group(1), " ".join(cells[1:])
-        else:
-            continue
-        ids.add(rule)
-        if not text.strip(" -—–"):
-            problems.append("rule " + rule + " has no text")
+            ids.add(rule)
+            if not text.strip(" -—–"):
+                problems.append("rule " + rule + " has no text")
+    for cells in strict_table_rows(rules):
+        if match := re.fullmatch(rf"\**({ID})\**", cells[0]):
+            rule = match.group(1)
+            ids.add(rule)
+            if not " ".join(cells[1:]).strip(" -—–"):
+                problems.append("rule " + rule + " has no text")
     if not ids:
         problems.append("rule inventory is empty (define rules under Rules or --cover TEXT)")
     seen, covered = set(), set()
@@ -486,6 +500,32 @@ def table_cells(l: str) -> list[str]:
         esc = ch == "\\"
     out.append(cur)
     return out
+
+
+def strict_table_rows(text: str):
+    pipes = re.compile(r"(?<!\\)\|")
+
+    def cells(line: str) -> list[str]:
+        parts = pipes.split(line.strip())
+        start = 1 if len(parts) > 1 and not parts[0] else 0
+        end = len(parts) - 1 if len(parts) > 1 and not parts[-1] else len(parts)
+        return [part.strip() for part in parts[start:end]]
+
+    lines, i = text.splitlines(), 0
+    while i + 1 < len(lines):
+        header, separator = lines[i:i + 2]
+        marks = cells(separator)
+        if (not re.match(r"^ {0,3}\S", header) or not re.match(r"^ {0,3}\S", separator)
+                or BLOCK_START.match(header) or not (pipes.search(header) or pipes.search(separator))
+                or not marks or len(cells(header)) != len(marks) or not all(re.fullmatch(r":?-+:?", mark) for mark in marks)):
+            i += 1
+            continue
+        i += 2
+        while i < len(lines) and re.match(r"^ {0,3}\S", lines[i]) and not BLOCK_START.match(lines[i]):
+            row = cells(lines[i])
+            if row:
+                yield row[:len(marks)]
+            i += 1
 
 
 def span_of(lines: list[str], heads: list[tuple[int, int, str]], k: int) -> tuple[int, int]:
@@ -760,7 +800,8 @@ def main() -> int:
     # --- bold definitions (outside the scenario catalogue), duplicates ---
     outside = src.replace(scen_sec, "") if scen_sec else src
     if profile is not None:
-        first_cell_defs = re.findall(rf"^\s*\|\s*\**({ID}|D\d+)\**(?=\s|\|)", outside, re.M)
+        first_cell_defs = [m.group(1) for row in strict_table_rows(outside)
+                           if (m := re.match(rf"^\**({ID}|D\d+)(?=\s|\*|$)", row[0]))]
     bold = re.findall(rf"^\s*[-*]\s+\*\*({ID})\*\*", outside, re.M)
     seen: set[str] = set()
     for b in bold + first_cell_defs:
@@ -775,11 +816,7 @@ def main() -> int:
     if profile is None:
         rows = re.findall(r"^\|\s*(SC-[A-Z0-9-]+)\s*\|([^|\n]*)\|", scen_sec, re.M)
     else:
-        for line in scen_sec.splitlines():
-            if re.match(r"^ {0,3}\|", line):
-                cells = [c.strip() for c in table_cells(line)]
-                if re.fullmatch(r"SC-[A-Z0-9-]+", cells[0]):
-                    scenario_cells.append(cells)
+        scenario_cells = [cells for cells in strict_table_rows(scen_sec) if re.fullmatch(r"SC-[A-Z0-9-]+", cells[0])]
         rows = [(cells[0], cells[1] if len(cells) > 1 else "") for cells in scenario_cells]
     scenarios = sorted({sc for sc, _ in rows})
     if not scen_sec:

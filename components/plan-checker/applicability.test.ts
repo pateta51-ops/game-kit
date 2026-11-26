@@ -315,7 +315,7 @@ describe('explicit plan applicability', () => {
     fails({ text }, 'SC-01: UNKNOWN-01 is not defined');
   });
 
-  it.each(['> ', '- ', '1. ', '- > '])('ends an unclosed HTML block comment with its %s container', (prefix) => {
+  it.each(['> ', '- ', '1. ', '- > ', '- > - ', '- - '])('ends an unclosed HTML block comment with its %s container', (prefix) => {
     const text = PLAN.replace('## 3. Implementation phases', prefix + '<!-- example\n\n## 3. Implementation phases');
     const result = run({ text });
     expect(result.code, result.output).toBe(0);
@@ -330,9 +330,42 @@ describe('explicit plan applicability', () => {
     ['quote', '> <!-- example\n> SC-02.'],
     ['list', '- <!-- example\n  SC-02.'],
     ['nested quote', '- > <!-- example\n  > SC-02.'],
+    ['mixed nesting', '- > - <!-- example\n  >   SC-02.'],
   ])('keeps an HTML comment hidden until its %s ends', (_label, comment) => {
     const text = PLAN.replace('SC-01, SC-02. Implement', comment + '\n\nSC-01. Implement');
     fails({ text }, 'SC-02 is not assigned');
+  });
+
+  it('keeps an unpaired inline comment opener literal across a paragraph boundary', () => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', 'The delimiter is <!--. SC-01, SC-02. Implement\n\nMarker ends --> afterwards.');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('masks a paired inline comment within a multiline paragraph', () => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', 'SC-01. Marker <!-- begins\nSC-02 --> and ends. Implement');
+    fails({ text }, 'SC-02 is not assigned');
+  });
+
+  it.each([
+    ['raw pipe rows', ''],
+    ['a mismatched delimiter', '| ID | Rules | Expected |\n|---|---|\n'],
+  ])('requires a real scenario table instead of %s', (_label, header) => {
+    const text = PLAN.replace('| ID | Rules | Expected |\n|---|---|---|\n', header);
+    fails({ text }, 'scenario inventory is empty');
+  });
+
+  it('accepts aligned GFM scenario tables without outer pipes', () => {
+    const text = PLAN.replace('| ID | Rules | Expected |\n|---|---|---|', 'ID | Rules | Expected\n:--- | ---: | :---:')
+      .replace('| SC-01 | MOVE-01 | Enter the adjacent open space. |', 'SC-01 | MOVE-01 | Enter the adjacent open space.');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('preserves the legacy handling of raw scenario rows', () => {
+    const text = PLAN.replace('| ID | Rules | Expected |\n|---|---|---|\n', '');
+    const result = run({ text, noProfile: true, flags: ['--cards-optional', '--depth-optional'] });
+    expect(result.code, result.output).toBe(0);
   });
 
   it('preserves legacy scenario mentions outside phase blocks', () => {
