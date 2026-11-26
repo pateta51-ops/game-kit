@@ -455,6 +455,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K774 | Provide focused same-pin context and continuations, verify generated worker briefs against their inputs, and report component observations with their evidence limits. | M |  | done |
 | K775 | Import record-traced development observations and compare compatible accepted endpoints with explicit measurement limits. | M |  | done |
 | K776 | Verify retained ancestor coverage evidence, require actual Windows and PDF capability cases, and check the identities of commits contributed to a pull request. | M |  | done |
+| K777 | Compare compatible coverage per component, distinguish source and instrumentation scope changes, and replay the comparator against retained successful main workflow artifacts. | M |  | done |
 | K780 | Use a monotonic clock for check elapsed durations and fail receipt finalization when its observed UTC completion precedes its start. | S |  | done |
 
 ## Candidates
