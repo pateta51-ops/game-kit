@@ -1,7 +1,7 @@
 // Ported from unst src/ui/play/useBoardKeys.ts + ShortcutHelp.tsx and ufs src/ui/prompts/common.tsx (arrow lists), no React.
 // Enter confirms, arrows rove through a marked option list, the game's board keys run, `?` opens a key list, Escape closes it.
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import { activeOverlay, isControl, isTyping, type KeyPress, type KeyRoot, type KeyTarget } from './promptKeys.ts';
+import { activeOverlay, isControl, isTyping, keyOrigin, type KeyPress, type KeyRoot, type KeyTarget } from './promptKeys.ts';
 
 export interface PlayKeyPress extends KeyPress {
   repeat?: boolean;
@@ -73,7 +73,8 @@ export function bindPlayKeys(target: KeyTarget, o: PlayKeysOptions): () => void 
     if (RESERVED.test(k) || k in ARROWS) throw new Error(`bindPlayKeys: board key "${k}" is reserved`);
   const fn = (e: PlayKeyPress): void => {
     if (e.defaultPrevented || e.repeat === true || o.enabled?.() === false) return;
-    if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
+    const origin = keyOrigin(e);
+    if (e.ctrlKey || e.metaKey || e.altKey || isTyping(origin)) return;
     const key = e.key;
     if (o.help?.getState().open === true) {
       if (key === 'Escape' || key === '?') {
@@ -100,7 +101,7 @@ export function bindPlayKeys(target: KeyTarget, o: PlayKeysOptions): () => void 
       return;
     }
     if (key === 'Enter') {
-      if (isControl(e.target)) return;
+      if (isControl(origin)) return;
       const b = o.panel?.()?.querySelector(confirm) as { disabled?: unknown; click?: unknown } | null | undefined;
       if (b == null || b.disabled === true || typeof b.click !== 'function') return;
       (b.click as () => void).call(b);

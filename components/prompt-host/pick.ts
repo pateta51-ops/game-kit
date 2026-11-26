@@ -4,7 +4,7 @@
 // Confirm or Enter answers once min..max are picked; `confirm: false` answers when max are picked).
 import { useEffect, useState } from 'react';
 import type { KernelPrompt } from '../engine-core/index.ts';
-import { activeOverlay, isControl, isTyping } from '../ui-helpers/promptKeys.ts';
+import { activeOverlay, isControl, isTyping, keyOrigin } from '../ui-helpers/promptKeys.ts';
 import type { Answer } from './host.tsx';
 
 export type Mark = 'legal' | 'barred' | 'armed';
@@ -73,8 +73,9 @@ export function useBoardPick(prompt: KernelPrompt | null, answer: Answer, { conf
   useEffect(() => {
     if (armed === null) return;
     const key = (e: KeyboardEvent): void => {
-      if (e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target) || paused?.() === true || activeOverlay(document, overlay) != null) return;
-      if (e.key === 'Enter' && !isControl(e.target) && pick.ready) { e.preventDefault(); pick.confirm(); }
+      const origin = keyOrigin(e);
+      if (e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey || isTyping(origin) || paused?.() === true || activeOverlay(document, overlay) != null) return;
+      if (e.key === 'Enter' && !isControl(origin) && pick.ready) { e.preventDefault(); pick.confirm(); }
       else if (e.key === 'Escape') { e.preventDefault(); pick.cancel(); }
     };
     window.addEventListener('keydown', key);

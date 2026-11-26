@@ -4,6 +4,7 @@
 export interface KeyPress {
   key: string;
   target: unknown;
+  composedPath?: () => readonly unknown[];
   defaultPrevented: boolean;
   ctrlKey: boolean;
   metaKey: boolean;
@@ -52,6 +53,8 @@ const tag = (target: unknown): string => {
   const t = (target as { tagName?: unknown } | null)?.tagName;
   return typeof t === 'string' ? t.toUpperCase() : '';
 };
+
+export const keyOrigin = (event: KeyPress): unknown => event.composedPath?.()[0] ?? event.target;
 
 export const isTyping = (target: unknown): boolean =>
   (target as { isContentEditable?: unknown } | null)?.isContentEditable === true ||
@@ -111,7 +114,8 @@ export function bindPromptKeys(target: KeyTarget, options: PromptKeysOptions): (
   const { overlay, keys = {} } = options;
   const fn: KeyListener = (e) => {
     if (e.defaultPrevented || options.paused?.() === true || !options.open()) return;
-    if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
+    const origin = keyOrigin(e);
+    if (e.ctrlKey || e.metaKey || e.altKey || isTyping(origin)) return;
     if (activeOverlay(target, overlay) != null) return;
     const root = options.panel();
     if (root === null) return;
@@ -124,7 +128,7 @@ export function bindPromptKeys(target: KeyTarget, options: PromptKeysOptions): (
     const own = [e.key, e.key.toLowerCase()].find((k) => Object.hasOwn(keys, k));
     const done =
       own !== undefined
-        ? keys[own]?.({ press, onControl: isControl(e.target) }) === true
+        ? keys[own]?.({ press, onControl: isControl(origin) }) === true
         : /^[1-9]$/.test(e.key)
           ? press(`[data-shortcut="${e.key}"]`)
           : e.key === 'Escape' && (options.clear?.() === true || options.back?.() === true);

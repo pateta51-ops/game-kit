@@ -533,6 +533,50 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
     } finally { await page.close(); }
   });
 
+  it('retains native Enter on an open-shadow button while a board pick is armed', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Arm board pick' }).click();
+      const button = await shadowOpener(page.getByRole('button', { name: 'Numbered action' }));
+      await button.focus();
+      await page.keyboard.press('Enter');
+      expect(await values(page)).toEqual(['1', '0', '0', '0', 'card', '0', '0']);
+    } finally { await page.close(); }
+  });
+
+  it('retains native Enter on an open-shadow button when play keys have a confirm target', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Arm board pick' }).evaluate((el) => el.setAttribute('data-confirm', ''));
+      const button = await shadowOpener(page.getByRole('button', { name: 'Numbered action' }));
+      await button.focus();
+      await page.keyboard.press('Enter');
+      expect(await values(page)).toEqual(['1', '0', '0', '0', 'none', '0', '0']);
+    } finally { await page.close(); }
+  });
+
+  it('keeps prompt numbers, play keys and armed-pick Enter out of an open-shadow input', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Arm board pick' }).click();
+      await page.evaluate(() => {
+        const host = document.createElement('div');
+        host.attachShadow({ mode: 'open' }).innerHTML = '<input aria-label="Shadow note">';
+        document.querySelector('main')!.append(host);
+      });
+      const input = page.getByRole('textbox', { name: 'Shadow note' });
+      await input.focus();
+      await page.keyboard.press('1');
+      await page.keyboard.press('e');
+      await page.keyboard.press('Enter');
+      expect(await values(page)).toEqual(['0', '0', '0', '0', 'card', '0', '0']);
+      expect(await input.inputValue()).toBe('1e');
+    } finally { await page.close(); }
+  });
+
   it('focuses the summary of a closed disclosure and tab-traps its visible controls', async () => {
     const page = await browser.newPage();
     try {
