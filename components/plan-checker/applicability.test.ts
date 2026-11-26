@@ -1,0 +1,650 @@
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { afterAll, describe, expect, it } from 'vitest';
+import { candidates } from './plancheck.ts';
+
+const script = fileURLToPath(new URL('./plancheck.py', import.meta.url));
+const wrapper = fileURLToPath(new URL('./plancheck.ts', import.meta.url));
+const python = candidates(process.env, process.platform).find(cmd => spawnSync(cmd[0]!, [...cmd.slice(1), '--version']).status === 0);
+if (python === undefined) throw new Error('Python 3 is required for applicability acceptance');
+const made: string[] = [];
+afterAll(() => made.forEach(dir => rmSync(dir, { recursive: true, force: true })));
+const names = JSON.parse(readFileSync(script, 'utf8').match(/SHEET_QUESTIONS = (\[[\s\S]*?\]\])/u)![1]!) as [string, string][];
+const sheet = names.map(([id, name]) => `| ${name} | ${['player', 'positions', 'objectives'].includes(id) ? 'One piece reaches the goal' : 'not in this game'} | ${id === 'positions' ? '`grid-map`' : '`engine-core`'} |`).join('\n');
+const PLAN = `# Original movement fixture
+
+## 1. Rules
+
+- **MOVE-01** A move enters an adjacent unblocked space.
+- **WALL-01** A wall-crossing move is refused without changing state.
+
+## 2. Scenario catalogue
+
+| ID | Rules | Expected |
+|---|---|---|
+| SC-01 | MOVE-01 | Enter the adjacent open space. |
+| SC-02 | WALL-01 | Refuse the wall crossing and preserve the state. |
+
+## 3. Implementation phases
+
+### Phase 1 — movement
+
+SC-01, SC-02. Implement the movement contract and its refusal control.
+
+## 4. Session plan
+
+| Batch | Phases | Model | Confidence | Worker | Touches | Gate | Owner |
+|---|---|---|---|---|---|---|---|
+| S1 | 1 | test model | 90% | codex | src/engine | npm run check | architect |
+
+## 5. Definition of Done
+
+The declared movement and refusal cases pass. Exercise default-off paths when present.
+
+## 6. Layers
+
+Unit rules, refusal and invariants, then browser acceptance of actual movement.
+
+## 7. Shared preamble
+
+Send every changed flow through e2e with the heavy run queue.
+
+## 8. Reuse map
+
+Kit pin: tag v0.276.1.
+
+| Layer | Kind | Source |
+|---|---|---|
+| Kernel | Pull | \`engine-core\` |
+| Board | Pull | \`grid-map\` |
+| Movement policy | New | game code |
+
+| Game sheet line | Answer | Kit part or build-own row |
+|---|---|---|
+${sheet}
+
+| What the game builds | Words searched in the kit | Nearest kit part | Verdict | Register id or refusal |
+|---|---|---|---|---|
+| Movement policy | legal movement; wall refusal | \`grid-map\` | game code | The authored fixture owns movement meaning and refusal expectations; steward not asked |
+`;
+const NONE = { version: 1, cards: { mode: 'none', reason: 'This original movement fixture has no cards.' }, llmPlaytest: { mode: 'none', reason: 'The acceptance is deterministic and uses no model player.' } };
+interface FixtureOptions { text?: string; profile?: unknown; rawProfile?: string; catalogue?: unknown; scripts?: Record<string, string>; rawPackage?: string; fit?: string; flags?: string[]; noProfile?: boolean }
+function fixture(options: FixtureOptions = {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'plan-applicability-'));
+  made.push(dir);
+  mkdirSync(join(dir, 'docs', 'plan-review'), { recursive: true });
+  mkdirSync(join(dir, 'kit'));
+  writeFileSync(join(dir, 'kit', 'kit.lock.json'), JSON.stringify({ ref: 'v0.276.1', components: { 'engine-core': { files: {} }, 'grid-map': { files: {} } } }));
+  writeFileSync(join(dir, 'docs', 'PLAN.md'), options.text ?? PLAN);
+  writeFileSync(join(dir, 'docs', 'plan-review', 'kit-fit.md'), options.fit ?? 'Movement policy: original fixture rules over the existing grid and engine.');
+  writeFileSync(join(dir, 'docs', 'check-applicability.json'), options.rawProfile ?? JSON.stringify(options.profile ?? NONE));
+  writeFileSync(join(dir, 'package.json'), options.rawPackage ?? JSON.stringify({ scripts: options.scripts ?? { check: 'node fixture-check.mjs' } }));
+  if (options.catalogue !== undefined) {
+    mkdirSync(join(dir, 'docs', 'cards'));
+    writeFileSync(join(dir, 'docs', 'cards', 'catalogue.json'), JSON.stringify(options.catalogue));
+  }
+  const args = ['docs/PLAN.md', '--kit', join(dir, 'no-checkout'), ...(options.noProfile === true ? [] : ['--applicability', 'docs/check-applicability.json']), ...(options.flags ?? [])];
+  return { dir, args };
+}
+function run(options: FixtureOptions = {}) {
+  const { dir, args } = fixture(options);
+  const result = spawnSync(python![0]!, [...python!.slice(1), script, ...args], { cwd: dir, encoding: 'utf8' });
+  return { code: result.status, output: result.stdout + result.stderr, dir, args };
+}
+function fails(options: FixtureOptions, expected: string) {
+  const result = run(options);
+  expect(result.code, result.output).toBe(1);
+  expect(result.output).toContain(expected);
+}
+
+const CARD_PLAN = PLAN
+  .replace('- **WALL-01**', '- **AR-01** Apply the declared modifier once.\n- **WALL-01**')
+  .replace('| SC-02 | WALL-01 |', '| SC-03 | AR-01 | Apply one modifier. |\n| SC-02 | WALL-01 |')
+  .replace('SC-01, SC-02. Implement', 'SC-01, SC-02, SC-03. Build llm-playtester; run cards:whole-game. Implement')
+  .replace('| Gate | Owner |', '| Gate | Owner | Clauses | Patterns |')
+  .replace('|---|---|---|---|---|---|---|---|', '|---|---|---|---|---|---|---|---|---|---|')
+  .replace('| npm run check | architect |', '| npm run check | architect | 1 | P-01 |')
+  .replace('Exercise default-off paths when present.', 'Exercise default-off paths when present; expectNotOffered; LLM playtest; cards:check, cards:screen, cards:whole-game.')
+  .replace('Unit rules, refusal and invariants, then browser acceptance of actual movement.', 'Unit rules, refusal and invariants, then browser acceptance and LLM playtest.') + `
+## 9. Card-language test programme
+
+Use cardCase for every clause and interaction; expectNotOffered covers poor setups. The mapping is ar-map.md.
+
+| Family | Full resolve | Poor setup |
+|---|---|---|
+| Example | one independent check per clause | expectNotOffered |
+
+## 10. Modifier order
+
+| Quantity | Kit function | Ruling |
+|---|---|---|
+| Value | \`sumEffects\` | AR-01 |
+
+## 11. Screen-text scan
+
+Compare the authored text with the visible text.
+`;
+const CATALOGUE = { summary: { clauses: 1 }, patterns: [{ id: 'P-01' }] };
+
+describe('explicit plan applicability', () => {
+  it('checks a real non-card rule/scenario plan without any legacy optional flags', () => {
+    const result = run();
+    expect(result.code, result.output).toBe(0);
+    expect(result.output).toContain('applicability: cards none');
+    expect(result.output).not.toContain('NOTE cards:');
+    expect(result.output).not.toContain('NOTE depth:');
+  });
+
+  it('keeps default card behavior and supports an explicitly required card and LLM profile', () => {
+    const normal = run({ text: CARD_PLAN, catalogue: CATALOGUE, noProfile: true });
+    expect(normal.code, normal.output).toBe(0);
+    const required = { version: 1, cards: { mode: 'required' }, llmPlaytest: { mode: 'required' } };
+    const explicit = run({ text: CARD_PLAN, catalogue: CATALOGUE, profile: required });
+    expect(explicit.code, explicit.output).toBe(0);
+    fails({ text: CARD_PLAN.replace('expectNotOffered', 'missing-helper'), catalogue: CATALOGUE, profile: required }, 'expectNotOffered');
+    fails({ noProfile: true }, 'PROBLEM cards:');
+  });
+
+  it('checks cards and LLM independently in both mixed profiles', () => {
+    const cardOnly = run({
+      text: CARD_PLAN.replace('Build llm-playtester; run', 'Run').replace('; LLM playtest;', ';').replace(' and LLM playtest.', '.'),
+      catalogue: CATALOGUE, profile: { ...NONE, cards: { mode: 'required' } },
+    });
+    expect(cardOnly.code, cardOnly.output).toBe(0);
+    const llmOnly = run({
+      text: PLAN.replace('Implement the movement', 'Build llm-playtester. Implement the movement')
+        .replace('Exercise default-off paths when present.', 'Exercise default-off paths when present; LLM playtest.')
+        .replace('Unit rules, refusal', 'LLM playtest, unit rules, refusal'),
+      profile: { ...NONE, llmPlaytest: { mode: 'required' } },
+    });
+    expect(llmOnly.code, llmOnly.output).toBe(0);
+  });
+
+  it('allows an explicitly excluded empty catalogue without using it to infer applicability', () => {
+    const result = run({ catalogue: { summary: { clauses: 0 }, patterns: [], oneOffs: [] } });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('preserves legacy opt-in behavior only when no strict applicability is supplied', () => {
+    const result = run({ noProfile: true, flags: ['--cards-optional', '--depth-optional'] });
+    expect(result.code, result.output).toBe(0);
+    expect(result.output).toContain('NOTE cards:');
+  });
+
+  it.each(['--cards-optional', '--depth-optional', '--kit-optional', '--sessions-optional', '--sheet-optional', '--cover-skip'])('refuses %s with explicit strict applicability', flag => {
+    fails({ flags: [flag, ...(flag === '--cover-skip' ? ['MOVE'] : [])] }, 'cannot combine');
+  });
+
+  it.each([
+    ['unknown top key', { ...NONE, skipAll: true }],
+    ['missing cards', { version: 1, llmPlaytest: NONE.llmPlaytest }],
+    ['missing LLM', { version: 1, cards: NONE.cards }],
+    ['unknown mode', { ...NONE, cards: { mode: 'optional', reason: 'no' } }],
+    ['missing reason', { ...NONE, cards: { mode: 'none' } }],
+    ['blank reason', { ...NONE, llmPlaytest: { mode: 'none', reason: '  ' } }],
+    ['unknown section key', { ...NONE, cards: { ...NONE.cards, ignore: true } }],
+    ['wrong version', { ...NONE, version: 2 }],
+    ['boolean version', { ...NONE, version: true }],
+  ])('rejects malformed applicability: %s', (_label, profile) => fails({ profile }, 'applicability:'));
+
+  it('rejects malformed JSON and a missing applicability file', () => {
+    fails({ rawProfile: '{' }, 'applicability:');
+    fails({ noProfile: true, flags: ['--applicability', 'missing.json'] }, 'applicability:');
+  });
+
+  it.each([
+    ['an empty rule inventory', PLAN.replace(/- \*\*(MOVE|WALL)-01\*\*[^\n]*\n/gu, ''), 'rule inventory'],
+    ['an empty scenario inventory', PLAN.replace(/^\| SC-0[12] \|[^\n]*\n/gmu, ''), 'scenario inventory'],
+    ['a rule mentioned outside the citation column', PLAN.replace('| SC-02 | WALL-01 | Refuse', '| SC-02 | MOVE-01 | WALL-01 Refuse'), 'WALL-01 is not covered'],
+    ['a missing expected outcome', PLAN.replace('Enter the adjacent open space.', ''), 'expected outcome'],
+    ['a scenario absent from phases', PLAN.replace('SC-01, SC-02. Implement', 'SC-01. Implement'), 'SC-02 is not assigned'],
+    ['a phase with no session', PLAN.replace('| S1 | 1 |', '| S1 | 2 |'), 'Phase 1 is in no batch'],
+    ['missing default-off depth', PLAN.replace('default-off', 'alternate'), 'default-off'],
+    ['missing e2e queue instruction', PLAN.replace('e2e with the heavy', 'unit with the local'), 'e2e'],
+    ['missing reuse table', PLAN.replace('## 8. Reuse map', '## 8. Other'), 'Reuse map'],
+  ])('retains generic strict checks: %s', (_label, text, expected) => fails({ text }, expected));
+
+  it.each(['deleted', 'commented', 'fenced'])('rejects a %s scenario still referenced by a phase even when its rule is covered', (mode) => {
+    const row = '| SC-01 | MOVE-01 | Enter the adjacent open space. |';
+    const text = PLAN.replace(row, `${row}\n| SC-03 | MOVE-01 | Enter a different adjacent open space. |`)
+      .replace('SC-01, SC-02. Implement', 'SC-01, SC-02, SC-03. Implement');
+    const valid = run({ text });
+    expect(valid.code, valid.output).toBe(0);
+    const removed = mode === 'deleted' ? '' : mode === 'commented' ? `<!--\n${row}\n-->` : `\`\`\`md\n${row}\n\`\`\``;
+    fails({ text: text.replace(row, removed) }, 'phase references SC-01 but that scenario is not defined');
+  });
+
+  it('ignores example scenario definitions and phase references outside strict prose', () => {
+    const text = PLAN.replace('## 3. Implementation phases', '<!--\n| SC-97 | UNKNOWN-01 | Example only. |\n-->\n\n## 3. Implementation phases')
+      .replace('Implement the movement contract', '<!-- SC-98 -->\n```md\nSC-99\n```\nImplement the movement contract');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('does not assign a real scenario from a commented phase reference', () => {
+    fails({ text: PLAN.replace('SC-01, SC-02. Implement', 'SC-01. <!-- SC-02 --> Implement') }, 'SC-02 is not assigned');
+  });
+
+  it.each([
+    ['outside a phase', PLAN.replace('### Phase 1', 'Overview: SC-02.\n\n### Phase 1').replace('SC-01, SC-02. Implement', 'SC-01. Implement'), 'SC-02 is not assigned'],
+    ['in a commented heading', PLAN.replace('### Phase 1 — movement', '<!--\n### Phase 1 — movement\n-->'), 'no implementation phase headings'],
+    ['in a fenced heading', PLAN.replace('### Phase 1 — movement', '~~~~md\n### Phase 1 — movement\n~~~~'), 'no implementation phase headings'],
+    ['in duplicate phase headings', PLAN.replace('## 4. Session plan', '### Phase 1 — duplicate\n\n## 4. Session plan'), 'Phase 1 is defined more than once'],
+  ])('rejects an invalid phase assignment %s', (_label, text, expected) => {
+    fails({ text }, expected);
+  });
+
+  it('ignores a duplicate phase example and accepts scenarios in real phase subsections', () => {
+    const text = PLAN.replace('### Phase 1 — movement', '### Phase 1 — movement\n\n<!--\n### Phase 1 — example\n-->\n\n#### Acceptance');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('does not let a fenced literal comment opener swallow live phases', () => {
+    const text = PLAN.replace('## 3. Implementation phases', '```html\n<!--\n```\n\n## 3. Implementation phases');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it.each([
+    ['quoted code', PLAN.replace('SC-01, SC-02. Implement', '> ```text\n> SC-02\n> ```\n\nSC-01. Implement'), 'SC-02 is not assigned'],
+    ['indented code', PLAN.replace('SC-01, SC-02. Implement', '    SC-02.\n\nSC-01. Implement'), 'SC-02 is not assigned'],
+    ['Rules heading', PLAN.replace('## 1. Rules', '<!--\n## 1. Rules\n-->'), 'rule inventory'],
+    ['Scenario catalogue heading', PLAN.replace('## 2. Scenario catalogue', '<!--\n## 2. Scenario catalogue\n-->'), 'scenario inventory'],
+    ['Reuse map', PLAN.replace('## 8. Reuse map', '<!--\n## 8. Reuse map') + '\n-->', "no heading contains 'Reuse map'"],
+    ['default-off requirement', PLAN.replace('Exercise default-off paths when present.', 'Exercise alternate paths. <!-- default-off -->'), 'lacks the default-off paths'],
+    ['preamble evidence', PLAN.replace('Send every changed flow through e2e with the heavy run queue.', '<!-- e2e heavy -->'), 'does not send a changed flow through the e2e suites'],
+  ])('rejects hidden Markdown evidence for %s', (_label, text, expected) => {
+    fails({ text }, expected);
+  });
+
+  it.each([
+    ['inline literal comment opener', PLAN.replace('SC-01, SC-02. Implement', '`<!--` is a marker. SC-01, SC-02. Implement')],
+    ['indented fence-like example', PLAN.replace('## 3. Implementation phases', '    ~~~\n\n## 3. Implementation phases')],
+    ['list continuations', PLAN.replace('SC-01, SC-02. Implement', '1. Use SC-01.\n    Then use `SC-02`. Implement')],
+  ])('accepts visible plan evidence with %s', (_label, text) => {
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('validates real JSON fences without parsing fences inside comments', () => {
+    const invalid = '\n```json\n{\n```\n';
+    const hidden = run({ text: PLAN + '<!--' + invalid + '-->\n' });
+    expect(hidden.code, hidden.output).toBe(0);
+    fails({ text: PLAN + invalid }, 'json block 1');
+  });
+
+  it('does not count a commented kit-fit review', () => {
+    fails({ fit: '<!-- Movement policy: Original rules over the existing grid. -->' }, 'no kit-fit review');
+  });
+
+  it('does not manufacture headings by masking adjacent comments', () => {
+    fails({ text: PLAN.replace('### Phase 1', '###<!-- annotation --> Phase 1') }, 'no implementation phase headings');
+  });
+
+  it.each([1, 2, 3, 4])('recognizes HTML comment escapes after %s backslashes', (slashes) => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', 'SC-01. ' + '\\'.repeat(slashes) + '<!-- SC-02 --> Implement');
+    if (slashes % 2 === 0) fails({ text }, 'SC-02 is not assigned');
+    else {
+      const result = run({ text });
+      expect(result.code, result.output).toBe(0);
+    }
+  });
+
+  it.each(['`example <!--\ncontinued`', '`example\ncontinued <!--`'])('keeps the comment marker inside a multiline span: %s', (span) => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', 'The marker ' + span + ' is literal. SC-01, SC-02. Implement');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('does not join an inline span across an interrupting HTML comment block', () => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', 'SC-01. Unclosed ` marker.\n<!-- SC-02 -->`');
+    fails({ text }, 'SC-02 is not assigned');
+  });
+
+  it('does not join an inline span across ordered list items', () => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', '1. SC-01. Unclosed ` marker.\n2. <!-- SC-02 -->`');
+    fails({ text }, 'SC-02 is not assigned');
+  });
+
+  it('validates the complete scenario citation cell when it contains an escaped pipe', () => {
+    const text = PLAN.replace('| SC-01 | MOVE-01 |', '| SC-01 | MOVE-01 \\| UNKNOWN-01 |');
+    fails({ text }, 'SC-01: UNKNOWN-01 is not defined');
+  });
+
+  it.each(['> ', '- ', '1. ', '- > ', '- > - ', '- - '])('ends an unclosed HTML block comment with its %s container', (prefix) => {
+    const text = PLAN.replace('## 3. Implementation phases', prefix + '<!-- example\n\n## 3. Implementation phases');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('keeps an unclosed top-level HTML block comment across blank lines', () => {
+    const text = PLAN.replace('## 3. Implementation phases', '<!-- example\n\n## 3. Implementation phases');
+    fails({ text }, 'no implementation phase headings');
+  });
+
+  it.each([
+    ['quote', '> <!-- example\n> SC-02.'],
+    ['list', '- <!-- example\n  SC-02.'],
+    ['nested quote', '- > <!-- example\n  > SC-02.'],
+    ['mixed nesting', '- > - <!-- example\n  >   SC-02.'],
+  ])('keeps an HTML comment hidden until its %s ends', (_label, comment) => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', comment + '\n\nSC-01. Implement');
+    fails({ text }, 'SC-02 is not assigned');
+  });
+
+  it('keeps an unpaired inline comment opener literal across a paragraph boundary', () => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', 'The delimiter is <!--. SC-01, SC-02. Implement\n\nMarker ends --> afterwards.');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('masks a paired inline comment within a multiline paragraph', () => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', 'SC-01. Marker <!-- begins\nSC-02 --> and ends. Implement');
+    fails({ text }, 'SC-02 is not assigned');
+  });
+
+  it.each([
+    ['raw pipe rows', ''],
+    ['a mismatched delimiter', '| ID | Rules | Expected |\n|---|---|\n'],
+  ])('requires a real scenario table instead of %s', (_label, header) => {
+    const text = PLAN.replace('| ID | Rules | Expected |\n|---|---|---|\n', header);
+    fails({ text }, 'scenario inventory is empty');
+  });
+
+  it('accepts aligned GFM scenario tables without outer pipes', () => {
+    const text = PLAN.replace('| ID | Rules | Expected |\n|---|---|---|', 'ID | Rules | Expected\n:--- | ---: | :---:')
+      .replace('| SC-01 | MOVE-01 | Enter the adjacent open space. |', 'SC-01 | MOVE-01 | Enter the adjacent open space.');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it.each([
+    ['a delimiter suffix', '| ID | Rules | Expected |\n|---|---|---| <!-- separator comment -->'],
+    ['an inline delimiter comment', '| ID | Rules | Expected |\n|---|---<!-- cell comment -->|---|'],
+    ['a delimiter prefix', '| ID | Rules | Expected |\n<!-- separator comment --> |---|---|---|'],
+    ['a raw extra header pipe', '| ID <!-- extra | separator --> | Rules | Expected |\n|---|---|---|'],
+  ])('does not turn %s into a GFM scenario table by masking comments', (_label, table) => {
+    const text = PLAN.replace('| ID | Rules | Expected |\n|---|---|---|', table);
+    fails({ text }, 'scenario inventory is empty');
+  });
+
+  it('keeps comments out of the evidence in a syntactically valid table', () => {
+    const text = PLAN.replace('| ID | Rules | Expected |', '| ID <!-- heading note --> | Rules | Expected |')
+      .replace('| SC-01 | MOVE-01 | Enter', '| SC-01 | MOVE-01 \\| <!-- UNKNOWN-01 --> | Enter');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it.each([
+    ['<pre>', '</pre>'],
+    ['<textarea>\n', '</textarea>'],
+    ['<div>', '</div>'],
+    ['<markup-example role="table">', '</markup-example>'],
+    ['<?example', '?>'],
+    ['<!EXAMPLE', '>'],
+    ['<![CDATA[', ']]>'],
+  ])('ignores scenario tables inside a raw HTML block starting with %s', (open, close) => {
+    const text = PLAN.replace('| ID | Rules | Expected |', open + '\n| ID | Rules | Expected |')
+      .replace('\n\n## 3. Implementation phases', '\n' + close + '\n\n## 3. Implementation phases');
+    fails({ text }, 'scenario inventory is empty');
+  });
+
+  it.each([
+    ['an explicit terminator', '<PRE>\n\nmarkdown example\n</PRE>\n'],
+    ['a blank line', '<div>\nexample</div>\n\n'],
+    ['the end of its quote', '> <pre>\n> example\n'],
+  ])('accepts the real scenario table after an HTML block ending at %s', (_label, html) => {
+    const text = PLAN.replace('| ID | Rules | Expected |', html + '| ID | Rules | Expected |');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it.each([
+    ['phase citations', PLAN.replace('SC-01, SC-02. Implement', 'Use <span title="SC-01, SC-02">examples</span>. Implement'), 'SC-01 is not assigned to any phase'],
+    ['multiline phase citations', PLAN.replace('SC-01, SC-02. Implement', 'Use <span\n title="SC-01, SC-02">examples</span>. Implement'), 'SC-01 is not assigned to any phase'],
+    ['rule text', PLAN.replace('A move enters an adjacent unblocked space.', '<span title="never visible"></span>'), 'rule MOVE-01 has no text'],
+  ])('does not count inline HTML attributes as %s', (_label, text, expected) => {
+    fails({ text }, expected);
+  });
+
+  it('preserves visible references beside inline HTML tags', () => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', 'Use <span>SC-01</span>.\n<note>\nThen use <em>SC-02</em>. Implement');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it.each([
+    ['destinations', 'Use [one](/SC-01) and [two](/SC-02). Implement'],
+    ['titles', 'Use [examples](/reference "SC-01, SC-02"). Implement'],
+    ['reference definitions', '[one]: /SC-01\n[two]: /SC-02\n\nImplement'],
+    ['reference labels', 'Use [examples][SC-01, SC-02]. Implement\n\n[SC-01, SC-02]: /reference\n\nImplement'],
+    ['multiline reference labels', 'Use [examples][SC-01,\nSC-02]. Implement\n\n[SC-01,\nSC-02]: /reference\n\nImplement'],
+    ['a multiline reference use', 'Use [examples][SC-01,\nSC-02]. Implement\n\n[SC-01, SC-02]: /reference\n\nImplement'],
+    ['a multiline reference definition', 'Use [examples][SC-01, SC-02]. Implement\n\n[SC-01,\nSC-02]: /reference\n\nImplement'],
+  ])('does not count Markdown link %s as phase citations', (_label, body) => {
+    fails({ text: PLAN.replace('SC-01, SC-02. Implement', body) }, 'SC-01 is not assigned to any phase');
+  });
+
+  it('requires a visible rule citation and rule text even with Markdown links', () => {
+    fails({ text: PLAN.replace('| SC-01 | MOVE-01 |', '| SC-01 | [example](/MOVE-01) |') }, 'SC-01 cites no defined rule');
+    fails({ text: PLAN.replace('A move enters an adjacent unblocked space.', '[](/never-visible)') }, 'rule MOVE-01 has no text');
+  });
+
+  it.each([
+    '[SC-01, SC-02](/chapter(one) "Introduction")',
+    '[SC-01, SC-02][guide]\n\n[guide]: /chapter\n\nImplement',
+    '[SC-01, SC-02]',
+    '[description][SC-01, SC-02]',
+    '[description][SC-01,\nSC-02]',
+    '[SC-01,\nSC-02][guide]\n\n[guide]: /chapter\n\nImplement',
+    '<https://example.invalid/SC-01/SC-02>',
+    '`[description](/SC-01/SC-02)`',
+  ])('preserves visible Markdown plan references in %s', (body) => {
+    const result = run({ text: PLAN.replace('SC-01, SC-02. Implement', body + ' Implement') });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it.each([
+    '![](/image.png)',
+    '![Illustration](/image.png)',
+    '![Illustration][art]\n\n[art]: /image.png\n',
+  ])('requires visible rule text alongside an image: %s', (image) => {
+    fails({ text: PLAN.replace('A move enters an adjacent unblocked space.', image) }, 'rule MOVE-01 has no text');
+  });
+
+  it.each([
+    '![SC-01, SC-02](/image.png). Implement',
+    '![SC-01, SC-02][art]. Implement\n\n[art]: /image.png\n\nImplement',
+    '![SC-01, SC-02][]. Implement\n\n[SC-01, SC-02]: /image.png\n\nImplement',
+    '![SC-01, SC-02]. Implement\n\n[SC-01, SC-02]: /image.png\n\nImplement',
+    '![illustration [SC-01, SC-02](/guide)](/image.png). Implement',
+  ])('does not count image descriptions as phase citations: %s', (body) => {
+    fails({ text: PLAN.replace('SC-01, SC-02. Implement', body) }, 'SC-01 is not assigned to any phase');
+  });
+
+  it.each([
+    '![Illustration](/image.png) [SC-01, SC-02](/guide). Implement',
+    '[![Illustration](/image.png) SC-01, SC-02](/guide). Implement',
+    '\\![SC-01, SC-02](/image.png). Implement',
+    '![SC-01, SC-02][unknown]. Implement',
+  ])('preserves visible prose and unresolved image syntax: %s', (body) => {
+    const result = run({ text: PLAN.replace('SC-01, SC-02. Implement', body) });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it.each(['**[](/guide)**', '_![](/image.png)_', '***![](/image.png)***', '**_![](/image.png)_**'])(
+    'excludes formatting around hidden evidence: %s', (body) => {
+      fails({ text: PLAN.replace('A move enters an adjacent unblocked space.', body) }, 'rule MOVE-01 has no text');
+      fails({ text: PLAN.replace('Enter the adjacent open space.', body) }, 'SC-01 has no expected outcome');
+    },
+  );
+
+  it('does not count multiline emphasis surrounding only images as rule text', () => {
+    fails({ text: PLAN.replace('A move enters an adjacent unblocked space.', '*![](/one.png)\n  ![](/two.png)*') }, 'rule MOVE-01 has no text');
+  });
+
+  it.each(['*Ordinary text\n  ![](/two.png)*', '*![](/one.png)\n\n  ![](/two.png)*'])(
+    'preserves visible text or literal punctuation in %s', (body) => {
+      const result = run({ text: PLAN.replace('A move enters an adjacent unblocked space.', body) });
+      expect(result.code, result.output).toBe(0);
+    },
+  );
+
+  it.each(['|---|', '|||||||||'])('requires a structured session table delimiter: %s', (delimiter) => {
+    const text = PLAN.replace('|---|---|---|---|---|---|---|---|', delimiter);
+    fails({ text }, 'session plan has no batch table');
+    const legacy = run({ text, noProfile: true, flags: ['--cards-optional', '--depth-optional'] });
+    expect(legacy.code, legacy.output).toBe(0);
+  });
+
+  it('accepts a structured session table without outer pipes', () => {
+    const text = PLAN.replace(/\| Batch \|[^\n]+(?=\n)/u, row => row.slice(1, -1).trim())
+      .replace('|---|---|---|---|---|---|---|---|', '---|---|---|---|---|---|---|---')
+      .replace(/\| S1 \|[^\n]+(?=\n)/u, row => row.slice(1, -1).trim());
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it.each(['style', 'script'])('does not count inline %s contents as phase citations', (tag) => {
+    fails({ text: PLAN.replace('SC-01, SC-02. Implement', 'Use <' + tag + '>/* SC-01, SC-02 */</' + tag + '>. Implement') }, 'SC-01 is not assigned to any phase');
+  });
+
+  it('retains visible punctuation and visible prose beside inline styling', () => {
+    const text = PLAN.replace('A move enters an adjacent unblocked space.', '**[](/guide)** ?')
+      .replace('Enter the adjacent open space.', '*[](/guide)**')
+      .replace('SC-01, SC-02. Implement', 'Use <style>/* NOT-99 */</style> <span>SC-01, SC-02</span>. Implement');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('still reports broken anchor links in strict mode', () => {
+    fails({ text: PLAN.replace('SC-01, SC-02. Implement', 'SC-01, SC-02. [guide](#missing). Implement') }, 'broken anchor #missing');
+  });
+
+  it('preserves legacy scenario references around raw HTML', () => {
+    const text = PLAN.replace('| ID | Rules | Expected |', '<pre>\n| ID | Rules | Expected |')
+      .replace('\n\n## 3. Implementation phases', '\n</pre>\n\n## 3. Implementation phases');
+    const result = run({ text, noProfile: true, flags: ['--cards-optional', '--depth-optional'] });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('preserves the legacy handling of raw scenario rows', () => {
+    const text = PLAN.replace('| ID | Rules | Expected |\n|---|---|---|\n', '');
+    const result = run({ text, noProfile: true, flags: ['--cards-optional', '--depth-optional'] });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('preserves legacy scenario mentions outside phase blocks', () => {
+    const text = PLAN.replace('### Phase 1', 'Overview: SC-02.\n\n### Phase 1').replace('SC-01, SC-02. Implement', 'SC-01. Implement');
+    const result = run({ text, noProfile: true, flags: ['--cards-optional', '--depth-optional'] });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('preserves legacy handling of dangling phase references without an explicit profile', () => {
+    const result = run({ text: PLAN.replace('SC-01, SC-02. Implement', 'SC-01, SC-02, SC-99. Implement'), noProfile: true, flags: ['--cards-optional', '--depth-optional'] });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it.each(['commented', 'fenced'])('rejects a %s rule definition when another real rule remains', (mode) => {
+    const rule = '- **WALL-01** A wall-crossing move is refused without changing state.';
+    const example = mode === 'commented' ? `<!--\n${rule}\n-->` : `\`\`\`md\n${rule}\n\`\`\``;
+    fails({ text: PLAN.replace(rule, example) }, 'SC-02: WALL-01 is not defined');
+  });
+
+  it.each(['commented', 'fenced'])('allows a live rule with a duplicate only in a %s example', (mode) => {
+    const rule = '- **WALL-01** A wall-crossing move is refused without changing state.';
+    const example = mode === 'commented' ? `<!--\n${rule}\n-->` : `\`\`\`md\n${rule}\n\`\`\``;
+    const result = run({ text: PLAN.replace(rule, `${rule}\n${example}`) });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('checks real decision table definitions while ignoring their commented or fenced examples', () => {
+    const decision = '| ID | Decision |\n|---|---|\n| D1 | Use adjacent unblocked moves. |';
+    const plan = PLAN.replace('## 2. Scenario catalogue', `## 1.1 Decisions\n\n${decision}\n\n## 2. Scenario catalogue`)
+      .replace('| SC-02 | WALL-01 |', '| SC-02 | WALL-01, D1 |');
+    const valid = run({ text: plan });
+    expect(valid.code, valid.output).toBe(0);
+    for (const example of [`<!--\n${decision}\n-->`, `\`\`\`md\n${decision}\n\`\`\``]) {
+      fails({ text: plan.replace(decision, example) }, 'SC-02: D1 is not a defined decision');
+    }
+  });
+
+  it('retains the kit-fit check', () => fails({ fit: '' }, 'no kit-fit review'));
+
+  it.each([
+    ['nonempty catalogue', { catalogue: CATALOGUE }],
+    ['invalid catalogue', { catalogue: {} }],
+    ['card programme', { text: PLAN + '\n## Card-language test programme\nA family.\n' }],
+    ['cardCase', { text: PLAN + '\nUse cardCase for clauses.\n' }],
+    ['card-language reuse', { text: PLAN.replace('`grid-map` |', '`grid-map`, `card-language` |') }],
+    ['Cards as data answer', { text: PLAN.replace('Cards as data | not in this game', 'Cards as data | An authored deck with thirty cards') }],
+    ['card script', { scripts: { 'cards:check': 'node check-cards.mjs' } }],
+  ])('rejects cards:none contradicting %s', (_label, options) => fails(options, 'cards none contradicts'));
+
+  it('does not hide a known catalogue behind an alternate missing path', () => {
+    fails({ catalogue: CATALOGUE, flags: ['--catalogue', 'missing.json'] }, 'cards none contradicts');
+  });
+
+  it.each([
+    ['LLM phase', { text: PLAN.replace('Implement the movement', 'Build llm-playtester. Implement the movement') }],
+    ['LLM layer', { text: PLAN.replace('Unit rules, refusal', 'LLM playtest, unit rules, refusal') }],
+    ['LLM script', { scripts: { 'playtest:llm': 'node kit/llm-playtester/run.ts' } }],
+  ])('rejects llmPlaytest:none contradicting %s', (_label, options) => fails(options, 'llmPlaytest none contradicts'));
+
+  it('distinguishes LLM utility script names from declared LLM playtest scripts', () => {
+    const result = run({ scripts: { 'llm:lint': 'node lint-config.mjs' } });
+    expect(result.code, result.output).toBe(0);
+    for (const name of ['playtest:llm', 'llm:playtest', 'llm-playtest']) {
+      fails({ scripts: { [name]: 'node run-game.mjs' } }, 'LLM playtest script');
+    }
+  });
+
+  it('requires LLM declarations when explicitly required', () => {
+    fails({ profile: { ...NONE, llmPlaytest: { mode: 'required' } } }, 'LLM playtest');
+  });
+
+  it('does not use a fenced example as the strict rule inventory', () => {
+    const text = PLAN.replace('- **MOVE-01** A move enters an adjacent unblocked space.\n- **WALL-01** A wall-crossing move is refused without changing state.', '```md\n- **MOVE-01** A sample only.\n- **WALL-01** A sample only.\n```');
+    fails({ text }, 'rule inventory');
+  });
+
+  it.each(['Rules', 'Scenario catalogue'])('does not count an HTML-commented %s inventory', (name) => {
+    const next = name === 'Rules' ? '2. Scenario catalogue' : '3. Implementation phases';
+    const start = name === 'Rules' ? '1. Rules' : '2. Scenario catalogue';
+    const text = PLAN.replace(`## ${start}\n`, `## ${start}\n<!--`).replace(`## ${next}`, `-->\n## ${next}`);
+    fails({ text }, name === 'Rules' ? 'rule inventory' : 'scenario inventory');
+  });
+
+  it.each(['`', '~'])('keeps shorter %s fences inside longer example blocks', (mark) => {
+    const rules = '- **MOVE-01** A move enters an adjacent unblocked space.\n- **WALL-01** A wall-crossing move is refused without changing state.';
+    fails({ text: PLAN.replace(rules, `${mark.repeat(4)}md\n${mark.repeat(3)}md\n${rules}\n${mark.repeat(3)}\n${mark.repeat(4)}`) }, 'rule inventory');
+    const scenarios = '| SC-01 | MOVE-01 | Enter the adjacent open space. |\n| SC-02 | WALL-01 | Refuse the wall crossing and preserve the state. |';
+    fails({ text: PLAN.replace(scenarios, `${mark.repeat(4)}md\n${mark.repeat(3)}md\n${scenarios}\n${mark.repeat(3)}\n${mark.repeat(4)}`) }, 'scenario inventory');
+  });
+
+  it('requires real text in Layers even when no LLM layer applies', () => {
+    fails({ text: PLAN.replace('Unit rules, refusal and invariants, then browser acceptance of actual movement.', '<!-- a future layer -->') }, 'nonempty test Layers');
+  });
+
+  it('rejects duplicate applicability keys and unreadable package declarations', () => {
+    fails({ rawProfile: JSON.stringify(NONE).replace('"version":1', '"version":1,"version":1') }, 'duplicate key version');
+    fails({ rawProfile: 'null' }, 'expected version 1');
+    fails({ rawPackage: '{' }, 'cannot inspect');
+    fails({ rawPackage: '{"scripts":{"cards:check":null}}' }, 'script commands must be strings');
+  });
+
+  it('rejects extraction as a substitute for explicit strict validation', () => fails({ flags: ['--section', '1'] }, 'cannot combine'));
+
+  it('does not let the Node wrapper skip strict applicability when Python is absent', () => {
+    const { dir } = fixture();
+    const result = spawnSync(process.execPath, [wrapper, '--plan', 'docs/PLAN.md', '--applicability', 'docs/check-applicability.json', '--skip-without-python'], {
+      cwd: dir, encoding: 'utf8', env: { ...process.env, PYTHON: '', PATH: join(dir, 'no-python'), Path: join(dir, 'no-python'), CI: '' },
+    });
+    expect(result.status, result.stdout + result.stderr).not.toBe(0);
+    expect(result.stdout + result.stderr).toContain('cannot combine');
+  });
+});

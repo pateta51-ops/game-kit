@@ -1597,7 +1597,7 @@
     "gameSupplies": "The words to show, free of ids."
   },
   "plan-checker": {
-    "use": "Checking a game plan and listing a batch's line ranges (`plancheck.py --batch`).",
+    "use": "Checking a game plan and listing a batch's line ranges (`plancheck.py --batch`); explicit strict applicability supports non-card plans while retaining rule, scenario, session and reuse checks.",
     "not": "Anything but the plan file format.",
     "title": "Check a build plan document",
     "tags": [
@@ -2601,6 +2601,12 @@
     "title": "Acceptance receipts bound to source and inputs",
     "tags": ["acceptance receipt", "verify check execution evidence", "stale consumer acceptance", "bound kit revision", "cancelled check evidence"],
     "use": "Record the existing full check plan's commands and outcomes with consumer, kit lock, specification and acceptance-definition fingerprints; reject stale, missing, stopped, truncated or unfinished local evidence. Does not certify test quality or authenticate execution.",
+    "guide": "README.md"
+  },
+  "plan-checker/applicability": {
+    "title": "Strict checks for non-card game plans",
+    "tags": ["strict noncard plan", "noncard plan applicability", "validate plan applicability", "explicit card and playtest scope"],
+    "use": "Declare whether card encoding and LLM playtesting apply, with reasons and contradiction checks; validate real rule and scenario inventories without legacy optional flags. Default plans retain the existing card requirements.",
     "guide": "README.md"
   },
   "card-harness/mutations": {

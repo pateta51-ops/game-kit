@@ -11,7 +11,7 @@ The plan checker: `plancheck.py` checks a game's build plan (Markdown) for balan
 2. A worker prints its batch with `--batch <id>` and Reads only the line ranges it lists; `--section N.N` prints one section. Never open the plan whole.
 3. Keep each id defined once, every cited scenario defined and every scenario cited by a phase.
 4. Keep the session plan complete: every phase in one batch row, every batch with a Model and a Confidence percentage.
-5. Keep the test-depth text in the plan (`expectNotOffered`, "default-off", "LLM playtest", `llm-playtester` in a phase, e2e and `heavy` in the preamble), or pass `--depth-optional` for an older plan.
+5. Keep the test-depth text in the plan (`expectNotOffered`, "default-off", "LLM playtest", `llm-playtester` in a phase, e2e and `heavy` in the preamble), or pass `--depth-optional` for an older plan. For an explicitly scoped non-card or no-LLM workflow, use the strict applicability profile below instead of a legacy optional flag.
 6. Use `--sessions-optional` only for a plan with no session plan.
 7. Give the plan the card-encoding parts (K492; problems start with `cards:`): `cards/catalogue.json` beside the plan (or `--catalogue PATH`; `{"summary":{"clauses":N},"patterns":[{"id":"P-01"}]}`), `ar-map.md` named, a "Modifier order" heading whose table rows each hold an AR-n or IR-n id, `cardCase` and "interaction" in the card-test section, a "Screen-text scan" heading, `cards:check`, `cards:screen` and `cards:whole-game` in the Definition of Done, a phase naming `cards:whole-game`, a session table with Clauses and Patterns columns (no batch over `--max-clauses`, default 40, or `--max-patterns`, default 10; the Clauses cells sum to the catalogue's `summary.clauses`; every catalogue pattern id in a Patterns cell). A plan written before 20 Nov 2026 passes `--cards-optional` (the same checks become NOTE lines).
 8. Give the plan the kit-reuse parts (K525; problems start with `kit:`), all inside the "Reuse map" section (`--reuse TEXT`): a reuse-map table (Layer, Kind, Source; Kind is Pull, Kit phase, Pattern, Port or New) with a line naming the pin (`tag vX.Y.Z`) so every Pull row's backticked names are checked against the kit's `components/` at that tag; a game sheet table (a header cell "Game sheet") with one row and an answer for each of the sheet's 22 questions (step 10 lists them; always asked for, with or without the mechanics map), each naming a backticked kit part or "build-own" in its third cell unless the answer starts "not in this game"; a build-own table (a header cell "What the game builds") with a row for every New, Port and Pattern map row, two phrasings searched, a verdict (kit phase, candidate, game code) and a K id, "steward not asked" or a reason of six words; a build-own row of each kind the phases build (K690): a row starting "Screen" when a heading starts `Phase UC` or `Phase U<n>`, "Motion" for `Phase V` or `Phase V<n>`, "Sound" for `Phase AU` or `Phase AU<n>` (`Screen: <part>` and the like, checked like any other row; or one `Screen: none`, `Motion: none` or `Sound: none` row alone of its kind with a reason of six words; UW, UK and VO ask for none), failing as `kit: build-own table: the plan builds screen code (Phase U1) but has no 'Screen' row ...`; a "Kit steward's reply (<date>)" line with a `>` block when any row has an answer; `plan-review/kit-fit.md` beside the plan naming every build-own row; and a backticked name or "build-own" in each Modifier order row. A plan written before 21 Nov 2026 passes `--kit-optional` (the same checks become NOTE lines, exit 0).
@@ -51,6 +51,37 @@ python kit/plan-checker/plancheck.py docs/PLAN.md               # checks; the ga
 python kit/plan-checker/plancheck.py docs/PLAN.md --sheet-optional   # the same checks without reading the mechanics map
 python kit/plan-checker/plancheck.py docs/PLAN.md --kit ../game-kit  # a kit checkout (or $KIT_DIR): closed candidates and pin warnings too
 ```
+
+## Strict applicability for non-card and no-LLM games
+
+Pass `--applicability docs/check-applicability.json` to declare which specialized checks apply. Without this flag, all current defaults and legacy flags behave as before. The file must be a version 1 object with exactly `cards` and `llmPlaytest`; each has `mode: "required"` or `mode: "none"`. A `none` entry needs a nonblank `reason`. A reason on a `required` entry is optional but must also be nonblank. Missing keys, unknown keys or values, duplicate keys, malformed JSON and unreadable files fail with exit 1.
+
+```json
+{
+  "version": 1,
+  "cards": { "mode": "none", "reason": "This authored grid game has no card content or card effects." },
+  "llmPlaytest": { "mode": "none", "reason": "The game uses a deterministic pilot and direct browser acceptance." }
+}
+```
+
+```sh
+python kit/plan-checker/plancheck.py docs/PLAN.md --applicability docs/check-applicability.json --cover Rules
+node kit/plan-checker/plancheck.ts --plan docs/PLAN.md --applicability docs/check-applicability.json --cover Rules
+```
+
+`cards: none` excludes the card test programme and poor-setup helpers, catalogue/AR map/modifier order/screen-text requirements, card commands and card batch counts. `llmPlaytest: none` excludes only the LLM Definition of Done, Layers and phase requirements. The choices are independent: a card game can require card checks while excluding LLM playtesting, and a non-card game can require the LLM workflow.
+
+The strict profile still requires ordinary structural and citation checks, phase and session assignments, the full reuse map and kit-fit review, `default-off` in Definition of Done, nonempty Layers, and `e2e` plus `heavy` in Shared preamble. Comments, code blocks and raw HTML blocks cannot provide that evidence. It also requires a real inventory, even without `--cover`:
+
+- `Rules` (or the heading selected by `--cover TEXT`) defines at least one rule using `- **MOVE-01** Rule text.` or a table whose first cell is that ID and following cells contain rule text. Use the existing numeric ID format, such as `MOVE-01` or `COU-007`.
+- `Scenario catalogue` (or `--scenarios TEXT`) has a Markdown table with matching header and delimiter columns and at least one `SC-...` data row. The second cell cites defined rules or decisions; the third cell gives a nonblank expected outcome. Every rule in the inventory appears in a scenario's citation cell. Existing numeric ranges and family wildcards work. Each scenario ID is unique and assigned to an implementation phase, and each scenario a phase references must exist in the catalogue. Both directions use prose outside comments and fenced examples.
+- `Implementation phases` has unique, visible `Phase <id>` headings, each assigned to a session. Assign a scenario within a phase block, including its subsections. Introductory prose, comments and fenced examples do not count.
+
+Do not combine the profile with `--cards-optional`, `--depth-optional`, `--kit-optional`, `--sessions-optional`, `--sheet-optional`, `--cover-skip` or `--skip-without-python`; these combinations fail. `--section` and `--batch` are separate read commands and must not carry the profile: extraction is not validation.
+
+Declared exclusions are checked against known evidence. `cards: none` fails if the plan still declares a card test programme, `cardCase`, `card-language` in its reuse map, card clause/pattern batch work or `cards:*` commands; the game sheet's `Cards as data` answer must start `not in this game`. It also inspects `package.json` beside the game's `docs/` directory for card scripts. Both the default `docs/cards/catalogue.json` and any `--catalogue` path are inspected when present: nonempty or malformed catalogues contradict the exclusion, so a missing alternate path cannot hide an existing catalogue. An empty catalogue is allowed but never required. `llmPlaytest: none` fails if phases declare `llm-playtester`, Layers declare an LLM playtest, or package scripts declare an LLM playtest command. Malformed package declarations fail. Static checks inspect the conventional files and these declarations; they do not discover all arbitrary code or execute the declared acceptance commands.
+
+For original game-code build-own rows, record the actual searches and a reason of at least six words. Add `; steward not asked` when no steward reply was obtained; these marker words do not count toward the reason. When every build-own row has that marker, the existing checker does not require a fabricated steward reply block. The kit-fit file still has to name every build-own row. A `Pull rows NOT checked` note remains a limitation of the existing source lookup, not evidence that the pin was verified.
 
 ## Breaking (K690)
 

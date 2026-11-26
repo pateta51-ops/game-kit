@@ -723,5 +723,8 @@
   { "q": "prompt keyboard shortcuts", "first": "ui-helpers" },
   { "q": "active overlay keyboard", "first": "ui-helpers" },
   { "q": "modal dialog focus", "first": "modal-dialog" },
-  { "q": "board pick keyboard", "first": "prompt-host" }
+  { "q": "board pick keyboard", "first": "prompt-host" },
+  { "q": "strict noncard plan", "first": "plan-checker/applicability" },
+  { "q": "noncard plan applicability", "first": "plan-checker/applicability" },
+  { "q": "validate plan applicability", "first": "plan-checker/applicability" }
 ]

@@ -108,7 +108,7 @@ Usage: python plancheck.py docs/BUILD_PLAN.md [--tsc] [--scenarios TEXT] [--phas
        [--sessions TEXT] [--sessions-optional] [--scenarios-end TEXT] [--cover TEXT] [--cover-rows A,B]
        [--cover-skip A,B] [--tsc-at DIR] [--cards TEXT] [--done TEXT] [--layers TEXT] [--depth-optional]
        [--cards-optional] [--catalogue PATH] [--max-clauses N] [--max-patterns N] [--kit-optional] [--reuse TEXT] [--kit PATH]
-       [--map PATH] [--sheet-optional]
+       [--map PATH] [--sheet-optional] [--applicability PATH]
 Exit code 0 when no problems were found.
 """
 from __future__ import annotations
@@ -122,6 +122,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from unicodedata import category
 
 # An ID: uppercase family segments, then a number. Examples: KW-ACQ-02, BOT-RES-10, SET-01, IR-07, INV-03, V-12,
 # CARD-001, L-05. Lowercase-free so prose words never match.
@@ -153,16 +154,457 @@ def opt(name: str, default: str) -> str:
     return default
 
 
-def headings(lines: list[str]) -> list[tuple[int, int, str]]:
+def applicability() -> dict | None:
+    if "--applicability" not in sys.argv:
+        return None
+    incompatible = {"--cards-optional", "--depth-optional", "--kit-optional", "--sessions-optional", "--sheet-optional",
+                    "--cover-skip", "--skip-without-python", "--section", "--batch"} & set(sys.argv)
+    if incompatible:
+        raise ValueError("cannot combine --applicability with " + ", ".join(sorted(incompatible)))
+    value = opt("--applicability", "")
+    if sys.argv.count("--applicability") != 1 or not value or value.startswith("--"):
+        raise ValueError("--applicability needs exactly one file")
+    def unique(pairs):
+        out = {}
+        for key, val in pairs:
+            if key in out:
+                raise ValueError("duplicate key " + key)
+            out[key] = val
+        return out
+    data = json.loads(Path(value).read_text(encoding="utf-8"), object_pairs_hook=unique)
+    if (not isinstance(data, dict) or set(data) != {"version", "cards", "llmPlaytest"}
+            or type(data["version"]) is not int or data["version"] != 1):
+        raise ValueError("expected version 1 with exactly cards and llmPlaytest")
+    for key in ("cards", "llmPlaytest"):
+        part = data[key]
+        if (not isinstance(part, dict) or "mode" not in part or set(part) - {"mode", "reason"}
+                or part["mode"] not in ("required", "none")):
+            raise ValueError(key + " needs mode required or none; only mode and reason are allowed")
+        if (part["mode"] == "none" or "reason" in part) and (not isinstance(part.get("reason"), str) or not part["reason"].strip()):
+            raise ValueError(key + " needs a nonblank reason")
+    return data
+
+
+QUOTE = re.compile(r"^ {0,3}> ?")
+ITEM = re.compile(r"^ {0,3}(?:[-+*]|\d{1,9}[.)])( +)")
+BLOCK_START = re.compile(r"^ {0,3}(?:#{1,6}(?:[ \t]|$)|`{3,}[^`]*$|~{3,}|<!--|>|"
+                         r"(?:[-+*]|1[.)])[ \t]|(?:=+|-+)[ \t]*$|(?:\*[ \t]*){3,}$|(?:_[ \t]*){3,}$)")
+HTML_BLANK = re.compile(r"^[ \t]*$")
+HTML_TAGS = ("address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|"
+             "dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|"
+             "main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|section|source|summary|table|tbody|td|tfoot|th|thead|"
+             "title|tr|track|ul")
+HTML_BLOCKS = (
+    (re.compile(r"^ {0,3}<(?:pre|script|style|textarea)(?=[ \t]|>|$)", re.I), re.compile(r"</(?:pre|script|style|textarea)>", re.I)),
+    (re.compile(r"^ {0,3}<!--"), re.compile(r"-->")),
+    (re.compile(r"^ {0,3}<\?"), re.compile(r"\?>")),
+    (re.compile(r"^ {0,3}<![A-Z]"), re.compile(r">")),
+    (re.compile(r"^ {0,3}<!\[CDATA\["), re.compile(r"\]\]>")),
+    (re.compile(r"^ {0,3}</?(?:" + HTML_TAGS + r")(?=[ \t]|/?>|$)", re.I), HTML_BLANK),
+)
+HTML_ATTR = r'''[A-Za-z_:][A-Za-z0-9_.:-]*(?:[ \t\n]*=[ \t\n]*(?:"[^"]*"|'[^']*'|[^ \t\n"'=<>`]+))?'''
+INLINE_HTML = re.compile(r"(?:</[A-Za-z][A-Za-z0-9-]*[ \t\n]*>|<[A-Za-z][A-Za-z0-9-]*(?:[ \t\n]+"
+                      + HTML_ATTR + r")*[ \t\n]*/?>)")
+HTML_TAG = re.compile(r"^ {0,3}" + INLINE_HTML.pattern + r"[ \t]*$")
+LINK_ESCAPE = r"(?:\\[!-/:-@\[-`{-~]|\\(?![!-/:-@\[-`{-~]))"
+REF_LABEL_LIMIT = 999
+LINK_LABEL = r"\[((?:" + LINK_ESCAPE + r"|[^\[\]\\]){0," + str(REF_LABEL_LIMIT) + r"})\]"
+LINK_PAD = r"[ \t]*(?:\n[ \t]*)?"
+LINK_SPACE = r"(?:[ \t]+|[ \t]*\n[ \t]*)"
+LINK_CHAR = r"(?:[^\\()\x00-\x20\x7f]|" + LINK_ESCAPE + ")"
+LINK_DEST = LINK_CHAR
+for _ in range(3):
+    LINK_DEST = r"(?:" + LINK_CHAR + r"|\(" + LINK_DEST + r"*\))"
+LINK_DEST = r"(?P<dest><(?:[^<>\n\\]|" + LINK_ESCAPE + r")*>|(?!<)" + LINK_DEST + r"+)"
+LINK_TITLE = r"""(?P<title>"(?:[^"\\]|{escape})*"|'(?:[^'\\]|{escape})*'|\((?:[^()\\]|{escape})*\))""".format(escape=LINK_ESCAPE)
+INLINE_LINK = re.compile(r"\(" + LINK_PAD + r"(?:" + LINK_DEST + r")?(?:" + LINK_SPACE + LINK_TITLE + r")?" + LINK_PAD + r"\)")
+REF_DEF = re.compile(r" {0,3}" + LINK_LABEL + ":" + LINK_PAD + LINK_DEST + "(?:" + LINK_SPACE + LINK_TITLE + r")?[ \t]*(?=\n|$)")
+REF_LABEL = re.compile(LINK_LABEL)
+
+
+def html_block_end(body: str, paragraph: bool) -> re.Pattern[str] | None:
+    if not re.match(r"^ {0,3}<", body):
+        return None
+    for start, end in HTML_BLOCKS:
+        if start.match(body):
+            return end
+    return HTML_BLANK if not paragraph and HTML_TAG.match(body) else None
+
+
+def match_containers(raw: str, containers: list[int | None]) -> tuple[str, int]:
+    body = raw.expandtabs(4)
+    for depth, width in enumerate(containers):
+        if width is None:
+            marker = QUOTE.match(body)
+            if not marker:
+                return body, depth
+            body = body[marker.end():]
+        elif body.startswith(" " * width) or not body.strip():
+            body = body[width:]
+        else:
+            return body, depth
+    return body, len(containers)
+
+
+def inline_lines(lines: list[str], row: int, containers: list[int | None]):
+    for i in range(row, len(lines)):
+        raw = lines[i]
+        if i != row:
+            body, depth = match_containers(raw, containers)
+            if (not body.strip() or BLOCK_START.match(body) or html_block_end(body, True) or body.lstrip().startswith("|")
+                    or (depth < len(containers) and ITEM.match(body))):
+                break
+        yield i, raw
+
+
+def inline_end(lines: list[str], row: int, start: int, ticks: int, containers: list[int | None]) -> tuple[int, int] | None:
+    runs = re.compile(r"`+")
+    for i, raw in inline_lines(lines, row, containers):
+        offset = start if i == row else 0
+        if ticks:
+            for run in runs.finditer(raw, offset):
+                if len(run[0]) == ticks:
+                    return i, run.end()
+        elif (end := raw.find("-->", offset)) >= 0:
+            return i, end + 3
+    return None
+
+
+def raw_offset(raw: str, body: str) -> int:
+    prefix = len(raw.expandtabs(4)) - len(body)
+    column, offset = 0, 0
+    while column < prefix:
+        column += 4 - column % 4 if raw[offset] == "\t" else 1
+        offset += 1
+    return offset
+
+
+def inline_match(lines: list[str], row: int, start: int, containers: list[int | None], pattern: re.Pattern[str]):
+    text, result = "", None
+    for i, raw in inline_lines(lines, row, containers):
+        offset = start if i == row else 0
+        if i != row and containers:
+            offset = raw_offset(raw, match_containers(raw, containers)[0])
+        before = len(text)
+        text += raw[offset:] + "\n"
+        if (match := pattern.match(text)) and match.end() > before:
+            result = (i, offset + match.end() - before, match)
+            if pattern is not REF_DEF or match["title"] or i + 1 == len(lines):
+                break
+            next_body, _ = match_containers(lines[i + 1], containers)
+            if not next_body.lstrip().startswith(('"', "'", "(")):
+                break
+        if pattern in (REF_LABEL, REF_DEF) and before > 2 * REF_LABEL_LIMIT + 4 and not REF_LABEL.match(text.lstrip(" ")):
+            break
+    return result
+
+
+def inline_raw_end(lines: list[str], row: int, end: int, opening: str) -> tuple[int, int]:
+    tag = re.match(r"<(style|script)(?=[ \t\n/>])", opening, re.I)
+    if not tag:
+        return row, end
+    closer = re.compile(r"</" + tag[1] + r"[ \t]*>", re.I)
+    for i in range(row, len(lines)):
+        if close := closer.search(lines[i], end if i == row else 0):
+            return i, close.end()
+    return len(lines) - 1, len(lines[-1])
+
+
+def empty_emphasis(raw: str, line: str) -> str:
+    if raw == line:
+        return line
+    pending, chars, end = [], list(line), 0
+    for run in re.finditer(r"(\\*)(\*+|_+)", raw):
+        start, stop = run.span(2)
+        if line[start:stop] != run[2] or len(run[1]) % 2:
+            continue
+        if line[end:start].strip():
+            pending.clear()
+        end = stop
+        before, after = (raw[start-1] if start else " "), (raw[stop] if stop < len(raw) else " ")
+        before_punct, after_punct = category(before)[0] in "PS", category(after)[0] in "PS"
+        opens = not after.isspace() and (not after_punct or before.isspace() or before_punct)
+        closes = not before.isspace() and (not before_punct or after.isspace() or after_punct)
+        if run[2][0] == "_":
+            opens, closes = opens and (not closes or before_punct), closes and (not opens or after_punct)
+        if closes and pending and pending[-1][2] == run[2] and raw[pending[-1][1]:start].strip():
+            left, right, _ = pending.pop()
+            chars[left:right] = " " * (right - left)
+            chars[start:stop] = " " * (stop - start)
+        elif opens:
+            pending.append((start, stop, run[2]))
+        else:
+            pending.clear()
+    return "".join(chars)
+
+
+def emphasis_lines(lines: list[str], projected: list[str], continuation: list[bool], offsets: list[int]) -> list[str]:
+    i = 0
+    while i < len(lines):
+        j = i + 1
+        while j < len(lines) and continuation[j]:
+            j += 1
+        if j == i + 1:
+            projected[i] = empty_emphasis(lines[i], projected[i])
+        else:
+            raw = "\n".join(" " * offsets[k] + lines[k][offsets[k]:] for k in range(i, j))
+            text = "\n".join(" " * offsets[k] + projected[k][offsets[k]:] for k in range(i, j))
+            for k, row in enumerate(empty_emphasis(raw, text).split("\n"), i):
+                projected[k] = projected[k][:offsets[k]] + row[offsets[k]:]
+        i = j
+    return projected
+
+
+def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, str]], bool, list[str]]:
+    out, blocks, content, anchors = [], [], [], []
+    definitions, reference_uses, openers, brackets, masked = set(), [], [], [], []
+    containers: list[int | None] = []
+    fence, html = None, None
+    paragraph, unclosed = False, False
+    inline = re.compile(r"(\\*)(<!--|`+|</?[A-Za-z]|!?\[|\])")
+    span_row, span_end = -1, 0
+    hidden_row, hidden_end = -1, 0
+    continuation, offsets = [False] * len(lines), [0] * len(lines)
+    can_continue = False
+    for i, raw in enumerate(lines):
+        body, depth = match_containers(raw, containers)
+        joined = can_continue and depth == len(containers)
+        can_continue = False
+        if html and depth < html[0]:
+            html = None
+        if fence and depth < fence[3]:
+            unclosed, fence = True, None
+        if i > max(span_row, hidden_row):
+            del containers[depth:]
+            while html is None and fence is None:
+                if marker := QUOTE.match(body):
+                    containers.append(None)
+                    body = body[marker.end():]
+                elif item := ITEM.match(body):
+                    spaces = len(item[1])
+                    width = item.start(1) + (spaces if spaces <= 4 else 1)
+                    containers.append(width)
+                    body = body[width:]
+                else:
+                    break
+                paragraph, joined = False, False
+        mark = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", body)
+        if fence:
+            if mark and mark.group(1)[0] == fence[0][0] and len(mark.group(1)) >= len(fence[0]) and not mark.group(2).strip():
+                blocks.append((fence[1], fence[2], "\n".join(content)))
+                fence = None
+            else:
+                content.append(body if containers else raw)
+            out.append(" " * len(raw))
+            continue
+        block_start = i > max(span_row, hidden_row)
+        if html is None and block_start and (close := html_block_end(body, paragraph)):
+            html = (len(containers), close)
+        if html:
+            if html[1].search(body):
+                html = None
+            paragraph = False
+            out.append(" " * len(raw))
+            continue
+        if block_start and mark and (mark.group(1)[0] == "~" or "`" not in mark.group(2)):
+            fence = (mark.group(1), i, mark.group(2).strip(), len(containers))
+            content = []
+            paragraph = False
+            out.append(" " * len(raw))
+            continue
+        if block_start and not paragraph and body.startswith("    "):
+            out.append(" " * len(raw))
+            continue
+        can_continue = bool(body.strip()) and not BLOCK_START.match(body) and not body.lstrip().startswith("|")
+        continuation[i], offsets[i] = joined and can_continue, raw_offset(raw, body)
+        if block_start and (not paragraph or body.lstrip().startswith("|")):
+            brackets.clear()
+        pos = len(raw) if i < span_row else span_end if i == span_row else 0
+        if block_start and not paragraph and re.match(r"^ {0,3}\[", body):
+            label = REF_LABEL.match(body.lstrip(" "))
+            if not label or label.string.startswith(":", label.end()):
+                if (definition := inline_match(lines, i, raw_offset(raw, body), containers, REF_DEF)) and definition[2][1].strip():
+                    hidden_row, hidden_end, ref = definition
+                    definitions.add(" ".join(ref[1].split()).casefold())
+        visible = list(raw)
+        while pos < len(raw):
+            if i <= hidden_row:
+                stop = hidden_end if i == hidden_row else len(raw)
+                visible[pos:stop] = " " * (stop - pos)
+                pos, hidden_row = stop, -1 if i == hidden_row else hidden_row
+            elif match := inline.search(raw, pos):
+                escaped = len(match[1]) % 2
+                pos = match.end()
+                if match[2] == "<!--":
+                    if not escaped and (end_of_comment := inline_end(lines, i, pos, 0, containers)):
+                        hidden_row, hidden_end = end_of_comment
+                        pos = match.start(2)
+                elif match[2].startswith("<"):
+                    if not escaped and (end_of_tag := inline_match(lines, i, match.start(2), containers, INLINE_HTML)):
+                        hidden_row, hidden_end = inline_raw_end(lines, end_of_tag[0], end_of_tag[1], end_of_tag[2][0])
+                        pos = match.start(2)
+                elif match[2].endswith("["):
+                    if not escaped or match[2] == "![":
+                        brackets.append((i, pos - 1, match[2] == "![" and not escaped))
+                elif match[2] == "]":
+                    if not escaped and brackets:
+                        row, col, image = brackets.pop()
+                        if raw.startswith("(", pos) and (link := inline_match(lines, i, pos, containers, INLINE_LINK)):
+                            hidden_row, hidden_end, target = link
+                            pos = match.start(2)
+                            if image:
+                                masked.append((row, col - 1, hidden_row, hidden_end))
+                            else:
+                                openers.append((row, col))
+                                brackets = [item for item in brackets if item[2]]
+                                if not brackets and target["dest"] and target["dest"].startswith("#") and len(target["dest"]) > 1:
+                                    anchors.append(target["dest"][1:])
+                        else:
+                            ref = inline_match(lines, i, pos, containers, REF_LABEL) if raw.startswith("[", pos) else None
+                            if ref and ref[2][1]:
+                                label = ref[2][1]
+                            else:
+                                first = inline_match(lines, row, col, containers, REF_LABEL)
+                                if not first or first[:2] != (i, pos):
+                                    continue
+                                label = first[2][1]
+                            end_row, end = ref[:2] if ref else (i, pos)
+                            reference_uses.append((" ".join(label.split()).casefold(), row, col, image, i, match.start(2), end_row, end))
+                elif (width_of_span := len(match[2]) - escaped) and (end_of_span := inline_end(lines, i, pos, width_of_span, containers)):
+                    span_row, span_end = end_of_span
+                    pos = span_end if i == span_row else len(raw)
+            else:
+                break
+        out.append("".join(visible))
+        paragraph = bool(out[-1].strip()) and not re.match(r"^ {0,3}(?:#{1,6}\s|\||[-_*=]{3,}\s*$)", body)
+    for label, row, start, image, close_row, close, end_row, end in reference_uses:
+        if label in definitions:
+            if image:
+                masked.append((row, start - 1, end_row, end))
+            else:
+                openers.append((row, start))
+                masked.append((close_row, close, end_row, end))
+    for start_row, start, end_row, end in masked:
+        for i in range(start_row, end_row + 1):
+            a, b = start if i == start_row else 0, end if i == end_row else len(out[i])
+            out[i] = out[i][:a] + " " * (b - a) + out[i][b:]
+    for row, start in openers:
+        out[row] = out[row][:start] + " " + out[row][start + 1:]
+    return emphasis_lines(lines, out, continuation, offsets), blocks, unclosed or fence is not None, anchors
+
+
+def strict_inventory(rules: str, rule_rows: list[list[str]], scenarios: list[list[str]], defined: set[str]) -> list[str]:
+    problems, ids = [], set()
+    for line in rules.splitlines():
+        match = re.match(rf"^\s*[-*]\s+\*\*({ID})\*\*\s*(.*)$", line)
+        if match:
+            rule, text = match.groups()
+            ids.add(rule)
+            if not text.strip(" -—–"):
+                problems.append("rule " + rule + " has no text")
+    for cells in rule_rows:
+        if match := re.fullmatch(rf"\**({ID})\**", cells[0]):
+            rule = match.group(1)
+            ids.add(rule)
+            if not " ".join(cells[1:]).strip(" -—–"):
+                problems.append("rule " + rule + " has no text")
+    if not ids:
+        problems.append("rule inventory is empty (define rules under Rules or --cover TEXT)")
+    seen, covered = set(), set()
+    for cells in scenarios:
+        scenario = cells[0]
+        if scenario in seen:
+            problems.append(scenario + " is defined more than once")
+        seen.add(scenario)
+        cited = CITATION.sub(" ", cells[1] if len(cells) > 1 else "")
+        exact = set(expand_ids(cited)) | set(re.findall(r"\bD\d+\b", cited))
+        wild = tuple(f + "-" for f in re.findall(r"\b((?:[A-Z][A-Z0-9]*-)*[A-Z][A-Z0-9]*)-\*", cited))
+        matches = {rule for rule in defined if rule in exact or rule.startswith(wild or ("\0",))}
+        if not matches:
+            problems.append(scenario + " cites no defined rule or decision")
+        covered |= ids & matches
+        if len(cells) < 3 or not cells[2].strip(" -—–"):
+            problems.append(scenario + " has no expected outcome")
+    if not seen:
+        problems.append("scenario inventory is empty")
+    problems += ["rule " + rule + " is not covered by any scenario" for rule in sorted(ids - covered)]
+    return ["applicability: " + problem for problem in problems]
+
+
+def applicability_conflicts(profile: dict, path: Path, src: str, cards: str, phases: str, layers: str,
+                            maprows: list[list[str]], sheet: list[list[str]], clauses: int, patterns: list[str]) -> list[str]:
+    """Check declared exclusions against known inputs, not arbitrary game code."""
+    problems, scripts = [], {}
+    package = path.resolve().parent.parent / "package.json"
+    if package.exists():
+        try:
+            data = json.loads(package.read_text(encoding="utf-8"))
+            if not isinstance(data, dict) or not isinstance(data.get("scripts", {}), dict):
+                raise ValueError("expected a scripts object")
+            scripts = data.get("scripts", {})
+            if any(not isinstance(v, str) for v in scripts.values()):
+                raise ValueError("script commands must be strings")
+        except (ValueError, OSError) as error:
+            scripts = {}
+            problems.append(f"applicability: cannot inspect {package}: {error}")
+    if profile["cards"]["mode"] == "none":
+        found = []
+        if cards:
+            found.append("a card-language test programme")
+        if re.search(r"\bcardCase\b", src):
+            found.append("cardCase in the plan")
+        if any(re.search(r"\bcard-language\b", row[2]) for row in maprows):
+            found.append("card-language in the reuse map")
+        for row in sheet:
+            question = re.sub(r"\s+", " ", re.sub(r"[*`]", "", row[0])).strip().lower()
+            answer = re.sub(r"[*`]", "", row[1]).strip().lower() if len(row) > 1 else ""
+            if question.startswith("cards as data") and not answer.startswith("not in this game"):
+                found.append("the Cards as data game-sheet answer (use 'not in this game' for an excluded card workflow)")
+        if clauses or patterns:
+            found.append("card clause or pattern work in session batches")
+        if re.search(r"\bcards:[\w-]+", src) or any(
+                name.startswith("cards:") or re.search(r"\b(?:cards:[\w-]+|card-harness|card-language)\b", command)
+                for name, command in scripts.items()):
+            found.append("a cards script declaration")
+        # Always inspect the conventional catalogue too: --catalogue must not hide known work.
+        catalogues = {path.parent / "cards" / "catalogue.json", Path(opt("--catalogue", str(path.parent / "cards" / "catalogue.json")))}
+        for catalogue in sorted(catalogues):
+            if not catalogue.exists():
+                continue
+            try:
+                data = json.loads(catalogue.read_text(encoding="utf-8"))
+                summary = data.get("summary") if isinstance(data, dict) else None
+                count = summary.get("clauses") if isinstance(summary, dict) else None
+                if type(count) is not int or count < 0 or not isinstance(data.get("patterns"), list):
+                    raise ValueError("expected summary.clauses (nonnegative integer) and patterns (array)")
+                if count or data["patterns"] or any(data.get(key) for key in ("oneOffs", "interactions", "cards", "clauses")):
+                    found.append(f"nonempty catalogue {catalogue}")
+            except (ValueError, OSError) as error:
+                found.append(f"unreadable or invalid catalogue {catalogue}: {error}")
+        problems += ["applicability: cards none contradicts " + item for item in found]
+    if profile["llmPlaytest"]["mode"] == "none":
+        found = []
+        if "llm-playtester" in phases.lower():
+            found.append("an llm-playtester phase")
+        if "llm playtest" in layers.lower():
+            found.append("an LLM playtest layer")
+        if any(re.search(r"(?:^|:)(?:playtest:llm|llm:playtest|llm-playtest(?:er)?)(?:$|:)", name, re.I)
+               or re.search(r"\bllm[-:]playtest(?:er)?\b", command, re.I) for name, command in scripts.items()):
+            found.append("an LLM playtest script")
+        problems += ["applicability: llmPlaytest none contradicts " + item for item in found]
+    return problems
+
+
+def headings(lines: list[str], original: list[str] | None = None) -> list[tuple[int, int, str]]:
     """(line index, level, text) of every heading outside code fences."""
     out, in_code = [], False
     for i, l in enumerate(lines):
-        if l.strip().startswith("```"):
+        if original is None and l.strip().startswith("```"):
             in_code = not in_code
             continue
         if not in_code:
-            m = re.match(r"^(#{1,6})\s+(.*)$", l)
-            if m:
+            m = re.match(r"^ {0,3}(#{1,6})[ \t]+(.*)$" if original is not None else r"^(#{1,6})\s+(.*)$", l)
+            if m and (original is None or re.match(r"^ {0,3}#{1,6}[ \t]+", original[i])):
                 out.append((i, len(m.group(1)), m.group(2).strip()))
     return out
 
@@ -246,6 +688,53 @@ def table_cells(l: str) -> list[str]:
         esc = ch == "\\"
     out.append(cur)
     return out
+
+
+def strict_tables(lines: list[str], original: list[str]):
+    pipes = re.compile(r"(?<!\\)\|")
+
+    def cells(raw: str, evidence: str) -> list[str]:
+        separators = list(pipes.finditer(raw))
+        starts = [0] + [m.end() for m in separators]
+        ends = [m.start() for m in separators] + [len(raw)]
+        start = 1 if separators and not raw[:ends[0]].strip() else 0
+        end = len(ends) - 1 if separators and not raw[starts[-1]:].strip() else len(ends)
+        return [evidence[a:b].strip() for a, b in zip(starts[start:end], ends[start:end])]
+
+    i = 0
+    while i + 1 < len(lines):
+        header, separator = original[i:i + 2]
+        marks = cells(separator, separator)
+        if (not lines[i].strip() or not lines[i + 1].strip()
+                or not re.match(r"^ {0,3}\S", header) or not re.match(r"^ {0,3}\S", separator)
+                or BLOCK_START.match(header) or not (pipes.search(header) or pipes.search(separator))
+                or not marks or len(cells(header, header)) != len(marks)
+                or not all(re.fullmatch(r":?-+:?", mark) for mark in marks)):
+            i += 1
+            continue
+        start, table_rows = i, []
+        i += 2
+        while i < len(lines) and lines[i].strip() and re.match(r"^ {0,3}\S", original[i]) and not BLOCK_START.match(original[i]):
+            table_rows.append((i, cells(original[i], lines[i])))
+            i += 1
+        yield start, cells(header, lines[start]), table_rows
+
+
+def legacy_session_tables(lines: list[str]):
+    in_code, i = False, 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if line.startswith("```"):
+            in_code = not in_code
+        if not in_code and line.startswith("|") and i + 1 < len(lines) and re.match(r"^\|[\s\-:|]+\|$", lines[i + 1].strip()):
+            header, table_rows = table_cells(line), []
+            i += 2
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                table_rows.append((i, table_cells(lines[i])))
+                i += 1
+            yield header, table_rows
+        else:
+            i += 1
 
 
 def span_of(lines: list[str], heads: list[tuple[int, int, str]], k: int) -> tuple[int, int]:
@@ -419,7 +908,7 @@ def main() -> int:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     for flag in ("--scenarios", "--phases", "--types", "--sessions", "--section", "--batch", "--scenarios-end", "--cover",
                  "--cover-rows", "--cover-skip", "--tsc-stub", "--kit", "--tsc-at", "--cards", "--done", "--layers",
-                 "--catalogue", "--max-clauses", "--max-patterns", "--reuse", "--map"):
+                 "--catalogue", "--max-clauses", "--max-patterns", "--reuse", "--map", "--applicability"):
         if flag in sys.argv:
             v = opt(flag, "")
             if v in args:
@@ -428,21 +917,41 @@ def main() -> int:
         print(__doc__)
         return 2
     path = Path(args[0])
+    try:
+        profile = applicability()
+    except (ValueError, OSError) as error:
+        print(f"PROBLEM applicability: {error}")
+        return 1
+    cards_required = profile is None or profile["cards"]["mode"] == "required"
+    llm_required = profile is None or profile["llmPlaytest"]["mode"] == "required"
     src = path.read_text(encoding="utf-8")
     lines = src.split("\n")
-    heads = headings(lines)
+    original = None
+    fences: list[tuple[int, str, str]] = []
+    inline_anchors: list[str] = []
+    if profile is None:
+        unclosed = sum(1 for l in lines if l.strip().startswith("```")) % 2
+    else:
+        original = lines
+        lines, fences, unclosed, inline_anchors = visible_markdown(lines)
+        src = "\n".join(lines)
+    heads = headings(lines, original)
     if "--section" in sys.argv or "--batch" in sys.argv:
         return extract(path, lines, heads)
     problems: list[str] = []
     notes: set[str] = set()
+    if profile is not None:
+        for name in ("cards", "llmPlaytest"):
+            part = profile[name]
+            notes.add(f"applicability: {name} {part['mode']}" + (f" — {part['reason']}" if "reason" in part else ""))
 
     # --- code fences ---
-    if sum(1 for l in lines if l.strip().startswith("```")) % 2:
+    if unclosed:
         problems.append("unbalanced code fences")
 
     # --- anchors and § references ---
     anchors = {anchor(h) for _, _, h in heads}
-    for t in re.findall(r"\]\(#([^)]+)\)", src):
+    for t in (re.findall(r"\]\(#([^)]+)\)", src) if profile is None else inline_anchors):
         if t not in anchors:
             problems.append(f"broken anchor #{t}")
     numbered = {m.group(1) for _, _, h in heads if (m := re.match(r"^(\d+(?:\.\d+)*)", h))}
@@ -491,7 +1000,8 @@ def main() -> int:
         i += 1
 
     # --- JSON blocks ---
-    for k, block in enumerate(re.findall(r"```json\n(.*?)```", src, re.S), 1):
+    json_blocks = re.findall(r"```json\n(.*?)```", src, re.S) if profile is None else [block for _, lang, block in fences if lang == "json"]
+    for k, block in enumerate(json_blocks, 1):
         try:
             json.loads(block)
         except Exception as ex:  # noqa: BLE001
@@ -499,6 +1009,11 @@ def main() -> int:
 
     # --- bold definitions (outside the scenario catalogue), duplicates ---
     outside = src.replace(scen_sec, "") if scen_sec else src
+    tables = list(strict_tables(lines, original)) if original is not None else []
+    table_rows = [(i, cells[:len(header)]) for _, header, rows in tables for i, cells in rows]
+    if profile is not None:
+        first_cell_defs = [m.group(1) for i, row in table_rows if i not in scen_lines
+                           and (m := re.match(rf"^\**({ID}|D\d+)(?=\s|\*|$)", row[0]))]
     bold = re.findall(rf"^\s*[-*]\s+\*\*({ID})\*\*", outside, re.M)
     seen: set[str] = set()
     for b in bold + first_cell_defs:
@@ -509,7 +1024,12 @@ def main() -> int:
     families = {d.rsplit("-", 1)[0] for d in defined}
 
     # --- scenario citations ---
-    rows = re.findall(r"^\|\s*(SC-[A-Z0-9-]+)\s*\|([^|\n]*)\|", scen_sec, re.M)
+    scenario_cells = []
+    if profile is None:
+        rows = re.findall(r"^\|\s*(SC-[A-Z0-9-]+)\s*\|([^|\n]*)\|", scen_sec, re.M)
+    else:
+        scenario_cells = [cells for i, cells in table_rows if i in scen_lines and re.fullmatch(r"SC-[A-Z0-9-]+", cells[0])]
+        rows = [(cells[0], cells[1] if len(cells) > 1 else "") for cells in scenario_cells]
     scenarios = sorted({sc for sc, _ in rows})
     if not scen_sec:
         problems.append(f"no heading contains {opt('--scenarios', 'Scenario catalogue')!r} (use --scenarios)")
@@ -526,6 +1046,13 @@ def main() -> int:
                 continue
             if tok not in defined:
                 problems.append(f"{sc}: {tok} is not defined")
+
+    if profile is not None:
+        rules_kw = opt("--cover", "Rules")
+        rules_heading = find_heading(heads, rules_kw)
+        a, b = span_of(lines, heads, rules_heading) if rules_heading is not None else (0, 0)
+        rule_rows = [cells for i, cells in table_rows if a <= i < b]
+        problems += strict_inventory(section(lines, heads, rules_kw), rule_rows, scenario_cells, defined)
 
     # --- --cover: every id of the rules section appears in the catalogue ---
     if "--cover" in sys.argv:
@@ -544,11 +1071,30 @@ def main() -> int:
                 problems.append(f"rule {d} is not covered by any scenario")
 
     # --- every scenario assigned to a phase ---
-    phases = section(lines, heads, opt("--phases", "Implementation phases"))
+    phase_kw = opt("--phases", "Implementation phases")
+    phases = section(lines, heads, phase_kw)
+    phase_ids: list[str] = []
+    phase_blocks: list[str] = []
+    kph = find_heading(heads, phase_kw)
+    if kph is not None:
+        for k, (_, _, h) in enumerate(section_headings(heads, phase_kw), kph + 1):
+            if m := re.match(r"Phase\s+([A-Za-z0-9]+)\b", h):
+                phase_id = m.group(1)
+                if profile is not None and phase_id in phase_ids:
+                    problems.append(f"applicability: Phase {phase_id} is defined more than once")
+                phase_ids.append(phase_id)
+            if m or (profile is None and re.match(r"Phase\s+\w", h)):
+                phase_blocks.append("\n".join(lines[slice(*span_of(lines, heads, k))]))
+    if profile is not None and not phase_ids:
+        problems.append("applicability: no implementation phase headings")
     if not phases:
         problems.append(f"no heading contains {opt('--phases', 'Implementation phases')!r} (use --phases)")
     else:
-        refs = {t for t in expand_ids(phases) if t.startswith("SC-")}
+        phase_text = "\n".join(phase_blocks) if profile is not None else phases
+        refs = {t for t in expand_ids(phase_text) if t.startswith("SC-")}
+        if profile is not None:
+            problems += [f"applicability: phase references {s} but that scenario is not defined"
+                         for s in sorted(refs - set(scenarios))]
         for s in scenarios:
             if s not in refs:
                 problems.append(f"{s} is not assigned to any phase")
@@ -559,76 +1105,61 @@ def main() -> int:
     cd: list[str] = []
     ch, csum, pids = [0, 0], 0, []
     maxc, maxp = int(opt("--max-clauses", "40")), int(opt("--max-patterns", "10"))
-    phase_ids: list[str] = []
-    for _, _, h in section_headings(heads, opt("--phases", "Implementation phases")):
-        m = re.match(r"Phase\s+([A-Za-z0-9]+)\b", h)
-        if m:
-            phase_ids.append(m.group(1))
     if phases and not sess:
         if "--sessions-optional" not in sys.argv:
             problems.append(f"no heading contains {sess_kw!r} (use --sessions)")
     elif sess and phases:
         where: dict[str, list[str]] = {p: [] for p in phase_ids}
         batches = 0
-        in_code, slines, i = False, sess.split("\n"), 0
-        while i < len(slines):
-            l = slines[i]
-            if l.strip().startswith("```"):
-                in_code = not in_code
-                i += 1
+        if original is None:
+            session_tables = legacy_session_tables(sess.split("\n"))
+        else:
+            a, b = span_of(lines, heads, find_heading(heads, sess_kw))
+            session_tables = ((header, rows) for i, header, rows in tables if a <= i < b)
+        for header, rows in session_tables:
+            header = [c.strip().lower() for c in header]
+            cols = {name: next((k for k, c in enumerate(header) if name in c), None)
+                    for name in ("phase", "model", "confidence")}
+            if None in cols.values():
                 continue
-            if (not in_code and l.strip().startswith("|") and i + 1 < len(slines)
-                    and re.match(r"^\|[\s\-:|]+\|$", slines[i + 1].strip())):
-                header = [c.strip().lower() for c in table_cells(l)]
-                cols = {name: next((k for k, c in enumerate(header) if name in c), None)
-                        for name in ("phase", "model", "confidence")}
-                j = i + 2
-                if None in cols.values():
-                    while j < len(slines) and slines[j].strip().startswith("|"):
-                        j += 1
-                    i = j
+            cc, pc = (next((k for k, c in enumerate(header) if w in c), None) for w in ("clauses", "patterns"))
+            ch[0] |= cc is not None
+            ch[1] |= pc is not None
+            for j, cells in rows:
+                if len(cells) != len(header):
                     continue
-                cc, pc = (next((k for k, c in enumerate(header) if w in c), None) for w in ("clauses", "patterns"))
-                ch[0] |= cc is not None
-                ch[1] |= pc is not None
-                while j < len(slines) and slines[j].strip().startswith("|"):
-                    cells = [c.strip() for c in table_cells(slines[j])]
-                    if len(cells) == len(header):
-                        batch = cells[0].strip("`*") or f"row {j + 1}"
-                        batches += 1
-                        if cc is not None and cells[cc].strip("`*").isdigit():
-                            csum += int(cells[cc].strip("`*"))
-                            if int(cells[cc].strip("`*")) > maxc:
-                                cd.append(f"{batch} has {cells[cc].strip('`*')} clauses (cap {maxc})")
-                        if pc is not None:
-                            ids = [x.strip("`* ") for x in cells[pc].split(",")]
-                            ids = [x for x in ids if x.strip("-—– ")]
-                            pids += ids
-                            if len(ids) > maxp:
-                                cd.append(f"{batch} has {len(ids)} patterns (cap {maxp})")
-                        toks = phase_tokens(cells[cols["phase"]])
-                        if not toks:
-                            problems.append(f"{batch}: no phases listed")
-                        for t in toks:
-                            if t in where:
-                                where[t].append(batch)
-                            else:
-                                problems.append(f"{batch}: phase {t} has no 'Phase {t}' heading in the phases section")
-                        if cells[cols["model"]].strip("-—– ") == "":
-                            problems.append(f"{batch}: no model")
-                        if not re.search(r"\d+\s*%", cells[cols["confidence"]]):
-                            problems.append(f"{batch}: confidence is not a percentage")
-                        for name, need in (("worker", r"claude|codex|director"), ("touches", r"\w"), ("gate", r"check|full"),
-                                           ("owner", r"\S")):
-                            c = next((k for k, h in enumerate(header) if name in h), None)
-                            if c is None:
-                                notes.add(f"session table has no '{name}' column (the architect schedules by it)")
-                            elif not re.search(need, cells[c], re.I):
-                                problems.append(f"{batch}: '{name}' cell is empty or not understood")
-                    j += 1
-                i = j
-                continue
-            i += 1
+                cells = [c.strip() for c in cells]
+                batch = cells[0].strip("`*") or f"row {j + 1}"
+                batches += 1
+                if cc is not None and cells[cc].strip("`*").isdigit():
+                    csum += int(cells[cc].strip("`*"))
+                    if int(cells[cc].strip("`*")) > maxc:
+                        cd.append(f"{batch} has {cells[cc].strip('`*')} clauses (cap {maxc})")
+                if pc is not None:
+                    ids = [x.strip("`* ") for x in cells[pc].split(",")]
+                    ids = [x for x in ids if x.strip("-—– ")]
+                    pids += ids
+                    if len(ids) > maxp:
+                        cd.append(f"{batch} has {len(ids)} patterns (cap {maxp})")
+                toks = phase_tokens(cells[cols["phase"]])
+                if not toks:
+                    problems.append(f"{batch}: no phases listed")
+                for t in toks:
+                    if t in where:
+                        where[t].append(batch)
+                    else:
+                        problems.append(f"{batch}: phase {t} has no 'Phase {t}' heading in the phases section")
+                if cells[cols["model"]].strip("-—– ") == "":
+                    problems.append(f"{batch}: no model")
+                if not re.search(r"\d+\s*%", cells[cols["confidence"]]):
+                    problems.append(f"{batch}: confidence is not a percentage")
+                for name, need in (("worker", r"claude|codex|director"), ("touches", r"\w"), ("gate", r"check|full"),
+                                   ("owner", r"\S")):
+                    c = next((k for k, h in enumerate(header) if name in h), None)
+                    if c is None:
+                        notes.add(f"session table has no '{name}' column (the architect schedules by it)")
+                    elif not re.search(need, cells[c], re.I):
+                        problems.append(f"{batch}: '{name}' cell is empty or not understood")
         if not batches:
             problems.append("session plan has no batch table (columns Batch, Phases, Model, Confidence)")
         else:
@@ -652,9 +1183,9 @@ def main() -> int:
     # --- test depth: card tests per clause, default-off paths, the LLM playtest, e2e before review ---
     depth: list[str] = []
     cards = section(lines, heads, opt("--cards", "Card-language test programme"))
-    if not cards:
+    if cards_required and not cards:
         depth.append(f"no heading contains {opt('--cards', 'Card-language test programme')!r} (use --cards)")
-    else:
+    elif cards_required:
         if "expectNotOffered" not in cards:
             depth.append("card tests: the poor-setup helper expectNotOffered is not named")
         nrows, hdr = 0, None
@@ -677,16 +1208,17 @@ def main() -> int:
         depth.append(f"no heading contains {opt('--done', 'Definition of Done')!r} (use --done)")
     for need, what in (("expectNotOffered", "the card-test depth gate (a poor test that calls expectNotOffered)"),
                        ("default-off", "the default-off paths"), ("llm playtest", "the LLM playtest")):
+        if (need == "expectNotOffered" and not cards_required) or (need == "llm playtest" and not llm_required):
+            continue
         if done and need.lower() not in done.lower():
             depth.append(f"the Definition of Done lacks {what}")
-    if "llm playtest" not in section(lines, heads, opt("--layers", "Layers")).lower():
+    layers = section(lines, heads, opt("--layers", "Layers"))
+    if profile is not None and not re.sub(r"^\s*#+.*$", "", layers, flags=re.M).strip():
+        depth.append("no nonempty test Layers section")
+    if llm_required and "llm playtest" not in layers.lower():
         depth.append(f"the test layers ({opt('--layers', 'Layers')!r}, use --layers) do not name the LLM playtest")
-    kph = find_heading(heads, opt("--phases", "Implementation phases"))
-    if kph is not None:
-        a, b = span_of(lines, heads, kph)
-        if not any("llm-playtester" in "\n".join(lines[slice(*span_of(lines, heads, k))])
-                   for k, (i, _, t) in enumerate(heads) if a < i < b and re.match(r"Phase\s+\w", t)):
-            depth.append("no phase builds the LLM playtest (the kit's llm-playtester)")
+    if kph is not None and llm_required and not any("llm-playtester" in block for block in phase_blocks):
+        depth.append("no phase builds the LLM playtest (the kit's llm-playtester)")
     kpre = find_heading(heads, "Shared preamble")
     pre = "\n".join(lines[slice(*span_of(lines, heads, kpre))]) if kpre is not None else ""
     if "e2e" not in pre.lower() or "heavy" not in pre:
@@ -719,8 +1251,7 @@ def main() -> int:
     for need in ("cards:check", "cards:screen", "cards:whole-game"):
         if need not in done:
             cd.append(f"the Definition of Done lacks {need}")
-    if kph is not None and not any("cards:whole-game" in "\n".join(lines[slice(*span_of(lines, heads, k))])
-                                   for k, (i, _, t) in enumerate(heads) if a < i < b and re.match(r"Phase\s+\w", t)):
+    if kph is not None and not any("cards:whole-game" in block for block in phase_blocks):
         cd.append("no phase names cards:whole-game")
     for w, on in (("Clauses", ch[0]), ("Patterns", ch[1])):
         if not on:
@@ -734,10 +1265,11 @@ def main() -> int:
             cd += [f"pattern {p} is in no batch" for p in cp if ch[1] and p not in pids]
         except Exception:  # noqa: BLE001
             cd.append(f"catalogue ({cat}) does not parse or lacks summary.clauses / patterns")
-    if "--cards-optional" in sys.argv:
-        notes |= {f"cards: {d}" for d in cd}
-    else:
-        problems += [f"cards: {d}" for d in cd]
+    if cards_required:
+        if "--cards-optional" in sys.argv:
+            notes |= {f"cards: {d}" for d in cd}
+        else:
+            problems += [f"cards: {d}" for d in cd]
 
     # --- game-kit reuse: pulls at the pin, the game sheet, the build-own table, the kit-fit review ---
     kd: list[str] = []
@@ -773,6 +1305,8 @@ def main() -> int:
                 cells[0] = trows[-1][0]
             trows.append(cells)
     own, sheet, maprows = tabs.get("own", []), tabs.get("sheet", []), tabs.get("map", [])
+    if profile is not None:
+        problems += applicability_conflicts(profile, path, src, cards, phases, layers, maprows, sheet, csum, pids)
     if ru and "map" not in seen:
         kd.append("the reuse map has no table with Layer, Kind and Source columns")
     kit, comps = kit_dir(), set()
@@ -874,7 +1408,8 @@ def main() -> int:
         if ph and not any(norm(o[0]).startswith(w) for o in own):
             kd.append(f"build-own table: the plan builds {w} code ({ph}) but has no '{w.capitalize()}' row (one per {w} part the game writes, '{w.capitalize()}: <part>', or '{w.capitalize()}: none' with a reason of six words or more)")
     fit =path.parent / "plan-review" / "kit-fit.md"
-    fitt = norm(fit.read_text(encoding="utf-8", errors="replace")) if fit.is_file() else ""
+    fit_text = fit.read_text(encoding="utf-8", errors="replace") if fit.is_file() else ""
+    fitt = norm("\n".join(visible_markdown(fit_text.split("\n"))[0]) if profile is not None else fit_text)
     if not fitt:
         kd.append(f"no kit-fit review ({fit} is missing or empty): stage 9")
     answered = False
@@ -949,12 +1484,16 @@ def main() -> int:
                 continue
             if b:
                 ka, kb = find_heading(heads, a), find_heading(heads, b)
-                types = "" if ka is None or kb is None or kb <= ka else "\n".join(lines[heads[ka][0]:heads[kb][0]])
+                span = None if ka is None or kb is None or kb <= ka else (heads[ka][0], heads[kb][0])
             else:
-                types = section(lines, heads, a)
-            if not types and (b or len(specs) > 1):
+                ka = find_heading(heads, a)
+                span = None if ka is None else span_of(lines, heads, ka)
+            if span is None and (b or len(specs) > 1):
                 problems.append(f"--tsc: no section for {spec.strip()!r} (--types)")
-            blocks += re.findall(r"```ts\n(.*?)```", types, re.S)
+            if span is not None:
+                start, end = span
+                blocks += re.findall(r"```ts\n(.*?)```", "\n".join(lines[start:end]), re.S) if profile is None else [
+                    block for i, lang, block in fences if start <= i < end and lang == "ts"]
         code = "\n".join(blocks)
         if not code:
             problems.append("--tsc: no ```ts blocks found in the type-definitions section")

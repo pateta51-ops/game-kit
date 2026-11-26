@@ -28,6 +28,10 @@ function isPython3(cmd: string[]): boolean {
 }
 
 export function main(argv: readonly string[]): number {
+  if (argv.includes('--applicability') && argv.includes('--skip-without-python')) {
+    console.error('plancheck: cannot combine --applicability with --skip-without-python');
+    return 1;
+  }
   const python = candidates(process.env, process.platform).find(isPython3);
   const args = argv.filter((a) => a !== '--skip-without-python');
   if (python === undefined) {
