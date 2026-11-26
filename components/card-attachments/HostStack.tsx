@@ -72,12 +72,16 @@ export function HostStack({ host, hostTurned, attachments, w, h, mode = 'tuck', 
           {...(onRead ? {
             role: 'button', tabIndex: 0,
             onClick: (e: MouseEvent<HTMLDivElement>) => {
-              const target = e.target instanceof Element ? e.target : null
-              if (e.defaultPrevented || target?.closest<HTMLLabelElement>('label')?.control || (target && target.closest('button, a[href], input, select, textarea, details > summary, [role="button"], [contenteditable]:not([contenteditable="false"])') !== e.currentTarget)) return
+              if (e.defaultPrevented) return
+              const path = e.nativeEvent.composedPath()
+              const end = path.indexOf(e.currentTarget)
+              if (end < 0 || path.slice(0, end).some((target) => target instanceof Element &&
+                (target.matches('button, a[href], area[href], input, select, textarea, details > summary, [role="button"], [contenteditable]:not([contenteditable="false"])') ||
+                  (target instanceof HTMLLabelElement && target.control)))) return
               e.stopPropagation(); onRead(i, a.key)
             },
             onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => {
-              if (e.defaultPrevented || e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey || (e.key !== 'Enter' && e.key !== ' ')) return
+              if (e.defaultPrevented || e.nativeEvent.composedPath()[0] !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey || (e.key !== 'Enter' && e.key !== ' ')) return
               e.preventDefault(); e.stopPropagation()
               if (!e.repeat) onRead(i, a.key)
             },
