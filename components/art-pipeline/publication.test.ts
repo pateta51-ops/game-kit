@@ -111,6 +111,38 @@ describe('publication preserves usable art', () => {
     expect(readFileSync(join(dir, 'public/art/old.PNG'))).toEqual(picture);
   });
 
+  it.each(['jpg', 'webp'])('refuses a .%s with invalid scan framing', (ext) => {
+    const old = snapshot();
+    const jpeg = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/wAALCAACAAIBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAAB//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AJ3//2Q==', 'base64');
+    const webp = Buffer.from('UklGRhoAAABXRUJQVlA4TA4AAAAvAUAAAAcQEf0PRET/Aw==', 'base64');
+    webp[24] = webp[24]! | 0xe0;
+    put(`source/fresh.${ext}`, ext === 'jpg' ? Buffer.concat([jpeg.subarray(0, jpeg.indexOf(Buffer.from([0xff, 0xda]))), jpeg.subarray(-2)]) : webp);
+    index({ old: `fresh.${ext}` });
+    config({ ext });
+    const result = cli();
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain(`not a valid .${ext} image`);
+    expect(snapshot()).toEqual(old);
+  });
+
+  it('accepts a real progressive JPEG with multiple scans', () => {
+    const bytes = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/wgALCAACAAIBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAABv/aAAgBAQAAAAEn/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABBQJ//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPyF//9oACAEBAAAAEH//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/EH//2Q==', 'base64');
+    put('source/fresh.jpg', bytes);
+    index({ old: 'fresh.jpg' });
+    config({ ext: 'jpg' });
+    const result = cli();
+    expect(result.status, result.stderr).toBe(0);
+    expect(readFileSync(join(dir, 'public/art/old.jpg'))).toEqual(bytes);
+  });
+
+  it.each(['stage', 'out', 'manifest'])('preserves an existing %s target of the wrong kind', (key) => {
+    const protectedFile = put(key === 'manifest' ? 'protected/notes.txt' : 'protected', Buffer.from('keep this'));
+    config({ [key]: 'protected' });
+    const result = cli();
+    expect(result.status).toBe(2);
+    expect(readFileSync(protectedFile, 'utf8')).toBe('keep this');
+  });
+
   it.each([[{}], [[]], [null]])('refuses an empty or malformed selection without clearing the prior release: %j', async (defs) => {
     const old = snapshot();
     index(defs);

@@ -51,6 +51,40 @@ function pngData(buf: Buffer, [width, height]: readonly number[]): boolean {
   } catch { return false; }
 }
 
+function jpegData(buf: Buffer): boolean {
+  if (buf[0] !== 0xff || buf[1] !== 0xd8) return false;
+  let scanning = false, hasData = false, completed = false;
+  for (let at = 2; at < buf.length;) {
+    if (scanning && buf[at] !== 0xff) { hasData = true; at++; continue; }
+    if (buf[at++] !== 0xff) return false;
+    while (buf[at] === 0xff) at++;
+    const marker = buf[at++];
+    if (marker === undefined) return false;
+    if (scanning && (marker === 0 || (marker >= 0xd0 && marker <= 0xd7))) {
+      if (marker === 0) hasData = true;
+      continue;
+    }
+    if (scanning) {
+      if (!hasData) return false;
+      scanning = false;
+      completed = true;
+    }
+    if (marker === 0xd9) return completed;
+    if (marker === 0x01) continue;
+    if (marker < 0xc0 || (marker >= 0xd0 && marker <= 0xd8) || at + 2 > buf.length) return false;
+    const length = buf.readUInt16BE(at);
+    if (length < 2 || at + length > buf.length) return false;
+    if (marker === 0xda) {
+      const components = buf[at + 2];
+      if (!components || length !== 6 + 2 * components) return false;
+      scanning = true;
+      hasData = false;
+    }
+    at += length;
+  }
+  return false;
+}
+
 function webpData(buf: Buffer, at: number, end: number, allowFrames: boolean): boolean {
   let image = false;
   for (; at + 8 <= end;) {
@@ -58,7 +92,10 @@ function webpData(buf: Buffer, at: number, end: number, allowFrames: boolean): b
     const stop = start + length;
     at = stop + (length % 2);
     if (at > end) return false;
-    if (type === 'VP8L') image ||= length > 5 && buf[start] === 0x2f;
+    if (type === 'VP8L') {
+      if (length <= 5 || buf[start] !== 0x2f || (buf[start + 4]! & 0xe0)) return false;
+      image = true;
+    }
     if (type === 'VP8 ') image ||= length > 10 && buf.readUIntBE(start + 3, 3) === 0x9d012a;
     if (type === 'ANMF' && allowFrames) {
       if (length < 16 || !webpData(buf, start + 16, stop, false)) return false;
@@ -72,7 +109,7 @@ function outputSize(bytes: Uint8Array, ext: string, id: string): [number, number
   const buf = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let header: boolean;
   if (ext === 'png') header = buf.length >= 45 && buf.subarray(0, 16).equals(Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex'));
-  else if (ext === 'jpg' || ext === 'jpeg') header = buf[0] === 0xff && buf[1] === 0xd8 && buf.lastIndexOf(Buffer.from([0xff, 0xd9])) > 2;
+  else if (ext === 'jpg' || ext === 'jpeg') header = jpegData(buf);
   else if (ext === 'webp') header = buf.length >= 30 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP' && buf.readUInt32LE(4) + 8 <= buf.length && webpData(buf, 12, buf.readUInt32LE(4) + 8, true);
   else return imageSize(bytes);
   const size = header ? imageSize(bytes) : null;
@@ -106,6 +143,12 @@ export async function run(args: readonly string[], io: Io = stdio, codecOverride
       io.out('art-publish: recovered the interrupted publication; run again to publish');
       return 0;
     }
+    for (const target of [stage, out]) {
+      const existing = statSync(target, { throwIfNoEntry: false });
+      if (existing && !existing.isDirectory()) throw new Error('existing stage and out targets must be directories');
+    }
+    const existingManifest = statSync(manifestFile, { throwIfNoEntry: false });
+    if (existingManifest && !existingManifest.isFile()) throw new Error('existing manifest target must be a regular file');
     const indexFile = resolve(l.dir, c.index);
     const actualIndex = publicationPath(indexFile);
     const index = JSON.parse(readFileSync(indexFile, 'utf8')) as ArtIndex;
