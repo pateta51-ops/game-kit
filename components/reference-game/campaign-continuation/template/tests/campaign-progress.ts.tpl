@@ -124,6 +124,19 @@ const observations = CONFIGS.map(config => {
   finish(replayedCrossing);
   const complete = finishScenario(config, replayedCrossing);
   const completeArchive = roundTrip('completed-campaign', complete);
+  const pressResult = continueCampaign(config, afterRepeatedArrival, { day: 2, answers: { route: 'press' } });
+  assert.equal(pressResult.status, 'playing');
+  if (pressResult.status !== 'playing') throw new Error('press route did not start');
+  finish(pressResult.session);
+  const pressed = finishScenario(config, pressResult.session);
+  corruptCalendar(completeArchive, 'retry-changes-crossing-route', save => { save.log = structuredClone(pressed.log); });
+  corruptCalendar(completeArchive, 'retry-unprocesses-crossing-day', save => {
+    save.status = 'active';
+    save.position.step = { kind: 'scenario', id: 'crossing' };
+    save.position.done.pop();
+    delete save.position.resolutions['scenario:crossing'];
+    save.log = structuredClone(afterRepeatedArrival.log);
+  });
   corruptCalendar(completeArchive, 'inconsistent-retry-stock', save => {
     const crossingAttempt = save.history.find(attempt => attempt.step.id === 'crossing');
     assert(crossingAttempt);

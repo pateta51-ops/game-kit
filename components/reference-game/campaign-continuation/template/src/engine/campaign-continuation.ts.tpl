@@ -58,7 +58,7 @@ function gameLog(log: CampaignLog): ContinuationLog {
     || !Array.isArray(value.betweenSessions.notes) || !value.betweenSessions.notes.every(item => typeof item === 'string')) throw new Error('invalid game-owned campaign fields');
   return value;
 }
-function validateLog(config: ContinuationConfig, log: CampaignLog, completed: number, begun: boolean): void {
+function validateLog(config: ContinuationConfig, log: CampaignLog, completed: number, begun: boolean) {
   gameLog(log);
   remainingCampaignCards(log, config.box);
   const problem = rosterProblem(campaignRoster(log));
@@ -71,10 +71,12 @@ function validateLog(config: ContinuationConfig, log: CampaignLog, completed: nu
   let expected = schedule(emptyLog());
   if (cursor >= 1) expected = startCalendarDay(expected, 1, rules).log;
   if (completed >= 1) expected = record(expected, key('finished-arrival'));
-  if (cursor === 2) expected = startCalendarDay(expected, 2, rules, { route: has(log, key('rested')) ? 'rest' : 'press' }).log;
+  const route = has(log, key('rested')) ? 'rest' : 'press';
+  if (cursor === 2) expected = startCalendarDay(expected, 2, rules, { route }).log;
   if (completed === 2) expected = record(expected, key('finished-crossing'));
   const evidence = (value: CampaignLog) => [value[CALENDAR_KEY]?.calendar, value.recorded, value.order, value.crossed, value.counts, value.changes];
   if (hashValue(evidence(log)) !== hashValue(evidence(expected))) throw new Error('invalid continuation campaign calendar effects');
+  return cursor === 2 ? route : undefined;
 }
 function canonicalStep(value: unknown): number {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return -1;
@@ -114,8 +116,11 @@ function validateSave(config: ContinuationConfig, save: CampaignSave): void {
   if (save.id !== config.id || save.version !== version(config) || save.status === 'incompatible' || !Array.isArray(save.history)
     || !Number.isSafeInteger(save.seed) || save.seed < 0 || save.seed >= Number.MAX_SAFE_INTEGER) throw new Error('continuation variant or configuration mismatch');
   validateProgress(save);
-  validateLog(config, save.log, save.position.done.length, save.attempt !== undefined);
-  for (const attempt of [...save.history, ...(save.attempt ? [save.attempt] : [])]) validateLog(config, attempt.logBefore, canonicalStep(attempt.step), true);
+  const route = validateLog(config, save.log, save.position.done.length, save.attempt !== undefined);
+  for (const attempt of [...save.history, ...(save.attempt ? [save.attempt] : [])]) {
+    const previousRoute = validateLog(config, attempt.logBefore, canonicalStep(attempt.step), true);
+    if (previousRoute !== undefined && previousRoute !== route) throw new Error('invalid continuation campaign calendar route across attempts');
+  }
 }
 export function newContinuation(config: ContinuationConfig, seed: number): CampaignSave {
   if (!Number.isSafeInteger(seed) || seed < 0 || seed >= Number.MAX_SAFE_INTEGER || !config.life.every(value => Number.isSafeInteger(value) && value > 0) || !Number.isSafeInteger(config.restBonus) || config.restBonus < 0) throw new Error('invalid continuation setup');
