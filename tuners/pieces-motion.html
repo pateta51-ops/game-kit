@@ -14739,9 +14739,12 @@ var PIECES = (() => {
   };
   var isTyping = (target) => target?.isContentEditable === true || ["INPUT", "TEXTAREA", "SELECT"].includes(tag(target));
   var isControl = (target) => {
-    if (["BUTTON", "A", "SUMMARY"].includes(tag(target))) return true;
+    const name = tag(target);
+    if (["BUTTON", "A", "SUMMARY"].includes(name)) return true;
     const get = target?.getAttribute;
-    return typeof get === "function" && get.call(target, "role") === "button";
+    if (typeof get !== "function") return false;
+    const attribute = get;
+    return name === "AREA" && typeof attribute.call(target, "href") === "string" || attribute.call(target, "role") === "button";
   };
   function isActiveElement(node) {
     if (node == null) return false;
