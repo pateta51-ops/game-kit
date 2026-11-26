@@ -675,5 +675,8 @@
   { "q": "art pipeline sources", "first": "art-pipeline" },
   { "q": "check output manifest", "first": "tooling-scripts" },
   { "q": "required logical art ids", "first": "tooling-scripts" },
-  { "q": "output manifest logical ids", "first": "tooling-scripts" }
+  { "q": "output manifest logical ids", "first": "tooling-scripts" },
+  { "q": "media cap", "first": "bundle-size" },
+  { "q": "follow imports", "first": "bundle-size" },
+  { "q": "first download size", "first": "bundle-size" }
 ]
