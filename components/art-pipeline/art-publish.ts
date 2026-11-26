@@ -57,20 +57,21 @@ export async function run(args: readonly string[], io: Io = stdio, codecOverride
       if (previous !== undefined) throw new Error(`filename collision: ${previous} and ${id} map to ${name}`);
       names.set(name.toLowerCase(), id);
       const src = resolve(root, file);
+      const extension = extname(file);
+      const stageName = name + (extension.length > 1 ? extension : '.source');
       const actualSource = publicationPath(src);
       if (targets.some((p) => within(p, src) || within(p, indexFile)) || actualTargets.some((p) => within(p, actualSource) || within(p, actualIndex))) throw new Error(`publication would replace an input: ${id}`);
-      if (within(join(stage, `${name}${extname(file)}`), manifestFile) || within(join(out, `${name}.${c.ext}`), manifestFile)) throw new Error(`manifest would replace face ${id}`);
+      if (within(join(stage, stageName), manifestFile) || within(join(out, `${name}.${c.ext}`), manifestFile)) throw new Error(`manifest would replace face ${id}`);
       if (!statSync(src).isFile()) throw new Error(`${id}: source is not a file`);
       accessSync(src, constants.R_OK);
-      return { id, name, file, src };
+      return { id, name, file, src, stageName };
     });
     const cod = codecOverride ?? await codec(c.sharp);
     publication = beginPublication(targets, marker);
     const [nextStage, nextOut] = publication.paths as [string, string];
     for (const d of [nextStage, nextOut]) mkdirSync(d, { recursive: true });
     const manifest: Record<string, object> = Object.create(null) as Record<string, object>;
-    for (const { id, name, file, src } of selected) {
-      const stageName = `${name}${extname(file)}`;
+    for (const { id, name, file, src, stageName } of selected) {
       const bytes = readFileSync(src);
       writeFileSync(join(nextStage, stageName), bytes);
       const made = extname(file).slice(1).toLowerCase() === c.ext ? bytes : await (() => { const q = c.faces?.[id]?.quality ?? c.quality; return q ? encodeWithin(cod, bytes, c.ext, id, q, c.faces?.[id]?.maxFileBytes ?? c.maxFileBytes) : cod.out(bytes, c.ext); })();

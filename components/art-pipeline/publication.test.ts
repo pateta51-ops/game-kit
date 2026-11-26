@@ -1,12 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { run as check } from '../tooling-scripts/art-check.ts';
 import { run as publish } from './art-publish.ts';
-import { encodePng } from './lib.ts';
+import { encodePng, sha256 } from './lib.ts';
 import { beginPublication } from './publication.ts';
 
 let dir: string;
@@ -90,6 +90,22 @@ describe('publication preserves usable art', () => {
     index({ a: 'a.png' });
     expect(await publish(['--config', config({ manifest: 'public/art/manifest.json' })], io)).toBe(0);
     expect(check(['--manifest', join(dir, 'public/art/manifest.json'), '--sources', join(dir, 'chosen'), '--out', join(dir, 'public/art'), '--ext', 'png', '--need-ids', put('ids.json', ['a'])], io)).toBe(0);
+  });
+
+  it('verifies a generic source filename without an extension through the default check', async () => {
+    put('source/extensionless', picture);
+    index({ face: 'extensionless' });
+    expect(await publish(['--config', config()], io)).toBe(0);
+    expect(check([...checkArgs(), '--need-ids', put('ids.json', ['face'])], io)).toBe(0);
+  });
+
+  it('fails when a required legacy face output is a directory', () => {
+    const output = join(dir, 'public/art/old.png');
+    rmSync(output);
+    mkdirSync(output);
+    put('public/manifest.json', { old: { id: 'old', source: 'old.png', sha256: sha256(picture), bytes: statSync(output).size } });
+    expect(check([...checkArgs(), '--need', put('names.json', ['old']), '--need-ids', put('ids.json', ['old'])], io)).toBe(1);
+    expect(messages.join('\n')).toContain('required logical ID has no complete published face');
   });
 
   it.each(['chosen/manifest.json', 'chosen/metadata.v1/manifest.json', 'public/art/manifest.png', 'public/art/metadata.png/manifest.json'])('publishes and checks an in-directory manifest without counting it as art: %s', async (manifest) => {

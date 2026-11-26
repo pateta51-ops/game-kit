@@ -37,8 +37,9 @@ export interface ArtConfig {
 }
 
 const sha256 = (path: string): string => createHash('sha256').update(readFileSync(path)).digest('hex');
+const isFile = (path: string): boolean => statSync(path, { throwIfNoEntry: false })?.isFile() === true;
 const filesIn = (dir: string): string[] => readdirSync(dir, { withFileTypes: true })
-  .filter((entry) => entry.isFile() || (entry.isSymbolicLink() && statSync(join(dir, entry.name), { throwIfNoEntry: false })?.isFile()))
+  .filter((entry) => entry.isFile() || (entry.isSymbolicLink() && isFile(join(dir, entry.name))))
   .map((entry) => entry.name).sort();
 
 export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total: number; skipped: number } {
@@ -52,6 +53,7 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
   };
   const sourceManifest = manifestIn(c.sources);
   const outputManifest = manifestIn(c.out);
+  const isOutput = (file: string): boolean => !outputManifest(file) && isFile(join(c.out, file));
   const ids = new Set<string>();
   for (const file of filesIn(c.sources)) {
     if (sourceManifest(file)) continue;
@@ -70,13 +72,13 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
     if (c.noEnlarge !== false && (entry.width === undefined || entry.height === undefined || entry.sourceWidth === undefined || entry.sourceHeight === undefined)) skipped += 1;
     if (c.noEnlarge !== false && entry.width !== undefined && entry.height !== undefined && entry.sourceWidth !== undefined && entry.sourceHeight !== undefined && entry.width * entry.height > entry.sourceWidth * entry.sourceHeight)
       errors.push(`${id}: enlarged: the output is ${String(entry.width)}x${String(entry.height)}, the source ${String(entry.sourceWidth)}x${String(entry.sourceHeight)}`);
-    if (outputManifest(`${id}.${c.ext}`) || !existsSync(out)) errors.push(`${id}: the output ${id}.${c.ext} is missing`);
+    if (!isOutput(`${id}.${c.ext}`)) errors.push(`${id}: the output ${id}.${c.ext} is missing or is not a file`);
     else if (statSync(out).size !== entry.bytes || (entry.outSha256 !== undefined && entry.outSha256 !== sha256(out)))
       errors.push(`${id}: the output ${id}.${c.ext} differs from the manifest`);
   }
   if (ids.size === 0) errors.push(`no source file in ${c.sources} matched ${String(c.sourceId)}`);
   for (const id of Object.keys(manifest)) if (!ids.has(id)) errors.push(`${id}: in the manifest but has no source`);
-  for (const id of new Set(c.need)) if (outputManifest(`${id}.${c.ext}`) || !existsSync(join(c.out, `${id}.${c.ext}`))) errors.push(`${id}: needed by the game but has no ${id}.${c.ext}`);
+  for (const id of new Set(c.need)) if (!isOutput(`${id}.${c.ext}`)) errors.push(`${id}: needed by the game but has no ${id}.${c.ext}`);
   const logical = new Map<string, string>();
   for (const [name, entry] of Object.entries(manifest)) {
     const id = entry.id ?? name;
@@ -85,7 +87,7 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
   }
   for (const id of new Set(c.needIds ?? [])) {
     const name = logical.get(id);
-    if (name === undefined || !ids.has(name) || !existsSync(join(c.out, `${name}.${c.ext}`))) errors.push(`${id}: required logical ID has no complete published face`);
+    if (name === undefined || !ids.has(name) || !isOutput(`${name}.${c.ext}`)) errors.push(`${id}: required logical ID has no complete published face`);
   }
   let total = 0;
   for (const f of existsSync(c.out) ? filesIn(c.out) : []) {
