@@ -1,0 +1,11 @@
+{
+  "name": "combat",
+  "source": {
+    "game": "kit",
+    "commit": "none",
+    "paths": [],
+    "note": "Written new for K550 using engine-core timing and card-language verbs."
+  },
+  "needs": ["engine-core", "card-language"],
+  "packages": []
+}
