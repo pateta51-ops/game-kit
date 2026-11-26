@@ -5,7 +5,6 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 
 <!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
 **Hooks a game calls:**
-- `motionRate`: share one motion preference across hand, drag and timeline durations by converting a duration factor to a rate
 - `holdUntil` + `autoContinueMs`: hold a beat until a condition, with a timed fallback
 - `release`: let a held beat go when the game is ready
 - `onCue` + `onDroppedCue`: play a sound on a beat, also when the beat is skipped
@@ -16,6 +15,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 - `skipOnInput` + `hurryOnInput`: skip or hurry the animation on a click or key
 - `withReducedMotion` + `withAutomationOff`: the motion speed setting, still in tests and under reduced motion
 - `validateSpecs`: check that every motion spec names a known verb and zone
+- `motionRate`: share one motion preference across hand, drag and timeline durations by converting a duration factor to a rate
 <!-- /hooks -->
 
 **What it does:** Plays the director's motion specs as timed beats; verbs draw, the game keeps its state.

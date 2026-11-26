@@ -1209,11 +1209,11 @@ var PIECES = (() => {
         return a.stateNode.current === a ? fiber : alternate;
       }
       function findCurrentHostFiberImpl(node) {
-        var tag = node.tag;
-        if (5 === tag || 26 === tag || 27 === tag || 6 === tag) return node;
+        var tag2 = node.tag;
+        if (5 === tag2 || 26 === tag2 || 27 === tag2 || 6 === tag2) return node;
         for (node = node.child; null !== node; ) {
-          tag = findCurrentHostFiberImpl(node);
-          if (null !== tag) return tag;
+          tag2 = findCurrentHostFiberImpl(node);
+          if (null !== tag2) return tag2;
           node = node.sibling;
         }
         return null;
@@ -1923,15 +1923,15 @@ var PIECES = (() => {
       }
       function getInstanceFromNode(node) {
         if (node = node[internalInstanceKey] || node[internalContainerInstanceKey]) {
-          var tag = node.tag;
-          if (5 === tag || 6 === tag || 13 === tag || 31 === tag || 26 === tag || 27 === tag || 3 === tag)
+          var tag2 = node.tag;
+          if (5 === tag2 || 6 === tag2 || 13 === tag2 || 31 === tag2 || 26 === tag2 || 27 === tag2 || 3 === tag2)
             return node;
         }
         return null;
       }
       function getNodeFromInstance(inst) {
-        var tag = inst.tag;
-        if (5 === tag || 26 === tag || 27 === tag || 6 === tag) return inst.stateNode;
+        var tag2 = inst.tag;
+        if (5 === tag2 || 26 === tag2 || 27 === tag2 || 6 === tag2) return inst.stateNode;
         throw Error(formatProdErrorMessage(33));
       }
       function getResourcesFromRoot(root2) {
@@ -3089,8 +3089,8 @@ var PIECES = (() => {
         return 3 === sourceFiber.tag ? sourceFiber.stateNode : null;
       }
       var emptyContextObject = {};
-      function FiberNode(tag, pendingProps, key, mode) {
-        this.tag = tag;
+      function FiberNode(tag2, pendingProps, key, mode) {
+        this.tag = tag2;
         this.key = key;
         this.sibling = this.child = this.return = this.stateNode = this.type = this.elementType = null;
         this.index = 0;
@@ -3103,8 +3103,8 @@ var PIECES = (() => {
         this.childLanes = this.lanes = 0;
         this.alternate = null;
       }
-      function createFiberImplClass(tag, pendingProps, key, mode) {
-        return new FiberNode(tag, pendingProps, key, mode);
+      function createFiberImplClass(tag2, pendingProps, key, mode) {
+        return new FiberNode(tag2, pendingProps, key, mode);
       }
       function shouldConstruct(Component) {
         Component = Component.prototype;
@@ -3400,26 +3400,26 @@ var PIECES = (() => {
       function popHydrationState(fiber) {
         if (fiber !== hydrationParentFiber) return false;
         if (!isHydrating) return popToNextHostParent(fiber), isHydrating = true, false;
-        var tag = fiber.tag, JSCompiler_temp;
-        if (JSCompiler_temp = 3 !== tag && 27 !== tag) {
-          if (JSCompiler_temp = 5 === tag)
+        var tag2 = fiber.tag, JSCompiler_temp;
+        if (JSCompiler_temp = 3 !== tag2 && 27 !== tag2) {
+          if (JSCompiler_temp = 5 === tag2)
             JSCompiler_temp = fiber.type, JSCompiler_temp = !("form" !== JSCompiler_temp && "button" !== JSCompiler_temp) || shouldSetTextContent(fiber.type, fiber.memoizedProps);
           JSCompiler_temp = !JSCompiler_temp;
         }
         JSCompiler_temp && nextHydratableInstance && throwOnHydrationMismatch(fiber);
         popToNextHostParent(fiber);
-        if (13 === tag) {
+        if (13 === tag2) {
           fiber = fiber.memoizedState;
           fiber = null !== fiber ? fiber.dehydrated : null;
           if (!fiber) throw Error(formatProdErrorMessage(317));
           nextHydratableInstance = getNextHydratableInstanceAfterHydrationBoundary(fiber);
-        } else if (31 === tag) {
+        } else if (31 === tag2) {
           fiber = fiber.memoizedState;
           fiber = null !== fiber ? fiber.dehydrated : null;
           if (!fiber) throw Error(formatProdErrorMessage(317));
           nextHydratableInstance = getNextHydratableInstanceAfterHydrationBoundary(fiber);
         } else
-          27 === tag ? (tag = nextHydratableInstance, isSingletonScope(fiber.type) ? (fiber = previousHydratableOnEnteringScopedSingleton, previousHydratableOnEnteringScopedSingleton = null, nextHydratableInstance = fiber) : nextHydratableInstance = tag) : nextHydratableInstance = hydrationParentFiber ? getNextHydratable(fiber.stateNode.nextSibling) : null;
+          27 === tag2 ? (tag2 = nextHydratableInstance, isSingletonScope(fiber.type) ? (fiber = previousHydratableOnEnteringScopedSingleton, previousHydratableOnEnteringScopedSingleton = null, nextHydratableInstance = fiber) : nextHydratableInstance = tag2) : nextHydratableInstance = hydrationParentFiber ? getNextHydratable(fiber.stateNode.nextSibling) : null;
         return true;
       }
       function resetHydrationState() {
@@ -5097,13 +5097,13 @@ var PIECES = (() => {
         currentStateHook.memoizedState = action;
         return [stateHook, dispatch, false];
       }
-      function pushSimpleEffect(tag, inst, create, deps) {
-        tag = { tag, create, deps, inst, next: null };
+      function pushSimpleEffect(tag2, inst, create, deps) {
+        tag2 = { tag: tag2, create, deps, inst, next: null };
         inst = currentlyRenderingFiber.updateQueue;
         null === inst && (inst = createFunctionComponentUpdateQueue(), currentlyRenderingFiber.updateQueue = inst);
         create = inst.lastEffect;
-        null === create ? inst.lastEffect = tag.next = tag : (deps = create.next, create.next = tag, tag.next = deps, inst.lastEffect = tag);
-        return tag;
+        null === create ? inst.lastEffect = tag2.next = tag2 : (deps = create.next, create.next = tag2, tag2.next = deps, inst.lastEffect = tag2);
+        return tag2;
       }
       function updateRef() {
         return updateWorkInProgressHook().memoizedState;
@@ -7849,10 +7849,10 @@ var PIECES = (() => {
         }
       }
       function insertOrAppendPlacementNodeIntoContainer(node, before, parent, parentFragmentInstances) {
-        var tag = node.tag;
-        if (5 === tag || 6 === tag)
-          tag = node.stateNode, before ? (9 === parent.nodeType ? parent.body : "HTML" === parent.nodeName ? parent.ownerDocument.body : parent).insertBefore(tag, before) : (before = 9 === parent.nodeType ? parent.body : "HTML" === parent.nodeName ? parent.ownerDocument.body : parent, before.appendChild(tag), parent = parent._reactRootContainer, null !== parent && void 0 !== parent || null !== before.onclick || (before.onclick = noop$1)), commitNewChildToFragmentInstances(node, parentFragmentInstances), viewTransitionMutationContext = true;
-        else if (4 !== tag && (27 === tag && (commitNewChildToFragmentInstances(node, parentFragmentInstances), parentFragmentInstances = null, isSingletonScope(node.type) && (parent = node.stateNode, before = null)), node = node.child, null !== node))
+        var tag2 = node.tag;
+        if (5 === tag2 || 6 === tag2)
+          tag2 = node.stateNode, before ? (9 === parent.nodeType ? parent.body : "HTML" === parent.nodeName ? parent.ownerDocument.body : parent).insertBefore(tag2, before) : (before = 9 === parent.nodeType ? parent.body : "HTML" === parent.nodeName ? parent.ownerDocument.body : parent, before.appendChild(tag2), parent = parent._reactRootContainer, null !== parent && void 0 !== parent || null !== before.onclick || (before.onclick = noop$1)), commitNewChildToFragmentInstances(node, parentFragmentInstances), viewTransitionMutationContext = true;
+        else if (4 !== tag2 && (27 === tag2 && (commitNewChildToFragmentInstances(node, parentFragmentInstances), parentFragmentInstances = null, isSingletonScope(node.type) && (parent = node.stateNode, before = null)), node = node.child, null !== node))
           for (insertOrAppendPlacementNodeIntoContainer(
             node,
             before,
@@ -7867,10 +7867,10 @@ var PIECES = (() => {
             ), node = node.sibling;
       }
       function insertOrAppendPlacementNode(node, before, parent, parentFragmentInstances) {
-        var tag = node.tag;
-        if (5 === tag || 6 === tag)
-          tag = node.stateNode, before ? parent.insertBefore(tag, before) : parent.appendChild(tag), commitNewChildToFragmentInstances(node, parentFragmentInstances), viewTransitionMutationContext = true;
-        else if (4 !== tag && (27 === tag && (commitNewChildToFragmentInstances(node, parentFragmentInstances), parentFragmentInstances = null, isSingletonScope(node.type) && (parent = node.stateNode)), node = node.child, null !== node))
+        var tag2 = node.tag;
+        if (5 === tag2 || 6 === tag2)
+          tag2 = node.stateNode, before ? parent.insertBefore(tag2, before) : parent.appendChild(tag2), commitNewChildToFragmentInstances(node, parentFragmentInstances), viewTransitionMutationContext = true;
+        else if (4 !== tag2 && (27 === tag2 && (commitNewChildToFragmentInstances(node, parentFragmentInstances), parentFragmentInstances = null, isSingletonScope(node.type) && (parent = node.stateNode)), node = node.child, null !== node))
           for (insertOrAppendPlacementNode(
             node,
             before,
@@ -10104,10 +10104,10 @@ var PIECES = (() => {
       }
       function isRenderConsistentWithExternalStores(finishedWork) {
         for (var node = finishedWork; ; ) {
-          var tag = node.tag;
-          if ((0 === tag || 11 === tag || 15 === tag) && node.flags & 16384 && (tag = node.updateQueue, null !== tag && (tag = tag.stores, null !== tag)))
-            for (var i = 0; i < tag.length; i++) {
-              var check = tag[i], getSnapshot = check.getSnapshot;
+          var tag2 = node.tag;
+          if ((0 === tag2 || 11 === tag2 || 15 === tag2) && node.flags & 16384 && (tag2 = node.updateQueue, null !== tag2 && (tag2 = tag2.stores, null !== tag2)))
+            for (var i = 0; i < tag2.length; i++) {
+              var check = tag2[i], getSnapshot = check.getSnapshot;
               check = check.value;
               try {
                 if (!objectIs(getSnapshot(), check)) return false;
@@ -10115,9 +10115,9 @@ var PIECES = (() => {
                 return false;
               }
             }
-          tag = node.child;
-          if (node.subtreeFlags & 16384 && null !== tag)
-            tag.return = node, node = tag;
+          tag2 = node.child;
+          if (node.subtreeFlags & 16384 && null !== tag2)
+            tag2.return = node, node = tag2;
           else {
             if (node === finishedWork) break;
             for (; null === node.sibling; ) {
@@ -11561,13 +11561,13 @@ var PIECES = (() => {
         clientText = normalizeMarkupForTextOrAttribute(clientText);
         return normalizeMarkupForTextOrAttribute(serverText) === clientText ? true : false;
       }
-      function setProp(domElement, tag, key, value, props, prevValue) {
+      function setProp(domElement, tag2, key, value, props, prevValue) {
         switch (key) {
           case "children":
             if ("string" === typeof value)
-              "body" === tag || "textarea" === tag && "" === value || setTextContent(domElement, value);
+              "body" === tag2 || "textarea" === tag2 && "" === value || setTextContent(domElement, value);
             else if ("number" === typeof value || "bigint" === typeof value)
-              "body" !== tag && setTextContent(domElement, "" + value);
+              "body" !== tag2 && setTextContent(domElement, "" + value);
             else return;
             break;
           case "className":
@@ -11587,13 +11587,13 @@ var PIECES = (() => {
             setValueForStyles(domElement, value, prevValue);
             return;
           case "data":
-            if ("object" !== tag) {
+            if ("object" !== tag2) {
               setValueForKnownAttribute(domElement, "data", value);
               break;
             }
           case "src":
           case "href":
-            if ("" === value && ("a" !== tag || "href" !== key)) {
+            if ("" === value && ("a" !== tag2 || "href" !== key)) {
               domElement.removeAttribute(key);
               break;
             }
@@ -11613,28 +11613,28 @@ var PIECES = (() => {
               );
               break;
             } else
-              "function" === typeof prevValue && ("formAction" === key ? ("input" !== tag && setProp(domElement, tag, "name", props.name, props, null), setProp(
+              "function" === typeof prevValue && ("formAction" === key ? ("input" !== tag2 && setProp(domElement, tag2, "name", props.name, props, null), setProp(
                 domElement,
-                tag,
+                tag2,
                 "formEncType",
                 props.formEncType,
                 props,
                 null
               ), setProp(
                 domElement,
-                tag,
+                tag2,
                 "formMethod",
                 props.formMethod,
                 props,
                 null
               ), setProp(
                 domElement,
-                tag,
+                tag2,
                 "formTarget",
                 props.formTarget,
                 props,
                 null
-              )) : (setProp(domElement, tag, "encType", props.encType, props, null), setProp(domElement, tag, "method", props.method, props, null), setProp(domElement, tag, "target", props.target, props, null)));
+              )) : (setProp(domElement, tag2, "encType", props.encType, props, null), setProp(domElement, tag2, "method", props.method, props, null), setProp(domElement, tag2, "target", props.target, props, null)));
             if (null == value || "symbol" === typeof value || "boolean" === typeof value) {
               domElement.removeAttribute(key);
               break;
@@ -11829,7 +11829,7 @@ var PIECES = (() => {
         }
         viewTransitionMutationContext = true;
       }
-      function setPropOnCustomElement(domElement, tag, key, value, props, prevValue) {
+      function setPropOnCustomElement(domElement, tag2, key, value, props, prevValue) {
         switch (key) {
           case "style":
             setValueForStyles(domElement, value, prevValue);
@@ -11871,8 +11871,8 @@ var PIECES = (() => {
           default:
             if (!registrationNameDependencies.hasOwnProperty(key))
               a: {
-                if ("o" === key[0] && "n" === key[1] && (props = key.endsWith("Capture"), prevValue = key.slice(2, props ? key.length - 7 : void 0), tag = domElement[internalPropsKey] || null, tag = null != tag ? tag[key] : null, "function" === typeof tag && domElement.removeEventListener(prevValue, tag, props), "function" === typeof value)) {
-                  "function" !== typeof tag && null !== tag && (key in domElement ? domElement[key] = null : domElement.hasAttribute(key) && domElement.removeAttribute(key));
+                if ("o" === key[0] && "n" === key[1] && (props = key.endsWith("Capture"), prevValue = key.slice(2, props ? key.length - 7 : void 0), tag2 = domElement[internalPropsKey] || null, tag2 = null != tag2 ? tag2[key] : null, "function" === typeof tag2 && domElement.removeEventListener(prevValue, tag2, props), "function" === typeof value)) {
+                  "function" !== typeof tag2 && null !== tag2 && (key in domElement ? domElement[key] = null : domElement.hasAttribute(key) && domElement.removeAttribute(key));
                   domElement.addEventListener(prevValue, value, props);
                   break a;
                 }
@@ -11883,8 +11883,8 @@ var PIECES = (() => {
         }
         viewTransitionMutationContext = true;
       }
-      function setInitialProperties(domElement, tag, props) {
-        switch (tag) {
+      function setInitialProperties(domElement, tag2, props) {
+        switch (tag2) {
           case "div":
           case "span":
           case "svg":
@@ -11911,13 +11911,13 @@ var PIECES = (() => {
                       break;
                     case "children":
                     case "dangerouslySetInnerHTML":
-                      throw Error(formatProdErrorMessage(137, tag));
+                      throw Error(formatProdErrorMessage(137, tag2));
                     default:
-                      setProp(domElement, tag, propKey, propValue, props, null);
+                      setProp(domElement, tag2, propKey, propValue, props, null);
                   }
               }
-            hasSrcSet && setProp(domElement, tag, "srcSet", props.srcSet, props, null);
-            hasSrc && setProp(domElement, tag, "src", props.src, props, null);
+            hasSrcSet && setProp(domElement, tag2, "srcSet", props.srcSet, props, null);
+            hasSrc && setProp(domElement, tag2, "src", props.src, props, null);
             return;
           case "input":
             listenToNonDelegatedEvent("invalid", domElement);
@@ -11948,10 +11948,10 @@ var PIECES = (() => {
                     case "children":
                     case "dangerouslySetInnerHTML":
                       if (null != propValue$204)
-                        throw Error(formatProdErrorMessage(137, tag));
+                        throw Error(formatProdErrorMessage(137, tag2));
                       break;
                     default:
-                      setProp(domElement, tag, hasSrc, propValue$204, props, null);
+                      setProp(domElement, tag2, hasSrc, propValue$204, props, null);
                   }
               }
             initInput(
@@ -11980,12 +11980,12 @@ var PIECES = (() => {
                   case "multiple":
                     hasSrc = defaultValue;
                   default:
-                    setProp(domElement, tag, hasSrcSet, defaultValue, props, null);
+                    setProp(domElement, tag2, hasSrcSet, defaultValue, props, null);
                 }
-            tag = propKey;
+            tag2 = propKey;
             props = propValue;
             domElement.multiple = !!hasSrc;
-            null != tag ? updateOptions(domElement, !!hasSrc, tag, false) : null != props && updateOptions(domElement, !!hasSrc, props, true);
+            null != tag2 ? updateOptions(domElement, !!hasSrc, tag2, false) : null != props && updateOptions(domElement, !!hasSrc, props, true);
             return;
           case "textarea":
             listenToNonDelegatedEvent("invalid", domElement);
@@ -12006,7 +12006,7 @@ var PIECES = (() => {
                     if (null != defaultValue) throw Error(formatProdErrorMessage(91));
                     break;
                   default:
-                    setProp(domElement, tag, propValue, defaultValue, props, null);
+                    setProp(domElement, tag2, propValue, defaultValue, props, null);
                 }
             initTextarea(domElement, hasSrc, hasSrcSet, propKey);
             return;
@@ -12018,7 +12018,7 @@ var PIECES = (() => {
                     domElement.selected = hasSrc && "function" !== typeof hasSrc && "symbol" !== typeof hasSrc;
                     break;
                   default:
-                    setProp(domElement, tag, checked, hasSrc, props, null);
+                    setProp(domElement, tag2, checked, hasSrc, props, null);
                 }
             return;
           case "dialog":
@@ -12063,17 +12063,17 @@ var PIECES = (() => {
                 switch (defaultChecked) {
                   case "children":
                   case "dangerouslySetInnerHTML":
-                    throw Error(formatProdErrorMessage(137, tag));
+                    throw Error(formatProdErrorMessage(137, tag2));
                   default:
-                    setProp(domElement, tag, defaultChecked, hasSrc, props, null);
+                    setProp(domElement, tag2, defaultChecked, hasSrc, props, null);
                 }
             return;
           default:
-            if (isCustomElement(tag)) {
+            if (isCustomElement(tag2)) {
               for (propValue$204 in props)
                 props.hasOwnProperty(propValue$204) && (hasSrc = props[propValue$204], void 0 !== hasSrc && setPropOnCustomElement(
                   domElement,
-                  tag,
+                  tag2,
                   propValue$204,
                   hasSrc,
                   props,
@@ -12083,11 +12083,11 @@ var PIECES = (() => {
             }
         }
         for (defaultValue in props)
-          props.hasOwnProperty(defaultValue) && (hasSrc = props[defaultValue], null != hasSrc && setProp(domElement, tag, defaultValue, hasSrc, props, null));
+          props.hasOwnProperty(defaultValue) && (hasSrc = props[defaultValue], null != hasSrc && setProp(domElement, tag2, defaultValue, hasSrc, props, null));
       }
       var emptyProps = {};
-      function updateProperties(domElement, tag, lastProps, nextProps) {
-        switch (tag) {
+      function updateProperties(domElement, tag2, lastProps, nextProps) {
+        switch (tag2) {
           case "div":
           case "span":
           case "svg":
@@ -12110,7 +12110,7 @@ var PIECES = (() => {
                   case "defaultValue":
                     lastDefaultValue = lastProp;
                   default:
-                    nextProps.hasOwnProperty(propKey) || setProp(domElement, tag, propKey, null, nextProps, lastProp);
+                    nextProps.hasOwnProperty(propKey) || setProp(domElement, tag2, propKey, null, nextProps, lastProp);
                 }
             }
             for (var propKey$221 in nextProps) {
@@ -12145,12 +12145,12 @@ var PIECES = (() => {
                   case "children":
                   case "dangerouslySetInnerHTML":
                     if (null != propKey)
-                      throw Error(formatProdErrorMessage(137, tag));
+                      throw Error(formatProdErrorMessage(137, tag2));
                     break;
                   default:
                     propKey !== lastProp && setProp(
                       domElement,
-                      tag,
+                      tag2,
                       propKey$221,
                       propKey,
                       nextProps,
@@ -12181,7 +12181,7 @@ var PIECES = (() => {
                   default:
                     nextProps.hasOwnProperty(type) || setProp(
                       domElement,
-                      tag,
+                      tag2,
                       type,
                       null,
                       nextProps,
@@ -12204,17 +12204,17 @@ var PIECES = (() => {
                   default:
                     type !== lastDefaultValue && setProp(
                       domElement,
-                      tag,
+                      tag2,
                       name,
                       type,
                       nextProps,
                       lastDefaultValue
                     );
                 }
-            tag = defaultValue;
+            tag2 = defaultValue;
             lastProps = value;
             nextProps = propKey;
-            null != propKey$221 ? updateOptions(domElement, !!lastProps, propKey$221, false) : !!nextProps !== !!lastProps && (null != tag ? updateOptions(domElement, !!lastProps, tag, true) : updateOptions(domElement, !!lastProps, lastProps ? [] : "", false));
+            null != propKey$221 ? updateOptions(domElement, !!lastProps, propKey$221, false) : !!nextProps !== !!lastProps && (null != tag2 ? updateOptions(domElement, !!lastProps, tag2, true) : updateOptions(domElement, !!lastProps, lastProps ? [] : "", false));
             return;
           case "textarea":
             propKey = propKey$221 = null;
@@ -12226,7 +12226,7 @@ var PIECES = (() => {
                   case "children":
                     break;
                   default:
-                    setProp(domElement, tag, defaultValue, null, nextProps, name);
+                    setProp(domElement, tag2, defaultValue, null, nextProps, name);
                 }
             for (value in nextProps)
               if (name = nextProps[value], type = lastProps[value], nextProps.hasOwnProperty(value) && (null != name || null != type))
@@ -12245,7 +12245,7 @@ var PIECES = (() => {
                     if (null != name) throw Error(formatProdErrorMessage(91));
                     break;
                   default:
-                    name !== type && setProp(domElement, tag, value, name, nextProps, type);
+                    name !== type && setProp(domElement, tag2, value, name, nextProps, type);
                 }
             updateTextarea(domElement, propKey$221, propKey);
             return;
@@ -12259,7 +12259,7 @@ var PIECES = (() => {
                   default:
                     setProp(
                       domElement,
-                      tag,
+                      tag2,
                       propKey$237,
                       null,
                       nextProps,
@@ -12276,7 +12276,7 @@ var PIECES = (() => {
                   default:
                     setProp(
                       domElement,
-                      tag,
+                      tag2,
                       lastDefaultValue,
                       propKey$221,
                       nextProps,
@@ -12300,19 +12300,19 @@ var PIECES = (() => {
           case "wbr":
           case "menuitem":
             for (var propKey$242 in lastProps)
-              propKey$221 = lastProps[propKey$242], lastProps.hasOwnProperty(propKey$242) && null != propKey$221 && !nextProps.hasOwnProperty(propKey$242) && setProp(domElement, tag, propKey$242, null, nextProps, propKey$221);
+              propKey$221 = lastProps[propKey$242], lastProps.hasOwnProperty(propKey$242) && null != propKey$221 && !nextProps.hasOwnProperty(propKey$242) && setProp(domElement, tag2, propKey$242, null, nextProps, propKey$221);
             for (checked in nextProps)
               if (propKey$221 = nextProps[checked], propKey = lastProps[checked], nextProps.hasOwnProperty(checked) && propKey$221 !== propKey && (null != propKey$221 || null != propKey))
                 switch (checked) {
                   case "children":
                   case "dangerouslySetInnerHTML":
                     if (null != propKey$221)
-                      throw Error(formatProdErrorMessage(137, tag));
+                      throw Error(formatProdErrorMessage(137, tag2));
                     break;
                   default:
                     setProp(
                       domElement,
-                      tag,
+                      tag2,
                       checked,
                       propKey$221,
                       nextProps,
@@ -12321,11 +12321,11 @@ var PIECES = (() => {
                 }
             return;
           default:
-            if (isCustomElement(tag)) {
+            if (isCustomElement(tag2)) {
               for (var propKey$247 in lastProps)
                 propKey$221 = lastProps[propKey$247], lastProps.hasOwnProperty(propKey$247) && void 0 !== propKey$221 && !nextProps.hasOwnProperty(propKey$247) && setPropOnCustomElement(
                   domElement,
-                  tag,
+                  tag2,
                   propKey$247,
                   void 0,
                   nextProps,
@@ -12334,7 +12334,7 @@ var PIECES = (() => {
               for (defaultChecked in nextProps)
                 propKey$221 = nextProps[defaultChecked], propKey = lastProps[defaultChecked], !nextProps.hasOwnProperty(defaultChecked) || propKey$221 === propKey || void 0 === propKey$221 && void 0 === propKey || setPropOnCustomElement(
                   domElement,
-                  tag,
+                  tag2,
                   defaultChecked,
                   propKey$221,
                   nextProps,
@@ -12344,9 +12344,9 @@ var PIECES = (() => {
             }
         }
         for (var propKey$252 in lastProps)
-          propKey$221 = lastProps[propKey$252], lastProps.hasOwnProperty(propKey$252) && null != propKey$221 && !nextProps.hasOwnProperty(propKey$252) && setProp(domElement, tag, propKey$252, null, nextProps, propKey$221);
+          propKey$221 = lastProps[propKey$252], lastProps.hasOwnProperty(propKey$252) && null != propKey$221 && !nextProps.hasOwnProperty(propKey$252) && setProp(domElement, tag2, propKey$252, null, nextProps, propKey$221);
         for (lastProp in nextProps)
-          propKey$221 = nextProps[lastProp], propKey = lastProps[lastProp], !nextProps.hasOwnProperty(lastProp) || propKey$221 === propKey || null == propKey$221 && null == propKey || setProp(domElement, tag, lastProp, propKey$221, nextProps, propKey);
+          propKey$221 = nextProps[lastProp], propKey = lastProps[lastProp], !nextProps.hasOwnProperty(lastProp) || propKey$221 === propKey || null == propKey$221 && null == propKey || setProp(domElement, tag2, lastProp, propKey$221, nextProps, propKey);
       }
       function isLikelyStaticResource(initiatorType) {
         switch (initiatorType) {
@@ -13930,7 +13930,7 @@ var PIECES = (() => {
         _currentValue2: sharedNotPendingObject,
         _threadCount: 0
       };
-      function FiberRootNode(containerInfo, tag, hydrate, identifierPrefix, onUncaughtError, onCaughtError, onRecoverableError, onDefaultTransitionIndicator, formState) {
+      function FiberRootNode(containerInfo, tag2, hydrate, identifierPrefix, onUncaughtError, onCaughtError, onRecoverableError, onDefaultTransitionIndicator, formState) {
         this.tag = 1;
         this.containerInfo = containerInfo;
         this.pingCache = this.current = this.pendingChildren = null;
@@ -13951,10 +13951,10 @@ var PIECES = (() => {
         this.transitionTypes = null;
         this.incompleteTransitions = /* @__PURE__ */ new Map();
       }
-      function createFiberRoot(containerInfo, tag, hydrate, initialChildren, hydrationCallbacks, isStrictMode, identifierPrefix, formState, onUncaughtError, onCaughtError, onRecoverableError, onDefaultTransitionIndicator) {
+      function createFiberRoot(containerInfo, tag2, hydrate, initialChildren, hydrationCallbacks, isStrictMode, identifierPrefix, formState, onUncaughtError, onCaughtError, onRecoverableError, onDefaultTransitionIndicator) {
         containerInfo = new FiberRootNode(
           containerInfo,
-          tag,
+          tag2,
           hydrate,
           identifierPrefix,
           onUncaughtError,
@@ -13963,19 +13963,19 @@ var PIECES = (() => {
           onDefaultTransitionIndicator,
           formState
         );
-        tag = 1;
-        true === isStrictMode && (tag |= 24);
-        isStrictMode = createFiberImplClass(3, null, null, tag);
+        tag2 = 1;
+        true === isStrictMode && (tag2 |= 24);
+        isStrictMode = createFiberImplClass(3, null, null, tag2);
         containerInfo.current = isStrictMode;
         isStrictMode.stateNode = containerInfo;
-        tag = createCache();
-        tag.refCount++;
-        containerInfo.pooledCache = tag;
-        tag.refCount++;
+        tag2 = createCache();
+        tag2.refCount++;
+        containerInfo.pooledCache = tag2;
+        tag2.refCount++;
         isStrictMode.memoizedState = {
           element: initialChildren,
           isDehydrated: hydrate,
-          cache: tag
+          cache: tag2
         };
         initializeUpdateQueue(isStrictMode);
         return containerInfo;
@@ -14122,16 +14122,16 @@ var PIECES = (() => {
           var nearestMounted = getNearestMountedFiber(targetNode);
           if (null === nearestMounted) targetNode = null;
           else {
-            var tag = nearestMounted.tag;
-            if (13 === tag) {
+            var tag2 = nearestMounted.tag;
+            if (13 === tag2) {
               targetNode = getSuspenseInstanceFromFiber(nearestMounted);
               if (null !== targetNode) return targetNode;
               targetNode = null;
-            } else if (31 === tag) {
+            } else if (31 === tag2) {
               targetNode = getActivityInstanceFromFiber(nearestMounted);
               if (null !== targetNode) return targetNode;
               targetNode = null;
-            } else if (3 === tag) {
+            } else if (3 === tag2) {
               if (nearestMounted.stateNode.current.memoizedState.isDehydrated)
                 return 3 === nearestMounted.tag ? nearestMounted.stateNode.containerInfo : null;
               targetNode = null;
@@ -14731,7 +14731,37 @@ var PIECES = (() => {
 
   // components/prompt-host/pick.ts
   var import_react = __toESM(require_react(), 1);
-  function useBoardPick(prompt2, answer, { confirm: ask = true } = {}) {
+
+  // components/ui-helpers/promptKeys.ts
+  var tag = (target) => {
+    const t = target?.tagName;
+    return typeof t === "string" ? t.toUpperCase() : "";
+  };
+  var isTyping = (target) => target?.isContentEditable === true || ["INPUT", "TEXTAREA", "SELECT"].includes(tag(target));
+  var isControl = (target) => {
+    if (["BUTTON", "A", "SUMMARY"].includes(tag(target))) return true;
+    const get = target?.getAttribute;
+    return typeof get === "function" && get.call(target, "role") === "button";
+  };
+  function isActiveElement(node) {
+    if (node == null) return false;
+    const el = node;
+    if (typeof el.closest !== "function") return true;
+    if (el.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
+    const view = el.ownerDocument?.defaultView;
+    if (view) for (let at2 = el; at2; at2 = at2.parentElement) {
+      const style = view.getComputedStyle(at2);
+      if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse") return false;
+    }
+    return true;
+  }
+  function activeOverlay(root, selector = '[role="dialog"], [role="alertdialog"]') {
+    const nodes = root.querySelectorAll ? Array.from(root.querySelectorAll(selector)) : [root.querySelector(selector)];
+    return nodes.findLast(isActiveElement) ?? null;
+  }
+
+  // components/prompt-host/pick.ts
+  function useBoardPick(prompt2, answer, { confirm: ask = true, overlay, paused } = {}) {
     const [at2, setAt] = (0, import_react.useState)(null);
     const legal = (id) => prompt2?.options.some((o) => o.id === id && o.enabled) === true;
     const max = prompt2?.max ?? 1;
@@ -14778,8 +14808,14 @@ var PIECES = (() => {
     (0, import_react.useEffect)(() => {
       if (armed === null) return;
       const key = (e) => {
-        if (e.key === "Enter") pick.confirm();
-        else if (e.key === "Escape") pick.cancel();
+        if (e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target) || paused?.() === true || activeOverlay(document, overlay) != null) return;
+        if (e.key === "Enter" && !isControl(e.target) && pick.ready) {
+          e.preventDefault();
+          pick.confirm();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          pick.cancel();
+        }
       };
       window.addEventListener("keydown", key);
       return () => window.removeEventListener("keydown", key);
@@ -18697,7 +18733,7 @@ var PIECES = (() => {
   }
   function totalTag(stage, o, delay) {
     const { text, at: at2, font = "700 24px/1.15 sans-serif", colour = "white", travel: travel2 = 24, ms = 1700, image } = o;
-    const tag = stage.stand([...at2, 0, 0], {
+    const tag2 = stage.stand([...at2, 0, 0], {
       display: "flex",
       alignItems: "center",
       gap: ".15em",
@@ -18707,19 +18743,19 @@ var PIECES = (() => {
       zIndex: "7",
       textShadow: "0 0 6px #000"
     });
-    tag.style.width = "max-content";
-    tag.style.height = "auto";
+    tag2.style.width = "max-content";
+    tag2.style.height = "auto";
     const label = document.createElement("span");
     label.textContent = text;
-    tag.append(label);
+    tag2.append(label);
     if (image !== void 0) {
       const icon = document.createElement("img");
       icon.src = image;
       icon.alt = "";
       icon.style.height = ".85em";
-      tag.append(icon);
+      tag2.append(icon);
     }
-    stage.play(tag, [
+    stage.play(tag2, [
       { opacity: 0, transform: "translateY(0)" },
       { opacity: 1, transform: `translateY(${px(travel2 * 0.25)})`, offset: 0.08 },
       { opacity: 1, transform: `translateY(${px(travel2 * 0.4)})`, offset: 0.8 },
@@ -19041,14 +19077,14 @@ var PIECES = (() => {
   var stamp = ({ el, call }) => {
     const { text = "", tilt = 0, image, look, ms, ease: ease2 = "ease-in", scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames: frames2, press, ring, onParts, holdRing, ringZ, target, cracked } = call.step;
     const found = typeof target === "string" ? el.querySelector(target) ?? el.ownerDocument.querySelector(target) : target;
-    const tag = found ?? el.ownerDocument.createElement(image === void 0 ? "div" : "img");
-    if (found) Object.assign(tag.style, style);
+    const tag2 = found ?? el.ownerDocument.createElement(image === void 0 ? "div" : "img");
+    if (found) Object.assign(tag2.style, style);
     else {
-      if (tag instanceof HTMLImageElement && image !== void 0) {
-        tag.src = image;
-        tag.alt = text;
-      } else tag.textContent = text;
-      Object.assign(tag.style, image !== void 0 ? { position: "absolute", left: "0", top: "0", width: "100%", height: "100%", boxSizing: "border-box", background: "none", border: "0", objectFit: "contain", pointerEvents: "none" } : look === "bare" ? { position: "absolute", left: "0", top: "25%", width: "100%", height: "50%", display: "grid", placeItems: "center", boxSizing: "border-box", border: "0", background: "none", color: "inherit", fontWeight: "700", fontSize: "4em", lineHeight: "1", letterSpacing: ".08em", pointerEvents: "none" } : {
+      if (tag2 instanceof HTMLImageElement && image !== void 0) {
+        tag2.src = image;
+        tag2.alt = text;
+      } else tag2.textContent = text;
+      Object.assign(tag2.style, image !== void 0 ? { position: "absolute", left: "0", top: "0", width: "100%", height: "100%", boxSizing: "border-box", background: "none", border: "0", objectFit: "contain", pointerEvents: "none" } : look === "bare" ? { position: "absolute", left: "0", top: "25%", width: "100%", height: "50%", display: "grid", placeItems: "center", boxSizing: "border-box", border: "0", background: "none", color: "inherit", fontWeight: "700", fontSize: "4em", lineHeight: "1", letterSpacing: ".08em", pointerEvents: "none" } : {
         position: "absolute",
         left: "8%",
         top: "42%",
@@ -19063,9 +19099,9 @@ var PIECES = (() => {
         font: "700 1rem system-ui",
         pointerEvents: "none"
       }, style);
-      el.append(tag);
+      el.append(tag2);
     }
-    tag.dataset["fxPart"] = "label";
+    tag2.dataset["fxPart"] = "label";
     const rot = `rotate(${String(tilt)}deg)`;
     const keys = frames2 ?? [
       { transform: `${rot} scale(${String(scales[0])})`, opacity: 0 },
@@ -19074,7 +19110,7 @@ var PIECES = (() => {
     ];
     const end = keys.at(-1);
     const scale = call.dur / Number(call.step["dur"] ?? call.dur);
-    const animation = tag.animate([...keys], { duration: ms === void 0 ? call.dur : ms * scale, easing: ease2, fill: "both" });
+    const animation = tag2.animate([...keys], { duration: ms === void 0 ? call.dur : ms * scale, easing: ease2, fill: "both" });
     const accent = (node, part, composite) => node.animate([...part.frames], { delay: part.delay * scale, duration: part.ms * scale, fill: "none", easing: part.ease ?? "linear", composite });
     const give = press && accent(el, press, "add");
     let halo;
@@ -19083,36 +19119,36 @@ var PIECES = (() => {
     if (ring) {
       halo = el.ownerDocument.createElement("div");
       Object.assign(halo.style, {
-        zIndex: ringZ === void 0 ? tag.style.zIndex : String(ringZ),
+        zIndex: ringZ === void 0 ? tag2.style.zIndex : String(ringZ),
         position: "absolute",
-        left: tag.style.left,
-        top: tag.style.top,
-        width: tag.style.width,
-        height: tag.style.height,
+        left: tag2.style.left,
+        top: tag2.style.top,
+        width: tag2.style.width,
+        height: tag2.style.height,
         boxSizing: "border-box",
         borderRadius: "50%",
         opacity: "0",
         ...ring.style ? {} : { border: "3px solid currentColor" }
       }, ring.style);
       halo.dataset["fxPart"] = "ring";
-      tag.before(halo);
+      tag2.before(halo);
       glint = accent(halo, { ...ring, frames: ringFrames }, "replace");
     }
     let crack;
     let crackAnim;
     if (cracked) {
       crack = el.ownerDocument.createElement("div");
-      Object.assign(crack.style, { position: "absolute", left: tag.style.left || "0", top: tag.style.top || "0", width: tag.style.width || "100%", height: tag.style.height || "100%", pointerEvents: "none", opacity: "0", color: typeof cracked === "object" && cracked.colour ? cracked.colour : "inherit", zIndex: tag.style.zIndex });
+      Object.assign(crack.style, { position: "absolute", left: tag2.style.left || "0", top: tag2.style.top || "0", width: tag2.style.width || "100%", height: tag2.style.height || "100%", pointerEvents: "none", opacity: "0", color: typeof cracked === "object" && cracked.colour ? cracked.colour : "inherit", zIndex: tag2.style.zIndex });
       crack.innerHTML = '<svg viewBox="0 0 100 100" preserveAspectRatio="none" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="bevel"><path d="M46 0 L52 22 L40 38 L55 55 L45 72 L58 100 M52 22 L72 30 M55 55 L80 62 M40 38 L18 44 M45 72 L24 84"/></svg>';
       crack.dataset["fxPart"] = "crack";
-      tag.after(crack);
+      tag2.after(crack);
       crackAnim = crack.animate([{ opacity: 0 }, { opacity: 0, offset: pressOffset }, { opacity: 1 }], { duration: ms === void 0 ? call.dur : ms * scale, easing: "linear", fill: "both" });
     }
-    onParts?.(halo ? { label: tag, ring: halo } : { label: tag });
+    onParts?.(halo ? { label: tag2, ring: halo } : { label: tag2 });
     return () => {
-      if (end?.transform !== void 0) tag.style.transform = String(end.transform);
-      if (end?.opacity !== void 0) tag.style.opacity = String(end.opacity);
-      if (end?.filter !== void 0) tag.style.filter = String(end.filter);
+      if (end?.transform !== void 0) tag2.style.transform = String(end.transform);
+      if (end?.opacity !== void 0) tag2.style.opacity = String(end.opacity);
+      if (end?.filter !== void 0) tag2.style.filter = String(end.filter);
       animation.cancel();
       crackAnim?.cancel();
       if (crack) crack.style.opacity = "1";
@@ -19120,8 +19156,8 @@ var PIECES = (() => {
       glint?.cancel();
       if (holdRing && halo && ring) Object.assign(halo.style, Object.fromEntries(Object.entries(ringFrames.at(-1) ?? {}).filter(([k]) => k !== "offset" && k !== "easing" && k !== "composite").map(([k, v]) => [k, String(v)])));
       else halo?.remove();
-      if (!found && tag.style.opacity === "0") {
-        tag.remove();
+      if (!found && tag2.style.opacity === "0") {
+        tag2.remove();
         crack?.remove();
       }
     };
@@ -19576,9 +19612,9 @@ var PIECES = (() => {
       lineMinHeight = 1,
       lineFade = [0.12, 0.85]
     } = call.step;
-    const tag = banner2 === void 0 ? null : el.querySelector(banner2);
+    const tag2 = banner2 === void 0 ? null : el.querySelector(banner2);
     if (typeof el.animate !== "function" || el.ownerDocument.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) {
-      tag?.remove();
+      tag2?.remove();
       return void 0;
     }
     const overflow = ["overflow", "overflow-x", "overflow-y"].map((name) => ({
@@ -19591,7 +19627,7 @@ var PIECES = (() => {
     const px2 = (n) => `${String(n)}px`;
     const h2 = call.from[3];
     const factor = call.dur / Math.max(1, call.step.dur);
-    const delay = tag === null ? 0 : liftMs * drainAt * factor;
+    const delay = tag2 === null ? 0 : liftMs * drainAt * factor;
     const animations = [];
     const overlay = el.ownerDocument.createElement("div");
     overlay.setAttribute("aria-hidden", "true");
@@ -19606,7 +19642,7 @@ var PIECES = (() => {
       grey.append(surface);
     } else {
       for (const target of el.querySelectorAll(face2)) {
-        if (tag?.contains(target)) continue;
+        if (tag2?.contains(target)) continue;
         const copy = decorativeCopy(target);
         if (banner2 !== void 0) copy.querySelector(banner2)?.remove();
         copy.style.filter = filter;
@@ -19629,7 +19665,7 @@ var PIECES = (() => {
     el.append(overlay);
     const finish2 = () => {
       animations.forEach((a) => a.cancel());
-      tag?.remove();
+      tag2?.remove();
       overlay.remove();
       el.style.removeProperty("overflow");
       for (const { name, value, priority } of overflow) {
@@ -19639,13 +19675,13 @@ var PIECES = (() => {
     const play = (target, frames2, duration, easing, delay2 = 0) => {
       animations.push(target.animate(frames2, { duration, easing, delay: delay2, fill: "both" }));
     };
-    if (tag !== null) {
+    if (tag2 !== null) {
       const lift = el.ownerDocument.createElement("div");
       Object.assign(lift.style, { ...cardBox, zIndex: "1" });
-      const copy = decorativeCopy(tag);
+      const copy = decorativeCopy(tag2);
       lift.append(copy);
       overlay.insertBefore(lift, line);
-      tag.style.visibility = "hidden";
+      tag2.style.visibility = "hidden";
       copy.style.overflow = "visible";
       play(lift, [
         { overflow: "visible", translate: "0 0", scale: "1", opacity: 1 },

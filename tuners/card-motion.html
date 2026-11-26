@@ -15917,6 +15917,29 @@ var PREVIEW = (() => {
 
   // components/phone-mode/Sheet.tsx
   var import_react = __toESM(require_react(), 1);
+
+  // components/ui-helpers/promptKeys.ts
+  function isActiveElement(node) {
+    if (node == null) return false;
+    const el = node;
+    if (typeof el.closest !== "function") return true;
+    if (el.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
+    const view = el.ownerDocument?.defaultView;
+    if (view) for (let at = el; at; at = at.parentElement) {
+      const style = view.getComputedStyle(at);
+      if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse") return false;
+    }
+    return true;
+  }
+  function activeOverlay(root2, selector = '[role="dialog"], [role="alertdialog"]') {
+    const nodes = root2.querySelectorAll ? Array.from(root2.querySelectorAll(selector)) : [root2.querySelector(selector)];
+    return nodes.findLast(isActiveElement) ?? null;
+  }
+  function activeModal(root2) {
+    return activeOverlay(root2, '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]');
+  }
+
+  // components/phone-mode/Sheet.tsx
   var import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
   var SWIPE_CLOSE_PX = 70;
   var holds = /* @__PURE__ */ new WeakMap();
@@ -16006,7 +16029,7 @@ var PREVIEW = (() => {
       hold(true);
       box.current?.focus({ preventScroll: true });
       const key = (e) => {
-        if (e.key !== "Escape") return;
+        if (e.key !== "Escape" || e.defaultPrevented || activeModal(document) !== box.current) return;
         e.preventDefault();
         req.current();
       };

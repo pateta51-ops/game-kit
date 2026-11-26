@@ -440,6 +440,10 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K760 | card-harness: derive and run bounded runtime card cases over the current validated pack and an independent printed inventory. Check dispatch and outcome evidence, exercise standard gains, draws and costs, and reuse the same assertions in the clause mutation gate. | M |  | done |
 | K761 | Documentation: correct active component guidance, route agents from the recipe index, preserve historical evidence and consolidate empty reporting artifacts. Show seeded save replay and cover natural-language dice pattern discovery. | M |  | done |
 | K762 | Apply per-file caps to initial and followed media in bundle size checks. | S |  | done |
+| K763 | Publish a complete art set with logical ID checks, path collision protection and recovery after a failed or interrupted replacement. | M |  | done |
+| K764 | Bind context packets and worker briefs to verified installed kit inputs, supplied decisions and scoped source evidence. | M |  | done |
+| K765 | Apply the individual media cap to ICO favicons and document the recognized media extensions. | S |  | done |
+| K766 | Bind executed acceptance receipts and component branch coverage to verified consumer inputs and current Git source. | M |  | done |
 | K768 | Keep keyboard ownership with active dialogs and native controls, expose readable attachments, adapt shared motion timing and retry optional scan geometry loads. | M |  | done |
 
 ## Candidates

@@ -15202,6 +15202,29 @@ var K = (() => {
 
   // components/phone-mode/Sheet.tsx
   var import_react2 = __toESM(require_react(), 1);
+
+  // components/ui-helpers/promptKeys.ts
+  function isActiveElement(node) {
+    if (node == null) return false;
+    const el = node;
+    if (typeof el.closest !== "function") return true;
+    if (el.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
+    const view = el.ownerDocument?.defaultView;
+    if (view) for (let at = el; at; at = at.parentElement) {
+      const style = view.getComputedStyle(at);
+      if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse") return false;
+    }
+    return true;
+  }
+  function activeOverlay(root, selector = '[role="dialog"], [role="alertdialog"]') {
+    const nodes = root.querySelectorAll ? Array.from(root.querySelectorAll(selector)) : [root.querySelector(selector)];
+    return nodes.findLast(isActiveElement) ?? null;
+  }
+  function activeModal(root) {
+    return activeOverlay(root, '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]');
+  }
+
+  // components/phone-mode/Sheet.tsx
   var import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
   var SWIPE_CLOSE_PX = 70;
   var ARRIVE_MS = 250;
@@ -15292,7 +15315,7 @@ var K = (() => {
       hold(true);
       box.current?.focus({ preventScroll: true });
       const key = (e) => {
-        if (e.key !== "Escape") return;
+        if (e.key !== "Escape" || e.defaultPrevented || activeModal(document) !== box.current) return;
         e.preventDefault();
         req.current();
       };
@@ -15965,10 +15988,22 @@ var K = (() => {
               part: "attachment",
               cls,
               "data-index": i,
-              ...onRead ? { role: "button", tabIndex: 0, onClick: (e) => {
-                e.stopPropagation();
-                onRead(i, a.key);
-              } } : {},
+              ...onRead ? {
+                role: "button",
+                tabIndex: 0,
+                onClick: (e) => {
+                  const target = e.target instanceof Element ? e.target : null;
+                  if (e.defaultPrevented || target?.closest("label")?.control || target && target.closest('button, a[href], input, select, textarea, details > summary, [role="button"], [contenteditable]:not([contenteditable="false"])') !== e.currentTarget) return;
+                  e.stopPropagation();
+                  onRead(i, a.key);
+                },
+                onKeyDown: (e) => {
+                  if (e.defaultPrevented || e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey || e.key !== "Enter" && e.key !== " ") return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!e.repeat) onRead(i, a.key);
+                }
+              } : {},
               children: a.node
             },
             a.key

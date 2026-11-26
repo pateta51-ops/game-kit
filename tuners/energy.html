@@ -7715,6 +7715,7 @@ var MOTION = (() => {
     createMotionPlayer: () => createMotionPlayer,
     createVerbs: () => createVerbs,
     hurryOnInput: () => hurryOnInput,
+    motionRate: () => motionRate,
     placeOf: () => placeOf,
     prefersReducedMotion: () => prefersReducedMotion,
     putMotionSpeed: () => putMotionSpeed,
@@ -8523,6 +8524,14 @@ var MOTION = (() => {
   }
   function withReducedMotion(speed, reduced = prefersReducedMotion()) {
     return reduced ? "instant" : speed;
+  }
+  function motionRate(factor) {
+    if (factor === "instant") return 0;
+    if (!Number.isFinite(factor)) throw new RangeError("motionRate requires a finite duration factor");
+    if (factor <= 0) return 0;
+    const rate = 1 / factor;
+    if (!Number.isFinite(rate)) throw new RangeError("motionRate duration factor is too small to convert");
+    return rate;
   }
   function prefersReducedMotion() {
     return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
