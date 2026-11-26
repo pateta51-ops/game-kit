@@ -732,5 +732,11 @@
   { "q": "generate courier rules store simulation", "first": "scaffold/courier" },
   { "q": "courier plan gates", "first": "scaffold/courier" },
   { "q": "generated courier acceptance", "first": "scaffold/courier" },
-  { "q": "courier executable rule inventory", "first": "scaffold/courier" }
+  { "q": "courier executable rule inventory", "first": "scaffold/courier" },
+  { "q": "solo tactical reference", "first": "reference-game" },
+  { "q": "generated compatibility game", "first": "reference-game" },
+  { "q": "tactical reference contract", "first": "reference-game" },
+  { "q": "reference card acceptance", "first": "reference-game" },
+  { "q": "courier shared compatibility", "first": "reference-game" },
+  { "q": "reference printed mutation controls", "first": "reference-game" }
 ]
