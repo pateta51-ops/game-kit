@@ -9,6 +9,7 @@ Use after `kit.mjs new`, when the stub engine becomes the real game. Each row: t
 | Card effects as data, standard verbs | `card-language` (`pack.ts`) | [card-effect](card-effect.md) | `rules.ts` (`VERBS`, `cardText`) |
 | "When X, do Y" printed on a card | `card-language` (`when.ts`, `cardTriggers`) | [card-effect](card-effect.md) step 0c | `rules.ts` (Mend) |
 | Damage, draws, moves that others can prevent or replace | `engine-core` (`timed.ts`: `would`, replacement) | [timing](timing.md) | `rules.ts` (`TIMING`, Ward) |
+| Attacks, armor, and defeat | `combat` (`combatHappen`, `queueCombat`) | [combat](../../components/combat/README.md) | synthetic engine in `components/combat/combat.test.ts` |
 | "Until end of turn" | `engine-core` `addEffect` + `turn-flow` boundaries | [turn-flow](turn-flow.md) step 5 | `rules.ts` (Rally) |
 | State checks (a seat at 0 loses, hand limit) | `engine-core` `cfg.checkpoint` (`StateCheck`) | [timing](timing.md) step 6 | `rules.ts` (`CHECKS`) |
 | Hands, decks, hidden zones, each seat's view | `card-zones` | [card-table](card-table.md) | `rules.ts` (`viewOf`) |
@@ -27,6 +28,8 @@ Use after `kit.mjs new`, when the stub engine becomes the real game. Each row: t
 1. Steps as data: `Step[]` and `linear(STEPS)` for a fixed order (the graph runner for branches: [campaign README](../../components/campaign/README.md)).
 2. The log is plain data beside the save: `newCampaign`, then `begin` / `end` around each scenario; write results with `record`, `addCount` (pure: each returns a new log).
 3. Set-up of the next scenario reads the log (`count`, `has`), as `startOf(seed, start, log)` does in the reference game.
-4. Test: scenario 1's result changes scenario 2's set-up (the reference game's `tests/smoke.test.ts`).
+4. For optional dates, schedule stable between-scenario instruction IDs with `scheduleCalendarEntry`. Resolve the date with `startCalendarDay` before calling `begin` so a scenario retry keeps the resolved calendar snapshot.
+5. For changing attendance or shared deck inventory, pass the box and the whole batch of edits to `changeCampaignRoster`. Use the active players and their decks from `campaignRoster(log)` at setup.
+6. Test that scenario 1's result changes scenario 2's setup (the reference game's `tests/smoke.test.ts`).
 
 What a rule says (turn order, who chooses, what a card does) is never decided here: ask the arbiter or write a "Rules question".
