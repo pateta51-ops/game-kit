@@ -198,6 +198,19 @@ it.each(['Kit', 'evidence/Node_Modules', 'evidence/.Git'])('refuses receipt outp
   expect(existsSync(path.join(f.root, output))).toBe(false);
 });
 
+it('writes and verifies a receipt under an ignored directory beginning with a dash', () => {
+  const output = '-evidence/receipt.json';
+  const f = fixture(undefined, { receipt: { output, spec: 'game-spec.json', acceptance: 'acceptance.json' } });
+  writeFileSync(path.join(f.root, '.gitignore'), '-evidence/\n');
+  f.git('add', '.gitignore');
+  f.git('-c', 'user.name=kit-tests', '-c', 'user.email=kit-tests@users.noreply.github.com', 'commit', '-qm', 'Ignore the dashed destination');
+  const result = f.run();
+  expect(result.status, result.stderr).toBe(0);
+  const verified = spawnSync(process.execPath, [verifier, '--verify', output], { cwd: f.root, encoding: 'utf8' });
+  expect(verified.status, verified.stderr).toBe(0);
+  expect(JSON.parse(verified.stdout)).toMatchObject({ status: 'passed' });
+});
+
 it('does not present missing, malformed or unfinished evidence as passed', () => {
   const f = fixture();
   const missing = f.verify();

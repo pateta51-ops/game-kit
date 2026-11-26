@@ -111,7 +111,7 @@ export function acceptanceReceipt(config: ReceiptConfig, configFile: string, scr
   const segments = destination.toLowerCase().split(path.sep);
   if (outside(destination) || segments.some(part => ['.git', 'node_modules'].includes(part)) || segments[0] === 'kit')
     throw new Error('receipt output must stay outside kit and repository internals');
-  git(root, 'check-ignore', '--quiet', definition.output);
+  git(root, 'check-ignore', '--quiet', '--', definition.output);
   const initial = binding(root, definition);
   const outputParent = path.dirname(output), expected = path.resolve(root, destination);
   const unsafeOutput = (): Error => new Error('receipt output destination changed or is unsafe');
@@ -135,7 +135,7 @@ export function acceptanceReceipt(config: ReceiptConfig, configFile: string, scr
     status: 'not-run', commands: order.map(script => ({ script, command: scripts[script] ?? '', status: 'not-run', code: null, ms: null, output: null })), problems: [] };
   const write = (): void => {
     checkDestination();
-    git(root, 'check-ignore', '--quiet', destination);
+    git(root, 'check-ignore', '--quiet', '--', destination);
     const temporary = mkdtempSync(path.join(parent, '.acceptance-'));
     try {
       const file = path.join(temporary, 'receipt.json');
