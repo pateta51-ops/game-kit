@@ -286,6 +286,9 @@
     "gameSupplies": "The build folder and the size limits.",
     "entry": [
       "check-bundle-size.ts"
+    ],
+    "hooks": [
+      "measureBuild + run: check a media cap for images, fonts and audio, including the first download; follow imports for initial accounting"
     ]
   },
   "campaign": {
