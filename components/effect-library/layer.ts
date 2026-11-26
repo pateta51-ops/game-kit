@@ -28,6 +28,7 @@ export interface LayerOptions {
   isolate?: boolean;
 }
 export interface EffectActor extends Actor {
+  /** Hide from beat start, or from this actor's first dispatched step, until the run ends. */
   hideSource?: 'start' | 'step';
   /** K435-10: hides only the source's descendants matching this selector (a class: `.name`), not the whole source */
   hideParts?: string;
@@ -102,8 +103,11 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
   const originals = new WeakMap<HTMLElement, HTMLElement>();
   const sources = new Map<number, Map<string, HTMLElement[]>>();
   const pending = new Map<number, ReturnType<typeof setTimeout>[]>();
+  const dispatchOff = new Map<number, () => void>();
   const hidden = new Map<HTMLElement, { count: number; value: string; priority: string }>();
   const restore = (id: number): void => {
+    dispatchOff.get(id)?.();
+    dispatchOff.delete(id);
     for (const timer of pending.get(id) ?? []) clearTimeout(timer);
     pending.delete(id);
     for (const src of [...(sources.get(id)?.values() ?? [])].flat()) {
@@ -122,15 +126,27 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
       if (sources.has(run.id)) return;
       const held = new Map<string, HTMLElement[]>();
       const timers: ReturnType<typeof setTimeout>[] = [];
+      const starts = new Map<string, () => void>();
       const scheduled = new Set<string>();
       for (const a of actors ?? []) {
         const clone = runs.get(run.id)?.get(a.id);
         if (clone && a.zIndex !== undefined) clone.style.zIndex = String(a.zIndex);
         if (clone && a.blend) clone.style.mixBlendMode = a.blend;
         const src = clone && originals.get(clone);
-        if (!a.hideSource || !src || scheduled.has(a.id)) continue;
+        if (!a.hideSource || (!src && !(a.hideSource === 'step' && run.onActorStart)) || scheduled.has(a.id)) continue;
         const hide = (): void => {
-          const els = a.hideParts ? [...src.querySelectorAll<HTMLElement>(a.hideParts)] : [src];
+          let source = src;
+          if (!source) {
+            const actor = run.timeline.actors.find(actor => actor.id === a.id);
+            if (!actor) return;
+            const late = self.actor(run, a.id, actor.rect);
+            if (sources.get(run.id) !== held) return; // onActor may synchronously clear or end this run
+            if (a.zIndex !== undefined) late.style.zIndex = String(a.zIndex);
+            if (a.blend) late.style.mixBlendMode = a.blend;
+            source = originals.get(late);
+          }
+          if (!source) return;
+          const els = a.hideParts ? [...source.querySelectorAll<HTMLElement>(a.hideParts)] : [source];
           for (const e of els) {
             const saved = hidden.get(e);
             if (saved) saved.count++;
@@ -142,15 +158,23 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
           held.set(a.id, els);
         };
         if (a.hideSource === 'start') hide();
+        else if (run.onActorStart) starts.set(a.id, () => {
+          if (run.timeline.calls.some(call => call.actor === a.id)) hide();
+        });
         else {
           const first = run.timeline.calls.find((call) => call.actor === a.id);
           if (!first) continue;
-          timers.push(setTimeout(hide, first.t));
+          timers.push(setTimeout(hide, first.t)); // compatibility for manually constructed runs
         }
         scheduled.add(a.id);
       }
       if (scheduled.size > 0) sources.set(run.id, held);
       if (timers.length > 0) pending.set(run.id, timers);
+      if (starts.size > 0 && run.onActorStart) dispatchOff.set(run.id, run.onActorStart(id => {
+        const hide = starts.get(id);
+        starts.delete(id);
+        hide?.();
+      }));
     },
     actor(run, id, from) {
       let m = runs.get(run.id);

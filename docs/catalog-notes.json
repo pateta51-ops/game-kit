@@ -1060,7 +1060,7 @@
   },
   "effect-library": {
     "mechanics": "none: motion only (release 1.1)",
-    "use": "Release 1.1 visual effects: registered effects listed in the component README, plus particles, ambience, canvas layers and an opt-in logo glitch.",
+    "use": "Release 1.1 visual effects: registered effects listed in the component README, plus particles, ambience, canvas layers and an opt-in logo glitch. Per-actor source visibility follows actual playback.",
     "not": "Deciding which effect plays (the game's motion specs and motion-frame).",
     "title": "Visual effects for cards and pieces",
     "tags": [
@@ -1072,12 +1072,19 @@
       "fade",
       "glow",
       "screen",
-      "release-1.1"
+      "release-1.1",
+      "hideSourceUntil",
+      "keep the real piece visible until takeoff",
+      "hide source when its actor starts",
+      "skipped animation leaves source visible"
     ],
     "looks": "A set of motions and effects: moving, flipping, fading, sparks, glows and screen layers.",
     "visible": true,
     "release": 1.1,
-    "gameSupplies": "The motion specs and the elements to move."
+    "gameSupplies": "The motion specs and the elements to move.",
+    "hooks": [
+      "hideSource + hideParts: choose beat-start or actual actor-start hiding, optionally for selected descendants; restore the source when the run ends"
+    ]
   },
   "engine-core": {
     "use": "Every game's engine: seeded random, tasks and prompts, copy on write, state invariants, replay, undo, saves, timing windows and triggers.",
@@ -1366,7 +1373,10 @@
       "hold until",
       "auto continue",
       "animation queue",
-      "event queue for animations"
+      "event queue for animations",
+      "observe actual animation actor start",
+      "actor start notification on soft skip",
+      "custom motion controller actor lifecycle"
     ],
     "looks": "Plays a director motion file on the screen, step by step.",
     "visible": true,
@@ -1379,6 +1389,7 @@
       "parallel: run a beat at the same time as the one before it",
       "play: queue a beat and apply the next game state with commit",
       "onBeatStart + onBeatEnd: set and clear screen state for one beat",
+      "onActorStart: observe an actor's first actual registered verb dispatch within a run",
       "skipAll: drop every queued beat on undo, load or leaving the screen",
       "skipOnInput + hurryOnInput: skip or hurry the animation on a click or key",
       "withReducedMotion + withAutomationOff: the motion speed setting, still in tests and under reduced motion",

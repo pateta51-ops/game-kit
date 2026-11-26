@@ -25,6 +25,7 @@ interface Api {
   reduced(): Promise<{ ms: number; actors: number; cues: string[] }>;
   together(skip?: boolean, verb?: string): Promise<{ mid: { scale: string; transform: string }; end: string; seen: string[] }>;
   early(start: boolean): Promise<number>;
+  sourceCut(redraw?: boolean): Promise<{ started: string[]; mid: { visibility: string[]; running: boolean }; after: string[]; priorities: string[]; clones: number; animations: number }>;
   own(): Promise<{ log: string[]; names: string[] }>;
 }
 const CASES: [string, Record<string, unknown>, (o: Out) => void][] = [
@@ -144,6 +145,16 @@ describe.skipIf(!HAVE && !process.env['CI'])('effect library in a browser', () =
   it('layer.start makes the stand-ins at the beat start, not at the first verb', async () => {
     expect(await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.early(false))).toBe(0);
     expect(await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.early(true))).toBe(1);
+  });
+
+  it.each([false, true])('K329 keeps an unstarted source visible during a soft skip of native motion (redraw %s)', async redraw => {
+    const r = await page.evaluate(redraw => (window as unknown as { fxTest: Api }).fxTest.sourceCut(redraw), redraw);
+    expect(r.started).toEqual(['a']);
+    expect(r.mid).toEqual({ visibility: ['hidden', 'visible'], running: true });
+    expect(r.after).toEqual(['visible', 'visible']);
+    expect(r.priorities).toEqual(['important', 'important']);
+    expect(r.clones).toBe(0);
+    expect(r.animations).toBe(0);
   });
 
   it('a game registers its own effect beside the built-in verbs', async () => {

@@ -11,6 +11,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 - `parallel`: run a beat at the same time as the one before it
 - `play`: queue a beat and apply the next game state with commit
 - `onBeatStart` + `onBeatEnd`: set and clear screen state for one beat
+- `onActorStart`: observe an actor's first actual registered verb dispatch within a run
 - `skipAll`: drop every queued beat on undo, load or leaving the screen
 - `skipOnInput` + `hurryOnInput`: skip or hurry the animation on a click or key
 - `withReducedMotion` + `withAutomationOff`: the motion speed setting, still in tests and under reduced motion
@@ -33,6 +34,8 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 10. Give `mountMotionLab` a player of its own: on the game's player a press would end the game's beats.
 11. With motion-frame present, sound cues play only from `onCue` / `onDroppedCue`, never from a timer or from a sum of `maxMs`; beat order comes only from the player's queue plus `parallel: true` / `holdUntil`, never from sorting or splicing the list of beats or steps the game passes (sorting one beat's cue rows by time is fine). `node kit/kit.mjs check` fails `src/` on these (`bypass` in `component.json`: `cue-time-from-maxms`, `beats-reordered`); a line that must do it carries `// kit-allow <id>: <reason>` (no reason fails).
 12. A hold waits with `holdUntil` and continues on its own with `autoContinueMs`, never with a `setTimeout` / `setInterval` of the game that calls `release`, `next`, `advance`, `continue*`, `resume`, `proceed` or `finish`; an input skips or hurries beats only through `skipOnInput` / `hurryOnInput`, never `skipAll()` / `hurry()` called from your own `keydown`, `pointerdown` or `click` listener (`skipAll()` on undo, load or leaving the screen is fine). `kit check` fails `src/` on these (`hold-on-timer`, `skip-from-own-listener`); `// kit-allow <id>: <reason>` on the line allows one.
+
+13. (K329) Use the run's `onActorStart` subscription for work that must follow actual takeoff. It reports each actor once, immediately before its first registered verb is called; cancelled steps and missing verbs report nothing. Keep the returned unsubscribe. Effect-library uses this automatically for per-actor source visibility.
 
 **Common mistakes:**
 - A `holdUntil` beat holds the queue until `release()`, `skipAll()` or `autoContinueMs`: wire a release or the board freezes.
@@ -78,6 +81,7 @@ The executed cross-component example is [shared-motion.test.ts](../../tests/shar
 - `validateSpec(spec, stage, verbs)` and `validateSpecs(specs, stages, verbs)`: lines of problems (unknown verb, actor or zone that does not resolve, no `maxMs` or last step after it, a cue after the last step's end, a point `at` without `w` and `h`, bad shape; a spec without `stage` uses `stages.default`). Call it from the game's check with the registry or a list of verb names.
 ## Player (`player.ts`)
 `createVerbs()` is the registry the effect library and the game fill: `register(name, (call, run) => finish?)`. `run` is `{ id, timeline, context }`; the returned `finish` is called once, at the call's end or on a skip.
+Player-created runs also provide `run.onActorStart(listener)` before `onBeatStart`; the listener receives the actor id and the method returns an unsubscribe. It follows actual dispatch, including a step rescheduled by `onCut: 'run'`, instead of a second timer derived from the original timeline. Instant and snapped runs never announce an actor. Observers that throw report through `onProblem`; other active observers and the verb continue. An observer that skips the run stops further notifications and that verb. Ending a run releases its observers. The method is optional on the public `Run` type so existing manually constructed runs remain valid.
 `createMotionPlayer({ specs, stages, verbs, speed, context, onCue?, onBeatStart?, onBeatEnd?, onProblem? })`:
 - K448 timing: steps start and end at offsets from one `performance.now()` read at play start (no drift); step times and lengths keep fractional ms. A verb's returned finish may carry `finished` (a promise of its animations, type `Finish`): the step ends when its time is up and the promise settled (100 ms grace after the time if it never settles), and the beat end (`onBeatEnd`, `layer.end`, `onEnd`) waits for those; a skip ends everything at once. The Warp items are K452.
 - K464: every `onBeatStart` is paired with one `onBeatEnd`. A beat that never plays (snapped while queued, skipped, instant, failed or a problem beat) and carries `data` or a `commit` gets `onBeatEnd` with the same run right after its commit, so state a game sets in `onBeatStart` is always cleared.

@@ -168,6 +168,152 @@ it.each(['start', 'step'] as const)('hides the source at %s and restores it on s
   player.skipAll();
 });
 
+it('K329 keeps a source visible when a soft skip cancels its actor before takeoff', () => {
+  vi.useFakeTimers();
+  document.body.innerHTML = '<div id="a" style="visibility: visible !important"></div><div id="b" style="visibility: visible !important"></div>';
+  const sources = ['a', 'b'].map(id => document.getElementById(id)!);
+  const actors: EffectActor[] = [actor, b].map(a => ({ ...a, hideSource: 'step' }));
+  const spec: MotionSpec = { id: 'cut', actors, steps: [
+    { actor: 'a', do: 'move', t: 0, dur: 300, to: [100, 0] },
+    { actor: 'b', do: 'move', t: 120, dur: 100, to: [100, 0] },
+  ] };
+  const { context, verbs } = setup(spec);
+  const started: string[] = [], move = verbs.get('move')!;
+  verbs.register('move', (call, run) => { started.push(call.actor); return move(call, run); });
+  const player = createMotionPlayer({
+    specs: {}, stages: { default: stage }, verbs, speed: () => 1, context,
+    onBeatStart: run => context.start(run, actors), onBeatEnd: run => context.end(run),
+  });
+  player.play(spec);
+  vi.advanceTimersByTime(30);
+  player.skipAll({ finishStep: true });
+  vi.advanceTimersByTime(150);
+  expect(started).toEqual(['a']);
+  expect(sources.map(source => source.style.visibility)).toEqual(['hidden', 'visible']);
+  vi.advanceTimersByTime(120);
+  expect(sources.map(source => source.style.visibility)).toEqual(['visible', 'visible']);
+  expect(sources.map(source => source.style.getPropertyPriority('visibility'))).toEqual(['important', 'important']);
+  expect(context.el.children).toHaveLength(0);
+  expect(player.pending()).toBe(0);
+});
+
+it('K329 hides at the actual rescheduled dispatch of an onCut step, including custom verbs without a clone read', () => {
+  vi.useFakeTimers();
+  document.body.innerHTML = '<div id="a"></div><div id="b" style="visibility:visible!important"></div>';
+  const source = document.getElementById('b')!;
+  const actors: EffectActor[] = [actor, { ...b, hideSource: 'step' }];
+  const spec: MotionSpec = { id: 'restore', actors, steps: [
+    { actor: 'a', do: 'probe', t: 0, dur: 100 },
+    { actor: 'b', do: 'probe', t: 200, dur: 60, onCut: 'run' },
+  ] };
+  const { context, verbs } = setup(spec);
+  const seen: string[] = [];
+  verbs.register('probe', call => { seen.push(`${call.actor}:${source.style.visibility}`); return undefined; });
+  const player = createMotionPlayer({
+    specs: {}, stages: { default: stage }, verbs, speed: () => 1, context,
+    onBeatStart: run => context.start(run, actors), onBeatEnd: run => context.end(run),
+  });
+  player.play(spec);
+  vi.advanceTimersByTime(30);
+  player.skipAll({ finishStep: true });
+  vi.advanceTimersByTime(69);
+  expect(source.style.visibility).toBe('visible');
+  vi.advanceTimersByTime(1);
+  expect(seen).toEqual(['a:visible', 'b:hidden']);
+  vi.advanceTimersByTime(60);
+  expect(source.style.visibility).toBe('visible');
+  expect(context.el.children).toHaveLength(0);
+});
+
+it('K329 preserves timeline timing for manual runs without dispatch subscriptions', () => {
+  vi.useFakeTimers();
+  document.body.innerHTML = '<div id="a" style="visibility:visible!important"></div>';
+  const source = document.getElementById('a')!;
+  const actors: EffectActor[] = [{ ...actor, hideSource: 'step' }];
+  const { context, run } = setup({ id: 'manual', actors, steps: [{ actor: 'a', do: 'move', t: 100, dur: 100 }] });
+  context.start(run, actors);
+  vi.advanceTimersByTime(99);
+  expect(source.style.visibility).toBe('visible');
+  vi.advanceTimersByTime(1);
+  expect(source.style.visibility).toBe('hidden');
+  context.end(run);
+  expect(source.style.visibility).toBe('visible');
+  expect(source.style.getPropertyPriority('visibility')).toBe('important');
+});
+
+it('K329 retains step hiding through a committed redraw with an initially empty timeline', () => {
+  vi.useFakeTimers();
+  document.body.innerHTML = '<div id="b" style="visibility:visible!important"></div>';
+  const source = document.getElementById('b')!;
+  const actors: EffectActor[] = [{ ...b, at: 'gate', hideSource: 'step' }];
+  const verbs = createVerbs<EffectCtx>(), seen: string[] = [], starts: number[] = [];
+  const context = registerEffects(verbs, { resolve: () => source });
+  verbs.register('probe', () => { seen.push(source.style.visibility); return undefined; });
+  let ready = false;
+  const player = createMotionPlayer({
+    specs: {}, stages: { default: () => ready ? [0, 0, 20, 20] : undefined }, verbs, speed: () => 1, context,
+    frame: callback => { const timer = setTimeout(() => callback(performance.now()), 20); return () => clearTimeout(timer); },
+    onBeatStart: run => { starts.push(run.timeline.actors.length); context.start(run, actors); },
+    onBeatEnd: run => context.end(run),
+  });
+  player.play({ id: 'redraw', actors, whenReady: true, steps: [{ actor: 'b', do: 'probe', t: 40, dur: 200 }] }, { commit: () => { ready = true; } });
+  expect(starts).toEqual([0]);
+  expect(context.el.children).toHaveLength(0);
+  vi.advanceTimersByTime(60);
+  expect(seen).toEqual(['hidden']);
+  expect(context.el.children).toHaveLength(1);
+  player.skipAll();
+  expect(source.style.visibility).toBe('visible');
+  expect(context.el.children).toHaveLength(0);
+});
+
+it.each(['clear', 'skip'] as const)('K329 does not hide a late source after onActor tears down the run with %s', mode => {
+  vi.useFakeTimers();
+  document.body.innerHTML = '<div id="b" style="visibility:visible!important"></div>';
+  const source = document.getElementById('b')!;
+  const actors: EffectActor[] = [{ ...b, at: 'gate', hideSource: 'step' }];
+  const verbs = createVerbs<EffectCtx>(), seen: string[] = [];
+  const context = registerEffects(verbs, {
+    resolve: () => source,
+    onActor: () => { if (mode === 'clear') context.clear(); else player.skipAll(); },
+  });
+  verbs.register('probe', () => { seen.push(source.style.visibility); return undefined; });
+  let ready = false;
+  const player = createMotionPlayer({
+    specs: {}, stages: { default: () => ready ? [0, 0, 20, 20] : undefined }, verbs, speed: () => 1, context,
+    frame: callback => { const timer = setTimeout(() => callback(performance.now()), 20); return () => clearTimeout(timer); },
+    onBeatStart: run => context.start(run, actors), onBeatEnd: run => context.end(run),
+  });
+  player.play({ id: 'teardown', actors, whenReady: true, steps: [{ actor: 'b', do: 'probe', t: 40, dur: 200 }] }, { commit: () => { ready = true; } });
+  vi.advanceTimersByTime(60);
+  expect(seen).toEqual(mode === 'clear' ? ['visible'] : []);
+  expect(source.style.visibility).toBe('visible');
+  expect(context.el.children).toHaveLength(0);
+  player.skipAll();
+  expect(source.style.visibility).toBe('visible');
+  expect(source.style.getPropertyPriority('visibility')).toBe('important');
+  expect(context.el.children).toHaveLength(0);
+});
+
+it.each(['end', 'clear'] as const)('K329 unsubscribes pending actor starts on %s and ignores actors with no step', mode => {
+  vi.useFakeTimers();
+  document.body.innerHTML = '<div id="a"></div><div id="b"></div>';
+  const actors: EffectActor[] = [actor, b].map(a => ({ ...a, hideSource: 'step' }));
+  const { context, run } = setup({ id: 'subscription', actors, steps: [{ actor: 'a', do: 'move', t: 100, dur: 100 }] });
+  const listeners = new Set<(actor: string) => void>();
+  run.onActorStart = listener => { listeners.add(listener); return () => { listeners.delete(listener); }; };
+  context.start(run, actors);
+  context.start(run, actors);
+  expect(listeners.size).toBe(1);
+  for (const listener of listeners) listener('b');
+  expect(document.getElementById('b')?.style.visibility).toBe('');
+  if (mode === 'end') context.end(run); else context.clear();
+  expect(listeners.size).toBe(0);
+  vi.advanceTimersByTime(200);
+  expect(document.getElementById('a')?.style.visibility).toBe('');
+  expect(context.el.children).toHaveLength(0);
+});
+
 it('preserves the token keyframes, clip and full duration after a scaled stagger', () => {
   const token = glideSettings.token;
   const clipPath = 'polygon(0% 0%, 100% 0%, 50% 100%)';

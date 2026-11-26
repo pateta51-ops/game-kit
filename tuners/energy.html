@@ -771,8 +771,11 @@ var FX = (() => {
     const originals = /* @__PURE__ */ new WeakMap();
     const sources = /* @__PURE__ */ new Map();
     const pending = /* @__PURE__ */ new Map();
+    const dispatchOff = /* @__PURE__ */ new Map();
     const hidden = /* @__PURE__ */ new Map();
     const restore = (id) => {
+      dispatchOff.get(id)?.();
+      dispatchOff.delete(id);
       for (const timer of pending.get(id) ?? []) clearTimeout(timer);
       pending.delete(id);
       for (const src of [...sources.get(id)?.values() ?? []].flat()) {
@@ -791,15 +794,27 @@ var FX = (() => {
         if (sources.has(run.id)) return;
         const held = /* @__PURE__ */ new Map();
         const timers = [];
+        const starts = /* @__PURE__ */ new Map();
         const scheduled = /* @__PURE__ */ new Set();
         for (const a of actors ?? []) {
           const clone = runs.get(run.id)?.get(a.id);
           if (clone && a.zIndex !== void 0) clone.style.zIndex = String(a.zIndex);
           if (clone && a.blend) clone.style.mixBlendMode = a.blend;
           const src = clone && originals.get(clone);
-          if (!a.hideSource || !src || scheduled.has(a.id)) continue;
+          if (!a.hideSource || !src && !(a.hideSource === "step" && run.onActorStart) || scheduled.has(a.id)) continue;
           const hide = () => {
-            const els = a.hideParts ? [...src.querySelectorAll(a.hideParts)] : [src];
+            let source = src;
+            if (!source) {
+              const actor = run.timeline.actors.find((actor2) => actor2.id === a.id);
+              if (!actor) return;
+              const late = self.actor(run, a.id, actor.rect);
+              if (sources.get(run.id) !== held) return;
+              if (a.zIndex !== void 0) late.style.zIndex = String(a.zIndex);
+              if (a.blend) late.style.mixBlendMode = a.blend;
+              source = originals.get(late);
+            }
+            if (!source) return;
+            const els = a.hideParts ? [...source.querySelectorAll(a.hideParts)] : [source];
             for (const e of els) {
               const saved = hidden.get(e);
               if (saved) saved.count++;
@@ -811,6 +826,9 @@ var FX = (() => {
             held.set(a.id, els);
           };
           if (a.hideSource === "start") hide();
+          else if (run.onActorStart) starts.set(a.id, () => {
+            if (run.timeline.calls.some((call) => call.actor === a.id)) hide();
+          });
           else {
             const first = run.timeline.calls.find((call) => call.actor === a.id);
             if (!first) continue;
@@ -820,6 +838,11 @@ var FX = (() => {
         }
         if (scheduled.size > 0) sources.set(run.id, held);
         if (timers.length > 0) pending.set(run.id, timers);
+        if (starts.size > 0 && run.onActorStart) dispatchOff.set(run.id, run.onActorStart((id) => {
+          const hide = starts.get(id);
+          starts.delete(id);
+          hide?.();
+        }));
       },
       actor(run, id, from) {
         let m = runs.get(run.id);
@@ -6487,7 +6510,8 @@ void main() {
       timeline,
       context: o.context,
       ...item.place && { place: item.place },
-      ...item.data !== void 0 && { data: item.data }
+      ...item.data !== void 0 && { data: item.data },
+      onActorStart: () => () => void 0
     });
     const emptyTimeline = (id) => ({ id, ms: 0, calls: [], actors: [], cues: [] });
     const variant = (item) => o.reduced?.() === true ? withVariant(item.spec, item.spec.reduced) : withVariant(item.spec, item.place && item.spec.places?.[item.place.at]);
@@ -6542,6 +6566,7 @@ void main() {
       c.timers.forEach((t) => {
         clearTimeout(t);
       });
+      c.actorStarts.clear();
       commit(c.item);
       c.open.forEach((f) => {
         safe(`${c.run.timeline.id} finish`, f);
@@ -6556,8 +6581,15 @@ void main() {
       const run = makeRun(item, redraw ? emptyTimeline(spec.id) : build());
       const timers = /* @__PURE__ */ new Set();
       const open2 = /* @__PURE__ */ new Set();
+      const actorStarts = /* @__PURE__ */ new Set(), startedActors = /* @__PURE__ */ new Set();
+      run.onActorStart = (listener) => {
+        actorStarts.add(listener);
+        return () => {
+          actorStarts.delete(listener);
+        };
+      };
       const fired = /* @__PURE__ */ new Set();
-      const me = { item, run, timers, open: open2, leaving: false, waiting: /* @__PURE__ */ new Set(), drop: (w) => drop(spec, w, fired) };
+      const me = { item, run, timers, open: open2, actorStarts, leaving: false, waiting: /* @__PURE__ */ new Set(), drop: (w) => drop(spec, w, fired) };
       live.add(me);
       if (!parallel) cur = me;
       const at2 = (ms, f) => {
@@ -6608,7 +6640,15 @@ void main() {
           atT(off + call.t + base, () => {
             step.started = true;
             safe(`${spec.id} ${call.verb}`, () => {
-              done = o.verbs.get(call.verb)?.(call, run);
+              const verb = o.verbs.get(call.verb);
+              if (typeof verb === "function" && !startedActors.has(call.actor)) {
+                startedActors.add(call.actor);
+                for (const listener of [...actorStarts]) {
+                  if (!live.has(me)) return;
+                  if (actorStarts.has(listener)) safe(`${spec.id} actor ${call.actor}`, () => listener(call.actor));
+                }
+              }
+              if (live.has(me)) done = verb?.(call, run);
             });
             if (done === void 0) return;
             open2.add(done);
@@ -8012,7 +8052,8 @@ var MOTION = (() => {
       timeline,
       context: o.context,
       ...item.place && { place: item.place },
-      ...item.data !== void 0 && { data: item.data }
+      ...item.data !== void 0 && { data: item.data },
+      onActorStart: () => () => void 0
     });
     const emptyTimeline = (id) => ({ id, ms: 0, calls: [], actors: [], cues: [] });
     const variant = (item) => o.reduced?.() === true ? withVariant(item.spec, item.spec.reduced) : withVariant(item.spec, item.place && item.spec.places?.[item.place.at]);
@@ -8067,6 +8108,7 @@ var MOTION = (() => {
       c.timers.forEach((t) => {
         clearTimeout(t);
       });
+      c.actorStarts.clear();
       commit(c.item);
       c.open.forEach((f) => {
         safe(`${c.run.timeline.id} finish`, f);
@@ -8081,8 +8123,15 @@ var MOTION = (() => {
       const run = makeRun(item, redraw ? emptyTimeline(spec.id) : build());
       const timers = /* @__PURE__ */ new Set();
       const open = /* @__PURE__ */ new Set();
+      const actorStarts = /* @__PURE__ */ new Set(), startedActors = /* @__PURE__ */ new Set();
+      run.onActorStart = (listener) => {
+        actorStarts.add(listener);
+        return () => {
+          actorStarts.delete(listener);
+        };
+      };
       const fired = /* @__PURE__ */ new Set();
-      const me = { item, run, timers, open, leaving: false, waiting: /* @__PURE__ */ new Set(), drop: (w) => drop(spec, w, fired) };
+      const me = { item, run, timers, open, actorStarts, leaving: false, waiting: /* @__PURE__ */ new Set(), drop: (w) => drop(spec, w, fired) };
       live.add(me);
       if (!parallel) cur = me;
       const at = (ms, f) => {
@@ -8133,7 +8182,15 @@ var MOTION = (() => {
           atT(off + call.t + base, () => {
             step.started = true;
             safe(`${spec.id} ${call.verb}`, () => {
-              done = o.verbs.get(call.verb)?.(call, run);
+              const verb = o.verbs.get(call.verb);
+              if (typeof verb === "function" && !startedActors.has(call.actor)) {
+                startedActors.add(call.actor);
+                for (const listener of [...actorStarts]) {
+                  if (!live.has(me)) return;
+                  if (actorStarts.has(listener)) safe(`${spec.id} actor ${call.actor}`, () => listener(call.actor));
+                }
+              }
+              if (live.has(me)) done = verb?.(call, run);
             });
             if (done === void 0) return;
             open.add(done);
