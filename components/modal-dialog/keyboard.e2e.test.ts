@@ -186,6 +186,33 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
     } finally { await page.close(); }
   });
 
+  it('contains Tab after the final control of a positive-tabindex frame', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open ordered frame modal' }).click();
+      const frame = page.frameLocator('iframe[title="Ranked controls"]');
+      const first = page.getByRole('button', { name: 'First frame action' });
+      const last = page.getByRole('button', { name: 'Last frame action' });
+      const start = frame.getByRole('button', { name: 'Frame start' });
+      const end = frame.getByRole('button', { name: 'Frame end' });
+      await start.waitFor();
+      await first.focus();
+      await page.keyboard.press('Tab');
+      expect(await start.evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Tab');
+      expect(await end.evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Tab');
+      expect(await last.evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Shift+Tab');
+      expect(await end.evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Shift+Tab');
+      expect(await start.evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Shift+Tab');
+      expect(await first.evaluate((el) => el === document.activeElement)).toBe(true);
+    } finally { await page.close(); }
+  });
+
   it('handles Escape in a same-origin iframe after it reloads', async () => {
     const page = await browser.newPage();
     try {
@@ -232,6 +259,21 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
       await page.keyboard.press('Escape');
       expect(await page.getByRole('dialog', { name: 'Board sheet', exact: true }).isVisible()).toBe(false);
       expect(await page.getByTestId('clears').textContent()).toBe('0');
+    } finally { await page.close(); }
+  });
+
+  it('keeps focus in a modal when its underlying sheet unmounts', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open sheet', exact: true }).click();
+      await page.getByRole('button', { name: 'Modal above sheet' }).click();
+      const modal = page.getByRole('dialog', { name: 'Board decision' });
+      const close = modal.getByRole('button', { name: 'Close modal' });
+      await close.focus();
+      await modal.getByRole('button', { name: 'Dismiss underlying sheet' }).evaluate((el: HTMLButtonElement) => el.click());
+      await page.getByRole('dialog', { name: 'Board sheet', exact: true }).waitFor({ state: 'detached' });
+      expect(await close.evaluate((el) => el === document.activeElement)).toBe(true);
     } finally { await page.close(); }
   });
 

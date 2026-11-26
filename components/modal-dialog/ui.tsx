@@ -6,7 +6,7 @@ import './modal-dialog.css';
 const NATIVE_SUBTREE = 'iframe, audio[controls], video[controls]';
 const FOCUSABLE =
   `a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex], [contenteditable], ${NATIVE_SUBTREE}`;
-const tabGuardStyle: CSSProperties = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' };
+const tabGuardStyle = { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clipPath: 'inset(50%)' } as const;
 const editable = (element: Element | null): boolean => {
   for (let at = element; at; at = at.parentElement) {
     const value = at.getAttribute('contenteditable')?.toLowerCase();
@@ -86,6 +86,8 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
     });
     if (!preferred) (tabOrder(panel)[0] ?? panel).focus({ preventScroll: true });
 
+    const frameGuards = new Map<HTMLIFrameElement, [HTMLSpanElement, HTMLSpanElement]>();
+    let enteringFrame = false;
     const onKey = (event: KeyboardEvent) => {
       if (event.defaultPrevented || activeModal(document) !== panel) return;
       if (event.key === 'Escape') {
@@ -112,6 +114,13 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
           else if (!ordered) return;
         }
         if (next) {
+          const guards = frameGuards.get(next as HTMLIFrameElement);
+          if (guards) {
+            enteringFrame = true;
+            guards[backwards ? 1 : 0].focus();
+            enteringFrame = false;
+            return;
+          }
           event.preventDefault();
           next.focus();
         }
@@ -123,12 +132,36 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
     const frameDocuments = new Map<HTMLIFrameElement, Document>();
     const syncFrames = () => {
       const frames = new Set(panel.querySelectorAll('iframe'));
+      for (const [frame, guards] of frameGuards) {
+        if (frames.has(frame) && frame.tabIndex > 0 && tabStop(frame)) continue;
+        for (const guard of guards) guard.remove();
+        frameGuards.delete(frame);
+      }
       for (const [frame, frameDocument] of frameDocuments) {
         if (frames.has(frame) && frame.contentDocument === frameDocument) continue;
         frameDocument.removeEventListener('keydown', onFrameKey, true);
         frameDocuments.delete(frame);
       }
       for (const frame of frames) {
+        if (frame.tabIndex > 0 && tabStop(frame)) {
+          const makeGuard = (backwards: boolean) => {
+            const guard = document.createElement('span');
+            Object.assign(guard.style, tabGuardStyle);
+            guard.setAttribute('aria-hidden', 'true');
+            guard.addEventListener('focus', () => {
+              if (enteringFrame || activeModal(document) !== panel) return;
+              const items = tabOrder(panel, backwards);
+              const next = items[items.indexOf(frame) + (backwards ? -1 : 1)];
+              (next ?? (backwards ? items.at(-1) : items[0]) ?? panel).focus();
+            });
+            return guard;
+          };
+          const guards = frameGuards.get(frame) ?? [makeGuard(true), makeGuard(false)];
+          frameGuards.set(frame, guards);
+          for (const guard of guards) if (guard.tabIndex !== frame.tabIndex) guard.tabIndex = frame.tabIndex;
+          if (frame.previousSibling !== guards[0]) frame.before(guards[0]);
+          if (frame.nextSibling !== guards[1]) frame.after(guards[1]);
+        }
         if (frameDocuments.has(frame)) continue;
         const frameDocument = frame.contentDocument;
         if (!frameDocument) continue;
@@ -140,12 +173,14 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
       if (event.target instanceof HTMLIFrameElement) syncFrames();
     };
     const frameObserver = new MutationObserver(syncFrames);
-    frameObserver.observe(panel, { childList: true, subtree: true });
+    frameObserver.observe(panel, { childList: true, subtree: true, attributes: true,
+      attributeFilter: ['tabindex', 'hidden', 'inert', 'aria-hidden', 'open', 'style', 'class'] });
     panel.addEventListener('load', onFrameLoad, true);
     syncFrames();
     document.addEventListener('keydown', onKey, true);
     return () => {
       frameObserver.disconnect();
+      for (const guards of frameGuards.values()) for (const guard of guards) guard.remove();
       panel.removeEventListener('load', onFrameLoad, true);
       for (const frameDocument of frameDocuments.values()) frameDocument.removeEventListener('keydown', onFrameKey, true);
       document.removeEventListener('keydown', onKey, true);

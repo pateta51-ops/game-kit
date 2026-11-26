@@ -122,7 +122,8 @@ export function Sheet({
     return () => {
       document.removeEventListener('keydown', key, true);
       hold(false);
-      from?.focus?.({ preventScroll: true });
+      const front = activeModal(document) as Element | null;
+      if (from?.isConnected && (!front || front.contains(from))) from.focus?.({ preventScroll: true });
     };
   }, []);
   const end = () => {
