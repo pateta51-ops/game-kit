@@ -14737,6 +14737,7 @@ var PIECES = (() => {
     const t = target?.tagName;
     return typeof t === "string" ? t.toUpperCase() : "";
   };
+  var keyOrigin = (event) => event.composedPath?.()[0] ?? event.target;
   var isTyping = (target) => target?.isContentEditable === true || ["INPUT", "TEXTAREA", "SELECT"].includes(tag(target));
   var isControl = (target) => {
     const name = tag(target);
@@ -14811,8 +14812,9 @@ var PIECES = (() => {
     (0, import_react.useEffect)(() => {
       if (armed === null) return;
       const key = (e) => {
-        if (e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target) || paused?.() === true || activeOverlay(document, overlay) != null) return;
-        if (e.key === "Enter" && !isControl(e.target) && pick.ready) {
+        const origin = keyOrigin(e);
+        if (e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey || isTyping(origin) || paused?.() === true || activeOverlay(document, overlay) != null) return;
+        if (e.key === "Enter" && !isControl(origin) && pick.ready) {
           e.preventDefault();
           pick.confirm();
         } else if (e.key === "Escape") {
