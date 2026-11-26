@@ -786,5 +786,8 @@
   {"q": "custom motion controller actor lifecycle", "first": "motion-frame"},
   {"q": "reject unread dice pattern fields", "first": "dice-patterns"},
   {"q": "dice pattern unsupported key", "first": "dice-patterns"},
-  {"q": "dice pattern unknown option", "first": "dice-patterns"}
+  {"q": "dice pattern unknown option", "first": "dice-patterns"},
+  {"q": "monotonic check duration", "first": "check-runner/receipts"},
+  {"q": "receipt negative elapsed time", "first": "check-runner/receipts"},
+  {"q": "clock adjustment receipt duration", "first": "check-runner/receipts"}
 ]
