@@ -278,6 +278,40 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
     } finally { await page.close(); }
   });
 
+  it('includes image-map links only when their image is visible in a ranked modal', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open ordered modal' }).click();
+      await page.getByRole('dialog', { name: 'Ordered decision' }).evaluate((el) => {
+        const body = el.querySelector('.kc-modal-body')!;
+        const pixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        for (const name of ['visible-map', 'hidden-map']) {
+          const map = document.createElement('map');
+          map.name = name;
+          const area = document.createElement('area');
+          area.href = '#' + name;
+          area.alt = name;
+          area.shape = 'rect';
+          area.coords = '0,0,40,40';
+          map.append(area);
+          const img = document.createElement('img');
+          img.src = pixel;
+          img.useMap = '#' + name;
+          img.width = img.height = 40;
+          img.hidden = name === 'hidden-map';
+          body.append(img, map);
+        }
+      });
+      await page.locator('img[usemap="#visible-map"]').evaluate((el: HTMLImageElement) => el.decode());
+      await page.getByRole('button', { name: 'Default action' }).focus();
+      await page.keyboard.press('Tab');
+      expect(await page.locator('area[href="#visible-map"]').evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Tab');
+      expect(await page.getByRole('button', { name: 'First priority' }).evaluate((el) => el === document.activeElement)).toBe(true);
+    } finally { await page.close(); }
+  });
+
   it('leaves Escape to a frame whose document is inaccessible to the modal', async () => {
     const page = await browser.newPage();
     try {
@@ -292,6 +326,53 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
       expect(await iframe.evaluate((el: HTMLIFrameElement) => el.contentDocument === null)).toBe(true);
       await page.keyboard.press('Escape');
       expect(await page.getByRole('dialog', { name: 'Native controls' }).isVisible()).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it('handles Escape in a frame within an open shadow root', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      const opener = page.getByRole('button', { name: 'Open frame modal' });
+      await opener.click();
+      const modal = page.getByRole('dialog', { name: 'Native controls' });
+      await modal.evaluate((el) => {
+        const host = document.createElement('div');
+        host.id = 'shadow-frame-host';
+        el.querySelector('.kc-modal-body')!.append(host);
+      });
+      await page.locator('#shadow-frame-host').evaluate((host) => {
+        const frame = document.createElement('iframe');
+        frame.title = 'Shadow frame';
+        frame.srcdoc = '<button>Shadow frame action</button>';
+        host.attachShadow({ mode: 'open' }).append(frame);
+      });
+      await page.frameLocator('iframe[title="Shadow frame"]').getByRole('button', { name: 'Shadow frame action' }).focus();
+      await page.keyboard.press('Escape');
+      expect(await modal.isVisible()).toBe(false);
+      expect(await opener.evaluate((el) => el === document.activeElement)).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it('handles Escape in a nested same-origin frame added after the outer frame loads', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      const opener = page.getByRole('button', { name: 'Open frame modal' });
+      await opener.click();
+      const outer = page.frameLocator('iframe[title="Embedded controls"]');
+      await outer.getByRole('button', { name: 'Frame action' }).waitFor();
+      await page.locator('iframe[title="Embedded controls"]').evaluate((el: HTMLIFrameElement) => {
+        const doc = el.contentDocument!;
+        const frame = doc.createElement('iframe');
+        frame.title = 'Nested frame';
+        frame.srcdoc = '<button>Nested frame action</button>';
+        doc.body.append(frame);
+      });
+      await outer.frameLocator('iframe[title="Nested frame"]').getByRole('button', { name: 'Nested frame action' }).focus();
+      await page.keyboard.press('Escape');
+      expect(await page.getByRole('dialog', { name: 'Native controls' }).isVisible()).toBe(false);
+      expect(await opener.evaluate((el) => el === document.activeElement)).toBe(true);
     } finally { await page.close(); }
   });
 

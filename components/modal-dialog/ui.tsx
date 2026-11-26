@@ -5,7 +5,7 @@ import './modal-dialog.css';
 
 const NATIVE_SUBTREE = 'iframe, audio[controls], video[controls]';
 const FOCUSABLE =
-  `a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex], [contenteditable], ${NATIVE_SUBTREE}`;
+  `a[href], area[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex], [contenteditable], ${NATIVE_SUBTREE}`;
 const tabGuardStyle = { position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clipPath: 'inset(50%)' } as const;
 const editable = (element: Element | null): boolean => {
   for (let at = element; at; at = at.parentElement) {
@@ -24,6 +24,13 @@ const available = (el: HTMLElement): boolean => {
   return true;
 };
 const tabStop = (el: HTMLElement): boolean => {
+  if (el.matches('area[href]')) {
+    const map = el.closest('map')?.getAttribute('name');
+    const root = el.getRootNode() as Document | ShadowRoot;
+    return el.tabIndex >= 0 && !!map && !el.closest('[hidden], [inert], [aria-hidden="true"]') &&
+      Array.from(root.querySelectorAll<HTMLImageElement>('img[usemap]'))
+      .some((img) => img.useMap === '#' + map && isActiveElement(img) && img.getClientRects().length > 0);
+  }
   if (!available(el)) return false;
   if (el.hasAttribute('tabindex') || el.matches('a[href], button, input, select, textarea')) return el.tabIndex >= 0;
   if (el.matches(NATIVE_SUBTREE)) return true;
@@ -160,20 +167,55 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
     const onFrameKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onKey(event);
     };
-    const frameDocuments = new Map<HTMLIFrameElement, Document>();
+    const watched = new Map<HTMLElement | ShadowRoot | Document, AbortController>();
+    const onFrameLoad = (event: Event) => {
+      if ((event.target as Element | null)?.localName === 'iframe') syncFrames();
+    };
+    const watchRoot = (root: HTMLElement | ShadowRoot | Document) => {
+      const controller = new AbortController();
+      const options = { capture: true, signal: controller.signal };
+      root.addEventListener('load', onFrameLoad, options);
+      if (root.nodeType === Node.DOCUMENT_NODE) {
+        const doc = root as Document;
+        doc.addEventListener('keydown', onFrameKey, options);
+        doc.defaultView?.addEventListener('blur', syncFrames, { signal: controller.signal });
+      }
+      watched.set(root, controller);
+    };
     const syncFrames = () => {
       const frames = new Set(panel.querySelectorAll('iframe'));
+      const roots = new Set<HTMLElement | ShadowRoot | Document>();
+      const collect = (root: HTMLElement | ShadowRoot | Document) => {
+        roots.add(root);
+        for (const el of root.querySelectorAll<HTMLElement>('*')) {
+          if (el.shadowRoot) collect(el.shadowRoot);
+          const doc = el.localName === 'iframe' ? (el as HTMLIFrameElement).contentDocument : null;
+          if (doc) collect(doc);
+        }
+      };
+      collect(panel);
+      let removed = false;
+      for (const [root, controller] of watched) {
+        if (roots.has(root)) continue;
+        controller.abort();
+        watched.delete(root);
+        removed = true;
+      }
+      if (removed) frameObserver.disconnect();
+      for (const root of roots) {
+        if (!removed && watched.has(root)) continue;
+        if (!watched.has(root)) watchRoot(root);
+        frameObserver.observe(root, root === panel ? {
+          childList: true, subtree: true, attributes: true,
+          attributeFilter: ['tabindex', 'hidden', 'inert', 'aria-hidden', 'open', 'style', 'class'],
+        } : { childList: true, subtree: true });
+      }
       const first = frames.size > 0 ? tabOrder(panel)[0] : undefined;
       const ranked = first !== undefined && scopeOwner(first).tabIndex > 0;
       for (const [frame, guards] of frameGuards) {
         if (ranked && frames.has(frame) && tabStop(frame)) continue;
         for (const guard of guards) guard.remove();
         frameGuards.delete(frame);
-      }
-      for (const [frame, frameDocument] of frameDocuments) {
-        if (frames.has(frame) && frame.contentDocument === frameDocument) continue;
-        frameDocument.removeEventListener('keydown', onFrameKey, true);
-        frameDocuments.delete(frame);
       }
       for (const frame of frames) {
         if (ranked && tabStop(frame)) {
@@ -195,27 +237,17 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
           if (frame.previousSibling !== guards[0]) frame.before(guards[0]);
           if (frame.nextSibling !== guards[1]) frame.after(guards[1]);
         }
-        if (frameDocuments.has(frame)) continue;
-        const frameDocument = frame.contentDocument;
-        if (!frameDocument) continue;
-        frameDocument.addEventListener('keydown', onFrameKey, true);
-        frameDocuments.set(frame, frameDocument);
       }
     };
-    const onFrameLoad = (event: Event) => {
-      if (event.target instanceof HTMLIFrameElement) syncFrames();
-    };
     const frameObserver = new MutationObserver(syncFrames);
-    frameObserver.observe(panel, { childList: true, subtree: true, attributes: true,
-      attributeFilter: ['tabindex', 'hidden', 'inert', 'aria-hidden', 'open', 'style', 'class'] });
-    panel.addEventListener('load', onFrameLoad, true);
+    document.defaultView?.addEventListener('blur', syncFrames);
     syncFrames();
     document.addEventListener('keydown', onKey, true);
     return () => {
       frameObserver.disconnect();
       for (const guards of frameGuards.values()) for (const guard of guards) guard.remove();
-      panel.removeEventListener('load', onFrameLoad, true);
-      for (const frameDocument of frameDocuments.values()) frameDocument.removeEventListener('keydown', onFrameKey, true);
+      document.defaultView?.removeEventListener('blur', syncFrames);
+      for (const controller of watched.values()) controller.abort();
       document.removeEventListener('keydown', onKey, true);
       if (--openCount === 0) document.body.style.overflow = previousOverflow;
       const front = activeModal(document) as Element | null;
