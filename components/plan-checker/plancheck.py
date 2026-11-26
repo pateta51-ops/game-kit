@@ -215,13 +215,14 @@ def inline_code_end(lines: list[str], row: int, start: int, ticks: int, quote: i
 
 def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, str]], bool]:
     out, blocks, content, lists = [], [], [], []
-    fence = None
-    comment, paragraph, unclosed = False, False, False
+    fence, comment = None, None
+    paragraph, unclosed = False, False
     list_quote = 0
     inline = re.compile(r"(\\*)(<!--|`+)")
     span_row, span_end = -1, 0
     for i, raw in enumerate(lines):
-        body, quote = unquote(raw.expandtabs(4))
+        expanded = raw.expandtabs(4)
+        body, quote = unquote(expanded)
         if quote != list_quote:
             lists.clear()
             list_quote = quote
@@ -230,15 +231,20 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
         while lists and body.strip() and margin < lists[-1]:
             lists.pop()
         width = lists[-1] if lists else 0
-        body = body[width:]
+        body, extra = unquote(body[width:])
+        quote += extra
+        if comment:
+            retained_width = max(width, len(expanded) - len(expanded.lstrip(" "))) if quote else width
+            if quote < comment[0] or retained_width < comment[1]:
+                comment = None
         if not (comment or fence) and (item := re.match(r"^ {0,3}(?:[-+*]|\d{1,9}[.)])( +)", body)):
             spaces = len(item.group(1))
             width += item.start(1) + (spaces if spaces <= 4 else 1)
             lists.append(width)
             body = body[item.start(1) + (spaces if spaces <= 4 else 1):]
+            body, extra = unquote(body)
+            quote += extra
             paragraph = False
-        body, extra = unquote(body)
-        quote += extra
         mark = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", body)
         if fence and body.strip() and (quote != fence[3] or (not quote and width < fence[4])):
             unclosed, fence = True, None
@@ -264,8 +270,9 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
         while pos < len(raw):
             if comment:
                 end = raw.find("-->", pos)
-                comment = end < 0
-                stop = len(raw) if comment else end + 3
+                if end >= 0:
+                    comment = None
+                stop = len(raw) if end < 0 else end + 3
                 visible[pos:stop] = " " * (stop - pos)
                 pos = stop
             elif match := inline.search(raw, pos):
@@ -273,7 +280,8 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
                 pos = match.end()
                 if match[2] == "<!--":
                     if not escaped:
-                        comment, pos = True, match.start(2)
+                        comment = (quote, width) if body.lstrip(" ").startswith("<!--") else (0, 0)
+                        pos = match.start(2)
                 elif (width_of_span := len(match[2]) - escaped) and (end_of_span := inline_code_end(lines, i, pos, width_of_span, quote, width)):
                     span_row, span_end = end_of_span
                     pos = span_end if i == span_row else len(raw)
@@ -284,7 +292,7 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
     return out, blocks, unclosed or fence is not None
 
 
-def strict_inventory(rules: str, scenarios: str, defined: set[str]) -> list[str]:
+def strict_inventory(rules: str, scenarios: list[list[str]], defined: set[str]) -> list[str]:
     problems, ids = [], set()
     for line in rules.splitlines():
         match = re.match(rf"^\s*[-*]\s+\*\*({ID})\*\*\s*(.*)$", line)
@@ -301,10 +309,7 @@ def strict_inventory(rules: str, scenarios: str, defined: set[str]) -> list[str]
     if not ids:
         problems.append("rule inventory is empty (define rules under Rules or --cover TEXT)")
     seen, covered = set(), set()
-    for line in scenarios.splitlines():
-        cells = [c.strip() for c in table_cells(line)] if line.lstrip().startswith("|") else []
-        if not cells or not re.fullmatch(r"SC-[A-Z0-9-]+", cells[0]):
-            continue
+    for cells in scenarios:
         scenario = cells[0]
         if scenario in seen:
             problems.append(scenario + " is defined more than once")
@@ -766,7 +771,16 @@ def main() -> int:
     families = {d.rsplit("-", 1)[0] for d in defined}
 
     # --- scenario citations ---
-    rows = re.findall((r"^ {0,3}" if profile is not None else "^") + r"\|\s*(SC-[A-Z0-9-]+)\s*\|([^|\n]*)\|", scen_sec, re.M)
+    scenario_cells = []
+    if profile is None:
+        rows = re.findall(r"^\|\s*(SC-[A-Z0-9-]+)\s*\|([^|\n]*)\|", scen_sec, re.M)
+    else:
+        for line in scen_sec.splitlines():
+            if re.match(r"^ {0,3}\|", line):
+                cells = [c.strip() for c in table_cells(line)]
+                if re.fullmatch(r"SC-[A-Z0-9-]+", cells[0]):
+                    scenario_cells.append(cells)
+        rows = [(cells[0], cells[1] if len(cells) > 1 else "") for cells in scenario_cells]
     scenarios = sorted({sc for sc, _ in rows})
     if not scen_sec:
         problems.append(f"no heading contains {opt('--scenarios', 'Scenario catalogue')!r} (use --scenarios)")
@@ -785,7 +799,7 @@ def main() -> int:
                 problems.append(f"{sc}: {tok} is not defined")
 
     if profile is not None:
-        problems += strict_inventory(section(lines, heads, opt("--cover", "Rules")), scen_sec, defined)
+        problems += strict_inventory(section(lines, heads, opt("--cover", "Rules")), scenario_cells, defined)
 
     # --- --cover: every id of the rules section appears in the catalogue ---
     if "--cover" in sys.argv:

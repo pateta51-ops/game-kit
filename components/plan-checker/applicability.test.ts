@@ -310,6 +310,31 @@ describe('explicit plan applicability', () => {
     fails({ text }, 'SC-02 is not assigned');
   });
 
+  it('validates the complete scenario citation cell when it contains an escaped pipe', () => {
+    const text = PLAN.replace('| SC-01 | MOVE-01 |', '| SC-01 | MOVE-01 \\| UNKNOWN-01 |');
+    fails({ text }, 'SC-01: UNKNOWN-01 is not defined');
+  });
+
+  it.each(['> ', '- ', '1. ', '- > '])('ends an unclosed HTML block comment with its %s container', (prefix) => {
+    const text = PLAN.replace('## 3. Implementation phases', prefix + '<!-- example\n\n## 3. Implementation phases');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('keeps an unclosed top-level HTML block comment across blank lines', () => {
+    const text = PLAN.replace('## 3. Implementation phases', '<!-- example\n\n## 3. Implementation phases');
+    fails({ text }, 'no implementation phase headings');
+  });
+
+  it.each([
+    ['quote', '> <!-- example\n> SC-02.'],
+    ['list', '- <!-- example\n  SC-02.'],
+    ['nested quote', '- > <!-- example\n  > SC-02.'],
+  ])('keeps an HTML comment hidden until its %s ends', (_label, comment) => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', comment + '\n\nSC-01. Implement');
+    fails({ text }, 'SC-02 is not assigned');
+  });
+
   it('preserves legacy scenario mentions outside phase blocks', () => {
     const text = PLAN.replace('### Phase 1', 'Overview: SC-02.\n\n### Phase 1').replace('SC-01, SC-02. Implement', 'SC-01. Implement');
     const result = run({ text, noProfile: true, flags: ['--cards-optional', '--depth-optional'] });
