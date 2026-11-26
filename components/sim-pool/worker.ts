@@ -2,7 +2,7 @@
 import { parentPort, workerData } from 'node:worker_threads';
 import { setInvariantChecking, setStateFreezing, type GameTypes, type PortTypes } from '../engine-core/index.ts';
 import { isDriverRegistrationError, playOne, type SimGame } from './play.ts';
-import { isPortSimGame, type PortSimGame } from './port.ts';
+import { isPortSimGame, portOptionProblem, type PortSimGame } from './port.ts';
 import type { WorkerCommand, WorkerInput, WorkerMessage } from './pool.ts';
 
 const port = parentPort;
@@ -24,7 +24,8 @@ async function preflight(): Promise<SimGame<GameTypes> | PortSimGame<PortTypes> 
 const game = await preflight();
 if (game) {
   if (input.inspectOnly) {
-    port.postMessage({ type: 'ready', inspected: true, ...(isPortSimGame(game) ? { engine: 'port' } : {}) } satisfies WorkerMessage);
+    const portGame = isPortSimGame(game);
+    port.postMessage({ type: 'ready', ...(!portGame || portOptionProblem(game, input) === undefined ? { inspected: true } : {}), ...(portGame ? { engine: 'port' } : {}) } satisfies WorkerMessage);
     port.close();
   } else {
     const content = await game.content();

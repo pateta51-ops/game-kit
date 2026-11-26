@@ -50,10 +50,10 @@ const load = async (module: string): Promise<SimGame<GameTypes> | PortSimGame<Po
   ((await import(module)) as { simGame: SimGame<GameTypes> | PortSimGame<PortTypes> }).simGame;
 
 /** Inspect the actual module in isolation; a checkpoint's own engine tag never justifies accepting it. */
-export function executionKind(request: Pick<RunRequest, 'module' | 'worker' | 'gameTimeoutMs'>): Promise<'kernel' | 'port' | undefined> {
+export function executionKind(request: Pick<RunRequest, 'module' | 'worker' | 'gameTimeoutMs' | 'hidden' | 'debug' | 'hasten'>): Promise<'kernel' | 'port' | undefined> {
   return new Promise(resolve => {
     let worker: Worker;
-    try { worker = boot(request, { module: request.module, invariants: false, inspectOnly: true }); }
+    try { worker = boot(request, { module: request.module, invariants: false, inspectOnly: true, hidden: request.hidden, debug: request.debug, hasten: request.hasten }); }
     catch { resolve(undefined); return; }
     let settled = false;
     const finish = (kind?: 'kernel' | 'port'): void => {

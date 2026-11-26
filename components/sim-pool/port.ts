@@ -1,4 +1,4 @@
-import { hashValue, isChecking, StateInvariantError, type EnginePort, type InvariantViolation, type PortAnswer, type PortTypes } from '../engine-core/index.ts';
+import { canonicalJson, hashValue, isChecking, StateInvariantError, type EnginePort, type InvariantViolation, type PortAnswer, type PortTypes } from '../engine-core/index.ts';
 import type { Bot } from './bot.ts';
 import { jsonView, leaks, readDriverView, viewEvidence, withDriverViewValidation, type GameSpec, type PlayOptions, type ResolvedTrace, type SimRecord } from './play.ts';
 import type { DriverRng } from './rng.ts';
@@ -35,7 +35,16 @@ export interface PortSimGame<G extends PortTypes, S = unknown, O = unknown> {
 }
 
 export const isPortSimGame = (game: unknown): game is PortSimGame<PortTypes> =>
-  game !== null && typeof game === 'object' && !('rules' in game) && 'port' in game && typeof game.port === 'function';
+  game !== null && typeof game === 'object' && 'port' in game && typeof game.port === 'function'
+  && !('rules' in game && 'start' in game && typeof game.start === 'function');
+
+export const UNSUPPORTED_PORT_OPTION = 'UnsupportedPortOptionError';
+
+export function portOptionProblem(game: object, opts: PlayOptions): string | undefined {
+  if ('undoCheck' in game && game.undoCheck) return 'EnginePort simulation does not support undoCheck';
+  if (opts.hidden || opts.debug || opts.hasten) return 'EnginePort simulation does not support hidden, debug or hasten options';
+  return undefined;
+}
 
 /** The legal-move pilot chooses only among the supplied answers; its RNG never comes from the engine. */
 export function randomPortDriver<G extends PortTypes>(weight?: (answer: PortAnswer, state: G['state']) => number): PortDriver<G> {
@@ -76,13 +85,13 @@ export function playPortOne<G extends PortTypes, S, O>(game: PortSimGame<G, S, O
   let trace: ResolvedTrace | undefined;
   const resolved = new Set<string>(), noOp = new Set<string>();
   const ms = { answers: 0, choose: 0, apply: 0, view: 0 };
-  const judge = (before?: G['state'], after?: G['state']): void => {
+  const judge = (transition?: readonly [G['state'], G['state']]): void => {
     if (!trace) return;
     const effects = [...(trace.effects ?? [])];
     const each = new Set(effects.map(effect => effect.clause));
     for (const effect of effects) (game.changed && !game.changed(effect.clause, effect.before, effect.after, content) ? noOp : resolved).add(effect.clause);
     for (const clause of trace.resolved) if (!each.has(clause))
-      (game.changed && before !== undefined && after !== undefined && !game.changed(clause, before, after, content) ? noOp : resolved).add(clause);
+      (game.changed && transition !== undefined && !game.changed(clause, transition[0], transition[1], content) ? noOp : resolved).add(clause);
     trace.clear();
   };
   const validate = <V>(read: () => V, current: G['state'], seat?: string | number, driver = false): V => {
@@ -103,8 +112,8 @@ export function playPortOne<G extends PortTypes, S, O>(game: PortSimGame<G, S, O
   };
   const render = (current: G['state']): void => { if (opts.view) validate(() => game.view!(current, content), current); };
   try {
-    if ('undoCheck' in game && game.undoCheck) throw new Error('EnginePort simulation does not support undoCheck');
-    if (opts.hidden || opts.debug || opts.hasten) throw new Error('EnginePort simulation does not support hidden, debug or hasten options');
+    const unsupported = portOptionProblem(game, opts);
+    if (unsupported !== undefined) throw Object.assign(new Error(unsupported), { name: UNSUPPORTED_PORT_OPTION });
     if (opts.view && !game.view) { viewStatus = 'unavailable'; throw new Error('view validation unavailable: the port game has no view adapter'); }
     if (typeof game.answers !== 'function') throw new Error('EnginePort simulation requires an explicit legal answers callback');
     const registration = game.validateDriver?.(spec.driver);
@@ -140,6 +149,7 @@ export function playPortOne<G extends PortTypes, S, O>(game: PortSimGame<G, S, O
       ms.choose = performance.now() - t - ms.view;
       if (until !== undefined && actions.length >= until) break;
       const recorded = structuredClone(action);
+      canonicalJson(recorded);
       actions.push(recorded);
       t = performance.now(); judge();
       const before = (isChecking() && game.transitionInvariants) || game.changed ? structuredClone(s) : undefined;
@@ -150,7 +160,7 @@ export function playPortOne<G extends PortTypes, S, O>(game: PortSimGame<G, S, O
         violations.push(...(port.invariants?.(s, port.content) ?? []));
         if (game.transitionInvariants) violations.push(...game.transitionInvariants(before, s, recorded, content));
       }
-      judge(before, s); result = port.result(s) ?? null;
+      judge([before, s]); result = port.result(s) ?? null;
       ms.apply = performance.now() - t; render(s);
       opts.onStep?.(actions.length - 1, { ...ms }, viewBytes);
     }

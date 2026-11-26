@@ -29,10 +29,27 @@ it('resumes current port records, checks all driver registrations, and requires 
   await expect(runResumable({ module, specs: [spec], view: true }, 2, checkpoint('old-view', oldView), 'fixture')).rejects.toThrow(/lacks executed view checks/);
 });
 
+it('refuses unsupported port options even with completed checkpoint records', async () => {
+  const file = join(dir, 'unsupported-checkpoint.jsonl');
+  const request = { module, specs: [spec], fresh: true };
+  const [completed] = await runResumable(request, 1, file, 'fixture');
+  expect(completed?.result).toMatchObject({ winner: 'actor' });
+  const undoModule = join(dir, 'unsupported-undo.mjs');
+  writeFileSync(undoModule, `import { simGame as base } from ${JSON.stringify(module)}; export const simGame = { ...base, undoCheck: true };`);
+  for (const overrides of [{ hidden: true }, { debug: 1 }, { hasten: 1 }, { module: pathToFileURL(undoModule).href }]) {
+    const [rejected] = await runResumable({ ...request, ...overrides }, 1, file, 'fixture');
+    expect(rejected).toMatchObject({ result: null, actions: 0 });
+    expect(rejected?.error).toContain('does not support');
+  }
+  const played: SimRecord[] = [];
+  expect(await runResumable(request, 1, file, 'fixture', record => played.push(record))).toEqual([completed]);
+  expect(played).toEqual([]);
+});
+
 it('replays a port checkpoint with only kernel evidence and a kernel checkpoint with only port evidence', async () => {
   const legacy = { ...spec, result: 'not checked', actions: 2, hash: 'legacy' };
   const played: SimRecord[] = [];
-  const records = await runResumable({ module, specs: [spec], fresh: true }, 2,
+  const records = await runResumable({ module, specs: [spec], fresh: true, view: true }, 2,
     checkpoint('wrong-kernel-evidence', { ...legacy, triggerCapChecked: true }), 'fixture', r => played.push(r));
   expect(played).toHaveLength(1);
   expect(records[0]).toMatchObject({ portExecution: 1, actions: 3, result: { winner: 'actor' } });

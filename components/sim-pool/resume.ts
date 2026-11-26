@@ -6,6 +6,7 @@ import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs
 import { canonicalJson } from '../engine-core/index.ts';
 import { CRASH_HASH, hasExecutedViewValidation, type GameSpec, type SimRecord } from './play.ts';
 import { executionKind, runGames, type RunRequest } from './pool.ts';
+import { UNSUPPORTED_PORT_OPTION } from './port.ts';
 
 /** A game's key: its seed, driver and settings (not its index, so a run may grow). */
 export const specKey = (s: { seed: string; driver: string; settings?: GameSpec['settings'] }): string =>
@@ -37,7 +38,7 @@ export function openCheckpoint(file: string, settings: string): Checkpoint {
   return {
     done,
     append: (r) => {
-      if (r.hash !== CRASH_HASH) appendFileSync(file, `${JSON.stringify({ settings, record: r })}\n`);
+      if (r.hash !== CRASH_HASH && !(r.portExecution === 1 && r.errorName === UNSUPPORTED_PORT_OPTION)) appendFileSync(file, `${JSON.stringify({ settings, record: r })}\n`);
     },
   };
 }
@@ -52,9 +53,9 @@ export async function runResumable(request: RunRequest, workers: number, file: s
   const specs = request.specs.filter((s) => {
     const r = cp.done.get(specKey(s));
     if (r === undefined) return true;
+    if (engine === 'port' ? r.portExecution !== 1 : engine !== 'kernel' || r.triggerCapChecked !== true) return true;
     if (request.view && r.result !== null && !hasExecutedViewValidation(r))
       throw new Error('checkpoint lacks executed view checks for the current scope; start a new checkpoint to validate its views');
-    if (engine === 'port' ? r.portExecution !== 1 : engine !== 'kernel' || r.triggerCapChecked !== true) return true;
     old.push({ ...r, index: s.index });
     return false;
   });

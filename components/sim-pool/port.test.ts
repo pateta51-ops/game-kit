@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { describe, expect, it, vi } from 'vitest';
-import { isChecking, kernelPort, setInvariantChecking } from '../engine-core/index.ts';
+import { hashValue, isChecking, kernelPort, setInvariantChecking } from '../engine-core/index.ts';
 import { DriverRng, fuzz, fuzzMain, legalAnswers, playOne, portBotDriver, randomPortDriver, runGames, wholeGame, type PortSimGame } from './index.ts';
 import { simGame, type PortGame } from './fake/port-game.ts';
 import { simGame as kernelGame } from './fake/game.ts';
@@ -19,6 +19,11 @@ describe('K645 EnginePort simulations', () => {
     expect(record.resolved).toEqual(['choose', 'finish', 'pass']);
     expect(record.portExecution).toBe(1);
     expect(record.triggerCapChecked).toBeUndefined();
+  });
+
+  it('treats rules metadata without a kernel start as a port fixture', async () => {
+    const game = { ...simGame, rules: { release: 1 } };
+    expect(playOne(game, await game.content(), specs[0]!)).toMatchObject({ portExecution: 1, actions: 3, result: { winner: 'actor' } });
   });
 
   it('uses the real workers, whole-game accounting and fuzz command exit codes', async () => {
@@ -133,6 +138,42 @@ describe('K645 EnginePort simulations', () => {
       expect(states).toEqual([[0, 1]]);
       expect(result).toMatchObject({ result: null, actions: 1, violations: [{ id: 'port-transition' }], resolved: ['choose'] });
     } finally { setInvariantChecking(was); }
+  });
+
+  it('distinguishes an undefined opaque state from the absence of a transition', () => {
+    type Opaque = Omit<PortGame, 'state' | 'content'> & { state: undefined | false; content: Set<string> };
+    const changed = vi.fn(() => false);
+    const content = new Set<string>();
+    const game: PortSimGame<Opaque> = {
+      content: () => content,
+      port: (_spec, resolved) => ({
+        content: resolved, start: () => undefined, settle: state => state,
+        prompt: () => ({ id: 'opaque', options: [] }), events: () => [],
+        apply: () => { resolved.add('opaque'); return false; },
+        result: state => state === false ? 0 : null,
+      }),
+      answers: () => [{ kind: 'answer', promptId: 'opaque', picks: [] }],
+      driver: () => randomPortDriver<Opaque>(),
+      trace: resolved => ({ resolved, clear: () => resolved.clear() }),
+      changed,
+    };
+    expect(playOne(game, content, specs[0]!)).toMatchObject({ result: 0, actions: 1, resolved: [], noOp: ['opaque'] });
+    expect(changed).toHaveBeenCalledWith('opaque', undefined, false, content);
+  });
+
+  it('reports a noncanonical answer before applying it and keeps the replayable prefix', async () => {
+    const content = await simGame.content();
+    const game: PortSimGame<PortGame> = {
+      ...simGame,
+      driver: () => ({
+        name: 'noncanonical', reasons: () => [],
+        choose: (_state, valid) => valid[0]!.promptId === 'choose:0' ? valid[0]! : { ...valid[0]!, metadata: 1n },
+      }),
+    };
+    const record = playOne(game, content, specs[0]!);
+    expect(record).toMatchObject({ result: null, actions: 1, summary: { phase: 1 }, log: [{ promptId: 'choose:0' }] });
+    expect(record.error).toContain('unsupported value of type bigint');
+    expect(record.hash).toBe(hashValue(record.log));
   });
 
   it('refuses missing capabilities and kernel-only options before running the engine', async () => {
