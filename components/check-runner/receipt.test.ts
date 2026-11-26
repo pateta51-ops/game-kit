@@ -153,6 +153,28 @@ it('fails acceptance if a successful check changes a bound input while running',
   expect(f.read()).toMatchObject({ status: 'stale', commands: [{ status: 'passed', code: 0 }] });
 });
 
+it.each(['external parent', 'replacement parent', 'symlink', 'hardlink'])('refuses a receipt destination swapped to %s during checks', kind => {
+  const f = fixture({ a: 'node swap.cjs' });
+  const external = mkdtempSync(path.join(tmp, 'outside-'));
+  const sentinel = path.join(external, path.basename(f.output));
+  const original = 'outside bytes\n';
+  writeFileSync(sentinel, original);
+  const script = {
+    'external parent': `fs.renameSync('evidence', 'evidence-old'); fs.symlinkSync(${JSON.stringify(external)}, 'evidence', 'junction');`,
+    'replacement parent': "fs.renameSync('evidence', 'evidence-old'); fs.mkdirSync('evidence');",
+    symlink: `fs.unlinkSync('evidence/acceptance.json'); fs.symlinkSync(${JSON.stringify(sentinel)}, 'evidence/acceptance.json');`,
+    hardlink: `fs.unlinkSync('evidence/acceptance.json'); fs.linkSync(${JSON.stringify(sentinel)}, 'evidence/acceptance.json');`,
+  }[kind];
+  writeFileSync(path.join(f.root, '.git/info/exclude'), 'evidence-old/\n');
+  writeFileSync(path.join(f.root, 'swap.cjs'), `const fs = require('node:fs'); ${script}\n`);
+  f.git('add', 'swap.cjs');
+  f.git('-c', 'user.name=kit-tests', '-c', 'user.email=kit-tests@users.noreply.github.com', 'commit', '-qm', 'Exercise replaced receipt destinations');
+  const result = f.run();
+  expect(readFileSync(sentinel, 'utf8')).toBe(original);
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain('receipt output destination changed or is unsafe');
+});
+
 it('does not present missing, malformed or unfinished evidence as passed', () => {
   const f = fixture();
   const missing = f.verify();

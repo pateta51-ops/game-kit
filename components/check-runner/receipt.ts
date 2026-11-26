@@ -113,19 +113,36 @@ export function acceptanceReceipt(config: ReceiptConfig, configFile: string, scr
     throw new Error('receipt output must stay outside kit and repository internals');
   git(root, 'check-ignore', '--quiet', definition.output);
   const initial = binding(root, definition);
-  mkdirSync(path.dirname(output), { recursive: true });
-  const parent = path.relative(root, realpathSync(path.dirname(output)));
-  if (outside(parent) || existsSync(output) && lstatSync(output).isSymbolicLink())
-    throw new Error('receipt output escapes the consumer');
+  const outputParent = path.dirname(output), expected = path.resolve(root, destination);
+  const unsafeOutput = (): Error => new Error('receipt output destination changed or is unsafe');
+  if (path.relative(expected, target(root, definition.output)) !== '') throw unsafeOutput();
+  mkdirSync(outputParent, { recursive: true });
+  const parent = realpathSync(outputParent), pinnedOutput = path.join(parent, path.basename(output));
+  const parentIdentity = lstatSync(parent, { bigint: true });
+  if (path.relative(expected, pinnedOutput) !== '') throw unsafeOutput();
+  const sameParent = (): boolean => {
+    try {
+      const current = lstatSync(parent, { bigint: true });
+      return current.isDirectory() && current.dev === parentIdentity.dev && current.ino === parentIdentity.ino && realpathSync(outputParent) === parent;
+    } catch { return false; }
+  };
+  const checkDestination = (): void => {
+    if (!sameParent()) throw unsafeOutput();
+    const entry = lstatSync(pinnedOutput, { throwIfNoEntry: false });
+    if (entry && (!entry.isFile() || entry.nlink !== 1)) throw unsafeOutput();
+  };
   const receipt: Receipt = { schemaVersion: 1, definition, binding: initial, startedAt: new Date().toISOString(), completedAt: null, cancelled: false,
     status: 'not-run', commands: order.map(script => ({ script, command: scripts[script] ?? '', status: 'not-run', code: null, ms: null, output: null })), problems: [] };
   const write = (): void => {
-    const temporary = mkdtempSync(path.join(path.dirname(output), '.acceptance-'));
+    checkDestination();
+    git(root, 'check-ignore', '--quiet', destination);
+    const temporary = mkdtempSync(path.join(parent, '.acceptance-'));
     try {
       const file = path.join(temporary, 'receipt.json');
       writeFileSync(file, JSON.stringify(receipt, null, 2) + '\n', { flag: 'wx' });
-      renameSync(file, output);
-    } finally { rmSync(temporary, { recursive: true, force: true }); }
+      checkDestination();
+      renameSync(file, pinnedOutput);
+    } finally { if (sameParent()) rmSync(temporary, { recursive: true, force: true }); }
   };
   write();
   return {
