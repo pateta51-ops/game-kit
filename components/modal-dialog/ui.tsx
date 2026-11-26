@@ -68,7 +68,7 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
     const panel = dialog.current;
     if (!panel || activeModal(document) !== panel) return;
     const items = tabOrder(panel, backwards);
-    ((backwards ? items.at(-1) : items[0]) ?? panel).focus({ preventScroll: true });
+    ((backwards ? items.at(-1) : items[0]) ?? panel).focus();
   };
 
   useEffect(() => {
@@ -113,12 +113,41 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
         }
         if (next) {
           event.preventDefault();
-          next.focus({ preventScroll: true });
+          next.focus();
         }
       }
     };
+    const onFrameKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onKey(event);
+    };
+    const frameDocuments = new Map<HTMLIFrameElement, Document>();
+    const syncFrames = () => {
+      const frames = new Set(panel.querySelectorAll('iframe'));
+      for (const [frame, frameDocument] of frameDocuments) {
+        if (frames.has(frame) && frame.contentDocument === frameDocument) continue;
+        frameDocument.removeEventListener('keydown', onFrameKey, true);
+        frameDocuments.delete(frame);
+      }
+      for (const frame of frames) {
+        if (frameDocuments.has(frame)) continue;
+        const frameDocument = frame.contentDocument;
+        if (!frameDocument) continue;
+        frameDocument.addEventListener('keydown', onFrameKey, true);
+        frameDocuments.set(frame, frameDocument);
+      }
+    };
+    const onFrameLoad = (event: Event) => {
+      if (event.target instanceof HTMLIFrameElement) syncFrames();
+    };
+    const frameObserver = new MutationObserver(syncFrames);
+    frameObserver.observe(panel, { childList: true, subtree: true });
+    panel.addEventListener('load', onFrameLoad, true);
+    syncFrames();
     document.addEventListener('keydown', onKey, true);
     return () => {
+      frameObserver.disconnect();
+      panel.removeEventListener('load', onFrameLoad, true);
+      for (const frameDocument of frameDocuments.values()) frameDocument.removeEventListener('keydown', onFrameKey, true);
       document.removeEventListener('keydown', onKey, true);
       if (--openCount === 0) document.body.style.overflow = previousOverflow;
       const front = activeModal(document) as Element | null;

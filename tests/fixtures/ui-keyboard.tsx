@@ -11,7 +11,7 @@ const prompt = { id: 1, kind: 'move', min: 1, max: 1, options: [{ id: 'card', en
 function Board() {
   const [modal, setModal] = useState(false);
   const [ordered, setOrdered] = useState(false);
-  const [native, setNative] = useState<'radio' | 'disclosure' | 'shared-radio' | 'frame' | null>(null);
+  const [native, setNative] = useState<'radio' | 'disclosure' | 'shared-radio' | 'frame' | 'scroll' | null>(null);
   const [nested, setNested] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [numbers, setNumbers] = useState(0);
@@ -42,6 +42,7 @@ function Board() {
       <button onClick={() => setNative('disclosure')}>Open disclosure modal</button>
       <button onClick={() => setNative('shared-radio')}>Open shared radio modal</button>
       <button onClick={() => setNative('frame')}>Open frame modal</button>
+      <button onClick={() => setNative('scroll')}>Open scrolling modal</button>
       <button onClick={() => setSheet(true)}>Open sheet</button>
       <label>Background choice <input type="radio" name="shared-choice" defaultChecked /></label>
       <details><summary>Board disclosure</summary>Board explanation</details>
@@ -97,6 +98,10 @@ function Board() {
       </> : native === 'frame' ? <>
         <button>Before frame</button>
         <iframe title="Embedded controls" srcDoc="<button>Frame action</button>" />
+      </> : native === 'scroll' ? <>
+        <button tabIndex={1}>First scroll action</button>
+        <div style={{ height: 700 }} />
+        <button tabIndex={2}>Last scroll action</button>
       </> : <details><summary>Show explanation</summary><button>Hidden action</button></details>}
     </Modal>
   </>;

@@ -165,6 +165,64 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
     } finally { await page.close(); }
   });
 
+  it('scrolls a manual Tab target into view in a narrow, overflowing modal', async () => {
+    const page = await browser.newPage({ viewport: { width: 390, height: 460 } });
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open scrolling modal' }).click();
+      const first = page.getByRole('button', { name: 'First scroll action' });
+      const last = page.getByRole('button', { name: 'Last scroll action' });
+      const visibleFocus = (el: Element) => {
+        const panel = el.closest('[role="dialog"]')!.getBoundingClientRect();
+        const box = el.getBoundingClientRect();
+        return document.activeElement === el && box.top >= panel.top && box.bottom <= panel.bottom;
+      };
+      expect(await first.evaluate(visibleFocus)).toBe(true);
+      expect((await last.boundingBox())!.y).toBeGreaterThan(460);
+      await page.keyboard.press('Tab');
+      expect(await last.evaluate(visibleFocus)).toBe(true);
+      await page.keyboard.press('Shift+Tab');
+      expect(await first.evaluate(visibleFocus)).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it('handles Escape in a same-origin iframe after it reloads', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      const opener = page.getByRole('button', { name: 'Open frame modal' });
+      await opener.click();
+      const iframe = page.locator('iframe[title="Embedded controls"]');
+      await iframe.contentFrame().getByRole('button', { name: 'Frame action' }).waitFor();
+      const retired = await iframe.evaluateHandle((el: HTMLIFrameElement) => el.contentDocument!);
+      await iframe.evaluate((el) => { el.setAttribute('srcdoc', '<button>Reloaded action</button>'); });
+      await iframe.contentFrame().getByRole('button', { name: 'Reloaded action' }).focus();
+      await retired.evaluate((doc) => doc.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })));
+      expect(await page.getByRole('dialog', { name: 'Native controls' }).isVisible()).toBe(true);
+      await retired.dispose();
+      await page.keyboard.press('Escape');
+      expect(await page.getByRole('dialog', { name: 'Native controls' }).isVisible()).toBe(false);
+      expect(await opener.evaluate((el) => el === document.activeElement)).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it('leaves Escape to a frame whose document is inaccessible to the modal', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open frame modal' }).click();
+      const iframe = page.locator('iframe[title="Embedded controls"]');
+      await iframe.evaluate((el) => {
+        el.setAttribute('sandbox', '');
+        el.setAttribute('srcdoc', '<button>Sandboxed action</button>');
+      });
+      await iframe.contentFrame().getByRole('button', { name: 'Sandboxed action' }).focus();
+      expect(await iframe.evaluate((el: HTMLIFrameElement) => el.contentDocument === null)).toBe(true);
+      await page.keyboard.press('Escape');
+      expect(await page.getByRole('dialog', { name: 'Native controls' }).isVisible()).toBe(true);
+    } finally { await page.close(); }
+  });
+
   it('lets the enclosing sheet handle Escape from a nested nonmodal dialog', async () => {
     const page = await browser.newPage();
     try {
