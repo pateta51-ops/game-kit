@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
 import { collectPackages } from './packages.mjs'
+export { ASSEMBLIES } from './assembly.mjs'
 
 const require = createRequire(import.meta.url)
 const LEGACY_V1_PROFILES = {
@@ -54,7 +55,7 @@ const LEGACY_V1_PROFILES = {
 }
 export const PROFILES = LEGACY_V1_PROFILES
 
-export function resolveSpec(spec, read, base, profiles) {
+export function resolveSpec(spec, read, base, profiles, assemblies = {}) {
   const object = v => v && typeof v === 'object' && !Array.isArray(v)
   const keys = (v, allowed, label) => {
     if (!object(v)) throw new Error(label + ' must be an object')
@@ -68,7 +69,7 @@ export function resolveSpec(spec, read, base, profiles) {
     if (typeof n !== 'string' || !/^[a-z][a-z0-9-]*$/.test(n)) throw new Error('invalid component name: ' + n)
     return n
   }
-  keys(spec, ['version','id','name','profiles','components','mechanics','buildOwn','opponent'], 'spec')
+  keys(spec, ['version','id','name','profiles','components','mechanics','buildOwn','opponent','assembly'], 'spec')
   if (spec.version !== 1) throw new Error('spec version must be 1')
   componentName(spec.id)
   if (typeof spec.name !== 'string' || !/^[\p{L}\p{N}][\p{L}\p{N} .,:!?&()-]*$/u.test(spec.name)) throw new Error('name must be safe for scaffold templates')
@@ -88,6 +89,15 @@ export function resolveSpec(spec, read, base, profiles) {
   const opponent = spec.opponent ?? 'none'
   if (!Object.hasOwn(opponents, opponent)) throw new Error('unknown opponent: ' + opponent)
   opponents[opponent].forEach(n => add(n, 'opponent: ' + opponent))
+  let assembly
+  if (spec.assembly !== undefined) {
+    if (!object(spec.assembly) || !Object.hasOwn(assemblies,spec.assembly.kind)) throw new Error('unsupported courier assembly at the selected pin: '+spec.assembly?.kind)
+    if (opponent !== 'none') throw new Error('courier assembly supports opponent: none only; its pilot is a test driver')
+    if ((spec.profiles ?? []).some(p => p !== 'tactical-board') || (spec.mechanics ?? []).length) throw new Error('courier assembly supports only its fixed tactical rules; additional profiles or mechanics need game-owned adapters')
+    const adapter = assemblies[spec.assembly.kind]
+    assembly = adapter.resolve(spec.assembly)
+    adapter.components.forEach(n => add(n,'assembly: '+assembly.kind))
+  }
   const mechanics = strings(spec.mechanics ?? [], 'mechanics')
   const norm = s => s.trim().toLowerCase()
   if (new Set(mechanics.map(norm)).size !== mechanics.length) throw new Error('duplicate mechanic (case-insensitive)')
@@ -130,7 +140,7 @@ export function resolveSpec(spec, read, base, profiles) {
     const destination = declaration.role === 'dependencies' ? dependencies : devDependencies
     destination[name] = declaration.range
   }
-  return {version:1,id:spec.id,name:spec.name,opponent,components:[...selected.keys()].sort().map(name=>({name,reasons:[...selected.get(name)].sort()})),mechanics:decisions,unresolved:decisions.filter(m=>m.status!=='mapped'&&!m.buildOwn).map(m=>m.name),dependencies,devDependencies}
+  return {version:1,id:spec.id,name:spec.name,opponent,...(assembly?{assembly}:{}),components:[...selected.keys()].sort().map(name=>({name,reasons:[...selected.get(name)].sort()})),mechanics:decisions,unresolved:decisions.filter(m=>m.status!=='mapped'&&!m.buildOwn).map(m=>m.name),dependencies,devDependencies}
 }
 
 function withVersion(kit, ref, spec, run) {
@@ -142,7 +152,7 @@ function withVersion(kit, ref, spec, run) {
   }
   const source = fs.mkdtempSync(path.join(os.tmpdir(),'kit-spec-source-'))
   try {
-    let base, scaffold, profiles
+    let base, scaffold, profiles, assemblies
     try {
       const archive = execFileSync('git',['-C',kit,'archive',commit,'components/scaffold'],{maxBuffer:1<<26,stdio:['ignore','pipe','pipe']})
       execFileSync('tar',['-xf','-','-C',source],{input:archive,stdio:['pipe','pipe','pipe']})
@@ -152,12 +162,14 @@ function withVersion(kit, ref, spec, run) {
       base = generator.BASE
       scaffold = generator.scaffold
       const starter = path.join(folder,'spec.mjs')
-      profiles = fs.existsSync(starter) ? require(starter).PROFILES : LEGACY_V1_PROFILES
+      const definitions = fs.existsSync(starter) ? require(starter) : undefined
+      profiles = definitions?.PROFILES ?? LEGACY_V1_PROFILES
+      assemblies = definitions?.ASSEMBLIES ?? {}
       if (!Array.isArray(base) || typeof scaffold !== 'function' || !profiles || typeof profiles !== 'object' || !fs.statSync(path.join(folder,'template')).isDirectory()) {
         throw new Error('unsupported scaffold layout')
       }
     } catch (e) { throw new Error('unsupported starter at '+ref+': '+e.message,{cause:e}) }
-    return run({...resolveSpec(spec,read,base,profiles),ref,commit},scaffold)
+    return run({...resolveSpec(spec,read,base,profiles,assemblies),ref,commit},scaffold,assemblies)
   } finally { fs.rmSync(source,{recursive:true,force:true,maxRetries:3}) }
 }
 
@@ -165,7 +177,7 @@ export function resolveAt(kit, ref, spec) {
   return withVersion(kit,ref,spec,resolved=>resolved)
 }
 
-function generate(kit, spec, resolved, scaffold, flags) {
+function generate(kit, spec, resolved, scaffold, flags, assemblies) {
   if (!flags.dir) throw new Error('generate needs --dir')
   if (resolved.unresolved.length) throw new Error('unresolved mechanics: '+resolved.unresolved.join(', '))
   const dir = path.resolve(flags.dir)
@@ -182,15 +194,18 @@ function generate(kit, spec, resolved, scaffold, flags) {
   const staged = path.join(stageRoot,'game')
   try {
     const components = resolved.components.map(c=>c.name)
+    const adapter = resolved.assembly && assemblies[resolved.assembly.kind]
     scaffold({
       dir:staged, id:resolved.id, name:resolved.name, kit, ref:resolved.ref,
       ports, link:flags.link, install:false, git:false, components,
+      ...(adapter ? {overlay:adapter.overlays()} : {}),
     })
     const lock = JSON.parse(fs.readFileSync(path.join(staged,'kit/kit.lock.json'),'utf8'))
     if (lock.commit!==resolved.commit || lock.ref!==resolved.ref || !lock.components ||
         Object.keys(lock.components).length!==components.length || components.some(c=>!Object.hasOwn(lock.components,c))) {
       throw new Error('generated kit.lock.json does not match resolved assembly')
     }
+    if (adapter) adapter.write(staged,resolved.assembly)
     // Older pinned scaffolds ignore only directories, which leaves dependency links stageable.
     const ignoreFile = path.join(staged,'.gitignore')
     const ignore = fs.existsSync(ignoreFile) ? fs.readFileSync(ignoreFile,'utf8') : ''
@@ -215,7 +230,7 @@ function generate(kit, spec, resolved, scaffold, flags) {
     fs.writeFileSync(pkgFile,JSON.stringify(pkg,null,2)+'\n')
     const docs = path.join(staged,'docs')
     fs.mkdirSync(docs,{recursive:true})
-    fs.writeFileSync(path.join(docs,'kit-assembly.json'),JSON.stringify(resolved,null,2)+'\n')
+    fs.writeFileSync(path.join(docs,'kit-assembly.json'),JSON.stringify({...resolved,...(adapter?{validation:{configuration:'validated',bootstrap:'not-run',gameSlice:'not-run'}}:{})},null,2)+'\n')
     fs.writeFileSync(path.join(docs,'game-spec.json'),JSON.stringify(spec,null,2)+'\n')
     if (flags.install!==false&&!flags.link) {
       execFileSync('npm',['install','--package-lock=true'],{cwd:staged,stdio:'inherit',shell:process.platform==='win32'})
@@ -242,9 +257,9 @@ export function specMain(kit, args) {
   }
   const spec = JSON.parse(fs.readFileSync(file,'utf8'))
   const ref = flags.ref ?? execFileSync('git',['-C',kit,'describe','--tags','--abbrev=0'],{encoding:'utf8'}).trim()
-  return withVersion(kit,ref,spec,(resolved,scaffold)=>{
+  return withVersion(kit,ref,spec,(resolved,scaffold,assemblies)=>{
     if (command==='resolve') { console.log(JSON.stringify(resolved,null,2)); return resolved.unresolved.length?1:0 }
-    generate(kit,spec,resolved,scaffold,flags)
+    generate(kit,spec,resolved,scaffold,flags,assemblies)
     return 0
   })
 }

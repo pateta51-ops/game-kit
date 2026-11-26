@@ -1,0 +1,22 @@
+{
+  "plan": "docs/PLAN.md",
+  "ruleSection": 3,
+  "families": ["COU"],
+  "idTail": "\\d{2}",
+  "idsAtLineStart": true,
+  "headingDot": true,
+  "strictIdEnd": true,
+  "testDirs": ["tests"],
+  "testSrcDirs": [],
+  "sourceDirs": ["src/engine"],
+  "testFilePattern": "\\.test\\.tsx?$",
+  "requireComment": false,
+  "scenarioPrefix": "SC",
+  "scenarioDigits": "3",
+  "scenarios": "required",
+  "skipInsideSkippedDescribe": true,
+  "rejectTemplateTitles": true,
+  "countsLine": true,
+  "executableSuite": "tests/rule-evidence.ts",
+  "executableRuleIds": ["COU-01", "COU-02", "COU-03", "COU-04", "COU-05", "COU-06", "COU-07"]
+}
