@@ -108,8 +108,8 @@ export function acceptanceReceipt(config: ReceiptConfig, configFile: string, scr
   if (new Set(files.map(file => target(root, file))).size !== files.length)
     throw new Error('receipt output and bound inputs must be distinct files');
   const destination = path.relative(root, target(root, definition.output));
-  if (outside(destination)
-    || destination.split(path.sep).some(part => ['.git', 'node_modules'].includes(part)) || destination.split(path.sep)[0] === 'kit')
+  const segments = destination.toLowerCase().split(path.sep);
+  if (outside(destination) || segments.some(part => ['.git', 'node_modules'].includes(part)) || segments[0] === 'kit')
     throw new Error('receipt output must stay outside kit and repository internals');
   git(root, 'check-ignore', '--quiet', definition.output);
   const initial = binding(root, definition);

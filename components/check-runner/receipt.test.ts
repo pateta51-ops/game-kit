@@ -11,13 +11,13 @@ const runner = path.join(import.meta.dirname, 'check-runner.ts');
 const verifier = path.join(import.meta.dirname, 'receipt.ts');
 const hash = (file: string): string => createHash('sha256').update(readFileSync(file)).digest('hex');
 let serial = 0;
-function fixture(scripts: Record<string, string> = { a: 'node -e "console.log(\'accepted\')"' }, extra: object = {}) {
+function fixture(scripts: Record<string, string> = { a: 'node -e "console.log(\'accepted\')"' }, extra: object = {}, kitDir = 'kit') {
   const root = path.join(tmp, String(serial++));
-  mkdirSync(path.join(root, 'kit'), { recursive: true });
+  mkdirSync(path.join(root, kitDir), { recursive: true });
   writeFileSync(path.join(root, '.gitignore'), 'evidence/\n');
   writeFileSync(path.join(root, 'game-spec.json'), '{"game":"synthetic"}\n');
   writeFileSync(path.join(root, 'acceptance.json'), '{"required":["synthetic-behavior"]}\n');
-  writeFileSync(path.join(root, 'kit/kit.lock.json'), JSON.stringify({ commit: '1'.repeat(40), components: {} }));
+  writeFileSync(path.join(root, kitDir, 'kit.lock.json'), JSON.stringify({ commit: '1'.repeat(40), components: {} }));
   writeFileSync(path.join(root, 'package.json'), JSON.stringify({ scripts: { check: Object.keys(scripts).map(s => 'npm run ' + s).join(' && '), ...scripts } }));
   writeFileSync(path.join(root, 'check-runner.config.json'), JSON.stringify({ first: [], lanes: [Object.keys(scripts)],
     receipt: { output: 'evidence/acceptance.json', spec: 'game-spec.json', acceptance: 'acceptance.json' }, ...extra }));
@@ -153,12 +153,22 @@ it('fails acceptance if a successful check changes a bound input while running',
   expect(f.read()).toMatchObject({ status: 'stale', commands: [{ status: 'passed', code: 0 }] });
 });
 
-it.each(['external parent', 'replacement parent', 'symlink', 'hardlink'])('refuses a receipt destination swapped to %s during checks', kind => {
+for (const kind of ['external parent', 'replacement parent', 'symlink', 'hardlink'] as const) it(`refuses a receipt destination swapped to ${kind} during checks`, context => {
   const f = fixture({ a: 'node swap.cjs' });
   const external = mkdtempSync(path.join(tmp, 'outside-'));
   const sentinel = path.join(external, path.basename(f.output));
   const original = 'outside bytes\n';
   writeFileSync(sentinel, original);
+  if (kind === 'symlink') {
+    try { symlinkSync(sentinel, path.join(external, 'privilege-probe'), 'file'); }
+    catch (error) {
+      if (process.platform === 'win32' && error instanceof Error && 'code' in error && (error.code === 'EPERM' || error.code === 'EACCES')) {
+        context.skip('File symlink permission is unavailable');
+        return;
+      }
+      throw error;
+    }
+  }
   const script = {
     'external parent': `fs.renameSync('evidence', 'evidence-old'); fs.symlinkSync(${JSON.stringify(external)}, 'evidence', 'junction');`,
     'replacement parent': "fs.renameSync('evidence', 'evidence-old'); fs.mkdirSync('evidence');",
@@ -173,6 +183,19 @@ it.each(['external parent', 'replacement parent', 'symlink', 'hardlink'])('refus
   expect(readFileSync(sentinel, 'utf8')).toBe(original);
   expect(result.status).toBe(1);
   expect(result.stderr).toContain('receipt output destination changed or is unsafe');
+});
+
+it.each(['Kit', 'evidence/Node_Modules', 'evidence/.Git'])('refuses receipt output in protected case alias %s', parent => {
+  const output = `${parent}/acceptance.json`;
+  const f = fixture(undefined, { receipt: { output, kitLock: 'Kit/kit.lock.json', spec: 'game-spec.json', acceptance: 'acceptance.json' } }, 'Kit');
+  mkdirSync(path.join(f.root, parent), { recursive: true });
+  writeFileSync(path.join(f.root, '.gitignore'), `evidence/\n${output}\n`);
+  f.git('add', '.gitignore');
+  f.git('-c', 'user.name=kit-tests', '-c', 'user.email=kit-tests@users.noreply.github.com', 'commit', '-qm', 'Ignore the protected destination');
+  const result = f.run();
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain('receipt output must stay outside kit and repository internals');
+  expect(existsSync(path.join(f.root, output))).toBe(false);
 });
 
 it('does not present missing, malformed or unfinished evidence as passed', () => {
