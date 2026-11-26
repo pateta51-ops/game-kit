@@ -37,9 +37,15 @@ function clean(marker: string, state: State, rename: typeof renameSync): void {
 
 export function recoverPublication(targets: readonly string[], marker: string): void {
   if (!existsSync(marker)) throw new Error('no interrupted publication to recover');
-  const state = JSON.parse(readFileSync(marker, 'utf8')) as State;
   const slots = slotsFor(targets);
   checkPaths(slots, marker);
+  const bytes = readFileSync(marker), initial = Buffer.from(JSON.stringify({ phase: 'preparing', slots }));
+  if (bytes.length < initial.length && bytes.equals(initial.subarray(0, bytes.length)) && lstatSync(marker).isFile()) {
+    if ([`${marker}.tmp`, ...slots.flatMap((s) => [s.next, s.backup])].some((p) => lstatSync(p, { throwIfNoEntry: false }))) throw new Error('incomplete publication marker has scratch paths; preserve them and inspect recovery before retrying');
+    rmSync(marker);
+    return;
+  }
+  const state = JSON.parse(bytes.toString('utf8')) as State;
   if (!['preparing', 'committing', 'committed'].includes(state.phase) || !Array.isArray(state.slots) || state.slots.length !== slots.length || state.slots.some((s, i) => typeof s.existed !== 'boolean' || s.target !== slots[i]!.target || s.next !== slots[i]!.next || s.backup !== slots[i]!.backup))
     throw new Error('publication recovery state does not match the configured paths');
   clean(marker, state, renameSync);

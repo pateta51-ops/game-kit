@@ -18,6 +18,18 @@ const USAGE = 'usage: node art-publish.ts --config <json> [--recover]';
 
 export type Quality = { min: number; max?: number };
 
+function outputSize(bytes: Uint8Array, ext: string, id: string): [number, number] | null {
+  const buf = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let header: boolean;
+  if (ext === 'png') header = buf.length >= 45 && buf.subarray(0, 16).equals(Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex')) && buf.toString('ascii', buf.length - 8, buf.length - 4) === 'IEND';
+  else if (ext === 'jpg' || ext === 'jpeg') header = buf[0] === 0xff && buf[1] === 0xd8 && buf.lastIndexOf(Buffer.from([0xff, 0xd9])) > 2;
+  else if (ext === 'webp') header = buf.length >= 30 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP' && buf.readUInt32LE(4) + 8 <= buf.length;
+  else return imageSize(bytes);
+  const size = header ? imageSize(bytes) : null;
+  if (!size || size.some((n) => n <= 0)) throw new Error(`${id}: not a valid .${ext} image`);
+  return size;
+}
+
 export async function run(args: readonly string[], io: Io = stdio, codecOverride?: Codec): Promise<number> {
   let publication: ReturnType<typeof beginPublication> | undefined;
   try {
@@ -74,11 +86,12 @@ export async function run(args: readonly string[], io: Io = stdio, codecOverride
     for (const { id, name, file, src, stageName } of selected) {
       const bytes = readFileSync(src);
       writeFileSync(join(nextStage, stageName), bytes);
-      const made = extname(file).slice(1).toLowerCase() === c.ext ? bytes : await (() => { const q = c.faces?.[id]?.quality ?? c.quality; return q ? encodeWithin(cod, bytes, c.ext, id, q, c.faces?.[id]?.maxFileBytes ?? c.maxFileBytes) : cod.out(bytes, c.ext); })();
+      const passthrough = extname(file).slice(1).toLowerCase() === c.ext.toLowerCase();
+      const made = passthrough ? bytes : await (() => { const q = c.faces?.[id]?.quality ?? c.quality; return q ? encodeWithin(cod, bytes, c.ext, id, q, c.faces?.[id]?.maxFileBytes ?? c.maxFileBytes) : cod.out(bytes, c.ext); })();
+      const size = passthrough || !codecOverride ? outputSize(made, c.ext.toLowerCase(), id) : imageSize(made);
       const cap = c.faces?.[id]?.maxFileBytes ?? c.maxFileBytes;
       if (cap !== undefined && (!Number.isSafeInteger(cap) || cap < 0 || made.length > cap)) throw new Error(`${id}: ${String(made.length)} bytes is over the file cap of ${String(cap)}`);
       writeFileSync(join(nextOut, `${name}.${c.ext}`), made);
-      const size = imageSize(made);
       const from = imageSize(bytes);
       manifest[name] = { source: stageName, sha256: sha256(bytes), bytes: made.length, outSha256: sha256(made), id, ...(size ? { width: size[0], height: size[1] } : {}), ...(from ? { sourceWidth: from[0], sourceHeight: from[1] } : {}) };
     }

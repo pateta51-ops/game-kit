@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -56,6 +56,15 @@ describe('publication preserves usable art', () => {
     expect(result.status).toBe(2);
     expect(snapshot()).toEqual(old);
     expect(result.stdout).not.toContain('pictures to');
+  });
+
+  it.each(['<html>download failed</html>', '65504e470d0a1a0a'])('preserves the prior release when a passthrough PNG contains %s', (invalid) => {
+    const old = snapshot();
+    put('source/a.png', Buffer.from(invalid, invalid.startsWith('<') ? 'utf8' : 'hex'));
+    const result = cli();
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('not a valid .png image');
+    expect(snapshot()).toEqual(old);
   });
 
   it.each([[{}], [[]], [null]])('refuses an empty or malformed selection without clearing the prior release: %j', async (defs) => {
@@ -274,6 +283,40 @@ describe('publication preserves usable art', () => {
     expect(() => p.commit()).toThrow('blocked rename');
     p.abort();
     expect(snapshot()).toEqual(old);
+  });
+
+  it.each([0, 32])('recovers when the initial marker write stops after %i bytes', (cut) => {
+    const old = snapshot();
+    const marker = join(dir, 'publish.json.publish-state.json');
+    const script = `
+      import fs from 'node:fs';
+      import { syncBuiltinESMExports } from 'node:module';
+      import { run } from ${JSON.stringify(new URL('./art-publish.ts', import.meta.url).href)};
+      const marker = ${JSON.stringify(marker)};
+      const write = fs.writeFileSync;
+      fs.writeFileSync = (file, bytes, options) => {
+        if (file !== marker || options?.flag !== 'wx') return write(file, bytes, options);
+        const fd = fs.openSync(file, 'wx');
+        if (${String(cut)}) fs.writeSync(fd, bytes.slice(0, ${String(cut)}));
+        fs.closeSync(fd);
+        process.exit(73);
+      };
+      syncBuiltinESMExports();
+      process.exitCode = await run(['--config', ${JSON.stringify(join(dir, 'publish.json'))}]);
+    `;
+    expect(spawnSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }).status).toBe(73);
+    expect(readFileSync(marker).length).toBe(cut);
+    expect(cli().status).toBe(2);
+    const scratch = put('chosen.publish-next/preserve.txt', Buffer.from('preserve'));
+    expect(cli('--recover').status).toBe(2);
+    expect(existsSync(scratch)).toBe(true);
+    rmSync(scratch);
+    rmdirSync(dirname(scratch));
+    const recovered = cli('--recover');
+    expect(recovered.status, recovered.stderr).toBe(0);
+    expect(snapshot()).toEqual(old);
+    expect(existsSync(marker)).toBe(false);
+    expect(cli().status).toBe(0);
   });
 
   it('retains recoverable backups if rollback itself fails', () => {
