@@ -22,7 +22,7 @@ export interface Limits {
   /** The gzip level (zlib's default when left out). */
   gzipLevel?: number;
 }
-const MEDIA = /\.(png|jpe?g|webp|gif|avif|svg|woff2?|ttf|otf|mp3|ogg|wav|m4a)$/i;
+const MEDIA = /\.(png|jpe?g|webp|gif|avif|svg|ico|woff2?|ttf|otf|mp3|ogg|wav|m4a)$/i;
 
 export interface FileSize {
   /** The path relative to the build folder. */

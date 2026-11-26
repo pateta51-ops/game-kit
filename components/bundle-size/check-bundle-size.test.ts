@@ -124,7 +124,7 @@ describe('bundle size', () => {
     });
   });
 
-  it.each(['png', 'woff2', 'ogg'])('enforces the same %s cap through the CLI with follow enabled and disabled', (ext) => {
+  it.each(['png', 'ico', 'woff2', 'ogg'])('enforces the same %s cap through the CLI with follow enabled and disabled', (ext) => {
     const build = mkdtempSync(join(tmpdir(), 'size-media-'));
     try {
       mkdirSync(join(build, 'assets'));

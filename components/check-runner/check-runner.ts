@@ -26,6 +26,7 @@ import { spawn } from 'node:child_process';
 import { appendFileSync, closeSync, mkdtempSync, openSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { acceptanceReceipt, type ReceiptConfig } from './receipt.ts';
 
 export interface Plan {
   /** Run alone, one after the other, before the lanes start. */
@@ -58,6 +59,8 @@ export interface Config extends Plan {
   env?: Record<string, Record<string, string>>;
   timeoutMinutes: number;
   graceSeconds: number;
+  /** Opt-in evidence bound to a clean consumer, its kit pin and supplied acceptance inputs. */
+  receipt?: ReceiptConfig;
 }
 export const DEFAULT_CONFIG: Config = { first: [], lanes: [], checkScript: 'check', extra: [], timeoutMinutes: 30, graceSeconds: 20 };
 
@@ -94,6 +97,8 @@ interface Done {
   ms: number;
   /** Ended because another check failed (fail-fast), not by its own result. */
   stopped: boolean;
+  timedOut: boolean;
+  truncated: boolean;
 }
 
 let TIMEOUT_MS = 30 * 60_000;
@@ -134,7 +139,10 @@ function bail(): void {
 function forwardStop(signal: NodeJS.Signals): void {
   process.once(signal, () => {
     stopping = true; // no lane starts its next check
-    for (const pid of running) killTree(pid, 'SIGTERM');
+    for (const pid of running) {
+      if (pid !== undefined) killed.add(pid);
+      killTree(pid, 'SIGTERM');
+    }
     setTimeout(() => {
       for (const pid of running) killTree(pid, 'SIGKILL');
       process.exit(1);
@@ -183,7 +191,10 @@ function runScript(script: string, log: string, env: NodeJS.ProcessEnv = process
     child.stdout?.on('data', wake(out));
     child.stderr?.on('data', wake(err));
     let kill: NodeJS.Timeout | undefined;
+    let timedOut = false;
+    let truncated = false;
     const timer = setTimeout(() => {
+      timedOut = true;
       appendFileSync(log, `\ncheck-runner: npm run ${script} passed the ${TIMEOUT_MS / 60_000} min limit; stopping it\n`);
       killTree(child.pid, 'SIGTERM');
       kill = setTimeout(() => killTree(child.pid, 'SIGKILL'), GRACE_MS);
@@ -195,7 +206,7 @@ function runScript(script: string, log: string, env: NodeJS.ProcessEnv = process
         killTree(child.pid, 'SIGKILL'); // whatever of the tree outlived npm
       }
       closeSync(fd);
-      resolve({ script, code, ms: Date.now() - t0, stopped: child.pid !== undefined && killed.has(child.pid) });
+      resolve({ script, code, ms: Date.now() - t0, stopped: child.pid !== undefined && killed.has(child.pid), timedOut, truncated });
     };
     child.on('error', (e) => {
       appendFileSync(log, `\ncheck-runner: could not start npm run ${script}: ${e.message}\n`);
@@ -220,7 +231,7 @@ function runScript(script: string, log: string, env: NodeJS.ProcessEnv = process
       child.on('exit', (code, signal) => {
         exited = () => {
           clearTimeout(idle);
-          idle = setTimeout(() => fin(code, signal), 3000);
+          idle = setTimeout(() => { truncated = true; fin(code, signal); }, 3000);
         };
         exited();
       });
@@ -253,14 +264,17 @@ export async function main(argv: readonly string[]): Promise<void> {
     process.exitCode = 1;
     return;
   }
+  const order = [...FIRST, ...LANES.flat(), ...LAST];
+  if (cfg.receipt && pr) throw new Error('acceptance receipts require the full declared check plan');
+  const receipt = cfg.receipt ? acceptanceReceipt(cfg.receipt, file, pkg.scripts, order) : undefined;
   forwardStop('SIGINT');
   forwardStop('SIGTERM');
   const dir = mkdtempSync(path.join(os.tmpdir(), 'check-runner-'));
   const t0 = Date.now();
   console.log(`check-runner: first ${FIRST.join(' → ')} alone, then ${LANES.length} lanes: ${LANES.map((l) => l.join(' → ')).join(' | ')}${LAST.length ? `, then ${LAST.join(' → ')} alone` : ''}`);
   const results: Done[] = [];
-  const logOf = (script: string) => path.join(dir, `${script.replace(/:/g, '_')}.log`);
-  const state = (d: Done) => (d.code === 0 ? 'passed' : d.stopped ? 'stopped' : `FAILED (exit ${d.code})`);
+  const logOf = (script: string) => path.join(dir, `${String(order.indexOf(script))}.log`);
+  const state = (d: Done) => (d.stopped ? 'stopped' : d.code === 0 ? 'passed' : `FAILED (exit ${d.code})`);
   const print = (d: Done, log: string) => {
     const head = `npm run ${d.script}: ${state(d)} in ${secs(d.ms)}`;
     const text = readFileSync(log, 'utf8');
@@ -275,6 +289,7 @@ export async function main(argv: readonly string[]): Promise<void> {
       if (cfg.stream) console.log(`[${tag}] > ${script}`);
       const d = await runScript(script, log, envOf(cfg.env, script), cfg.npmSilent, cfg.stream ? tag : undefined);
       results.push(d);
+      receipt?.record(d, log);
       if (cfg.stream) console.log(`[${tag}] < ${script} ${d.code === 0 ? 'ok' : state(d)} in ${(d.ms / 1000).toFixed(1)}s`);
       else print(d, log); // whole, as soon as the check ends: a log is never interleaved with another
       if (failFast && d.code !== 0 && !bailed) bail();
@@ -287,7 +302,6 @@ export async function main(argv: readonly string[]): Promise<void> {
     if (LAST.length) console.log(`check-runner: a check failed; not starting ${LAST.join(', ')}`);
   } else await lane(LAST);
   const failed = results.filter((r) => r.code !== 0 && !r.stopped);
-  const order = [...FIRST, ...LANES.flat(), ...LAST];
   const rows = [...results].sort((a, b) => order.indexOf(a.script) - order.indexOf(b.script));
   const table = rows.map((r) => `| ${r.script} | ${state(r)} | ${secs(r.ms)} |`);
   const head = `Checks side by side: ${results.filter((r) => r.code === 0).length} of ${results.length} passed in ${secs(Date.now() - t0)} (wall clock)`;
@@ -301,6 +315,7 @@ export async function main(argv: readonly string[]): Promise<void> {
     console.error(`check-runner: failed: ${failed.map((r) => r.script).join(', ')} (their logs are printed above, open)`);
     process.exitCode = 1; // never process.exit(): it cut the long logs still on their way to the runner
   }
+  if (receipt && receipt.finish(stopping) !== 'passed') process.exitCode = 1;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) void main(process.argv.slice(2));
