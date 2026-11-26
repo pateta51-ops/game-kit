@@ -448,6 +448,34 @@ describe('explicit plan applicability', () => {
     expect(result.code, result.output).toBe(0);
   });
 
+  it.each([
+    '![](/image.png)',
+    '![Illustration](/image.png)',
+    '![Illustration][art]\n\n[art]: /image.png\n',
+  ])('requires visible rule text alongside an image: %s', (image) => {
+    fails({ text: PLAN.replace('A move enters an adjacent unblocked space.', image) }, 'rule MOVE-01 has no text');
+  });
+
+  it.each([
+    '![SC-01, SC-02](/image.png). Implement',
+    '![SC-01, SC-02][art]. Implement\n\n[art]: /image.png\n\nImplement',
+    '![SC-01, SC-02][]. Implement\n\n[SC-01, SC-02]: /image.png\n\nImplement',
+    '![SC-01, SC-02]. Implement\n\n[SC-01, SC-02]: /image.png\n\nImplement',
+    '![illustration [SC-01, SC-02](/guide)](/image.png). Implement',
+  ])('does not count image descriptions as phase citations: %s', (body) => {
+    fails({ text: PLAN.replace('SC-01, SC-02. Implement', body) }, 'SC-01 is not assigned to any phase');
+  });
+
+  it.each([
+    '![Illustration](/image.png) [SC-01, SC-02](/guide). Implement',
+    '[![Illustration](/image.png) SC-01, SC-02](/guide). Implement',
+    '\\![SC-01, SC-02](/image.png). Implement',
+    '![SC-01, SC-02][unknown]. Implement',
+  ])('preserves visible prose and unresolved image syntax: %s', (body) => {
+    const result = run({ text: PLAN.replace('SC-01, SC-02. Implement', body) });
+    expect(result.code, result.output).toBe(0);
+  });
+
   it('still reports broken anchor links in strict mode', () => {
     fails({ text: PLAN.replace('SC-01, SC-02. Implement', 'SC-01, SC-02. [guide](#missing). Implement') }, 'broken anchor #missing');
   });

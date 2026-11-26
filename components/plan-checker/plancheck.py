@@ -300,11 +300,11 @@ def inline_match(lines: list[str], row: int, start: int, containers: list[int | 
 
 def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, str]], bool, list[str]]:
     out, blocks, content, anchors = [], [], [], []
-    definitions, reference_uses, openers, brackets = set(), [], [], []
+    definitions, reference_uses, openers, brackets, masked = set(), [], [], [], []
     containers: list[int | None] = []
     fence, html = None, None
     paragraph, unclosed = False, False
-    inline = re.compile(r"(\\*)(<!--|`+|</?[A-Za-z]|[\[\]])")
+    inline = re.compile(r"(\\*)(<!--|`+|</?[A-Za-z]|!?\[|\])")
     span_row, span_end = -1, 0
     hidden_row, hidden_end = -1, 0
     for i, raw in enumerate(lines):
@@ -380,20 +380,22 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
                     if not escaped and (end_of_tag := inline_match(lines, i, match.start(2), containers, INLINE_HTML)):
                         hidden_row, hidden_end, _ = end_of_tag
                         pos = match.start(2)
-                elif match[2] in "[]":
-                    if escaped:
-                        continue
-                    if match[2] == "[":
-                        brackets.append((i, match.start(2)))
-                    elif brackets:
-                        row, col = brackets.pop()
+                elif match[2].endswith("["):
+                    if not escaped or match[2] == "![":
+                        brackets.append((i, pos - 1, match[2] == "![" and not escaped))
+                elif match[2] == "]":
+                    if not escaped and brackets:
+                        row, col, image = brackets.pop()
                         if raw.startswith("(", pos) and (link := inline_match(lines, i, pos, containers, INLINE_LINK)):
                             hidden_row, hidden_end, target = link
                             pos = match.start(2)
-                            openers.append((row, col))
-                            brackets.clear()
-                            if target["dest"] and target["dest"].startswith("#") and len(target["dest"]) > 1:
-                                anchors.append(target["dest"][1:])
+                            if image:
+                                masked.append((row, col - 1, hidden_row, hidden_end))
+                            else:
+                                openers.append((row, col))
+                                brackets = [item for item in brackets if item[2]]
+                                if not brackets and target["dest"] and target["dest"].startswith("#") and len(target["dest"]) > 1:
+                                    anchors.append(target["dest"][1:])
                         else:
                             ref = inline_match(lines, i, pos, containers, REF_LABEL) if raw.startswith("[", pos) else None
                             if ref and ref[2][1]:
@@ -404,7 +406,7 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
                                     continue
                                 label = first[2][1]
                             end_row, end = ref[:2] if ref else (i, pos)
-                            reference_uses.append((" ".join(label.split()).casefold(), row, col, i, match.start(2), end_row, end))
+                            reference_uses.append((" ".join(label.split()).casefold(), row, col, image, i, match.start(2), end_row, end))
                 elif (width_of_span := len(match[2]) - escaped) and (end_of_span := inline_end(lines, i, pos, width_of_span, containers)):
                     span_row, span_end = end_of_span
                     pos = span_end if i == span_row else len(raw)
@@ -412,12 +414,17 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
                 break
         out.append("".join(visible))
         paragraph = bool(out[-1].strip()) and not re.match(r"^ {0,3}(?:#{1,6}\s|\||[-_*=]{3,}\s*$)", body)
-    for label, row, start, close_row, close, end_row, end in reference_uses:
+    for label, row, start, image, close_row, close, end_row, end in reference_uses:
         if label in definitions:
-            openers.append((row, start))
-            for i in range(close_row, end_row + 1):
-                a, b = close if i == close_row else 0, end if i == end_row else len(out[i])
-                out[i] = out[i][:a] + " " * (b - a) + out[i][b:]
+            if image:
+                masked.append((row, start - 1, end_row, end))
+            else:
+                openers.append((row, start))
+                masked.append((close_row, close, end_row, end))
+    for start_row, start, end_row, end in masked:
+        for i in range(start_row, end_row + 1):
+            a, b = start if i == start_row else 0, end if i == end_row else len(out[i])
+            out[i] = out[i][:a] + " " * (b - a) + out[i][b:]
     for row, start in openers:
         out[row] = out[row][:start] + " " + out[row][start + 1:]
     return out, blocks, unclosed or fence is not None, anchors
