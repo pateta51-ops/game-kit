@@ -501,6 +501,38 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
     } finally { await page.close(); }
   });
 
+  it('retains native Enter on a linked map area while an unlinked area leaves the board pick in control', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.evaluate(() => {
+        document.querySelector('main')!.insertAdjacentHTML('beforeend',
+          '<img usemap="#board-map" width="40" height="40" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">' +
+          '<map name="board-map"><area href="#map-result" shape="rect" coords="0,0,20,40" alt="Map link">' +
+          '<area tabindex="0" shape="rect" coords="20,0,40,40" alt="Unlinked region"></map>');
+        const link = document.querySelector<HTMLAreaElement>('area[href="#map-result"]')!;
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          link.dataset.activated = 'true';
+        });
+      });
+      await page.locator('img[usemap="#board-map"]').evaluate((el: HTMLImageElement) => el.decode());
+      await page.getByRole('button', { name: 'Arm board pick' }).click();
+      const linked = page.locator('area[href="#map-result"]');
+      await linked.focus();
+      await page.keyboard.press('Enter');
+      expect(await linked.getAttribute('data-activated')).toBe('true');
+      expect(await page.getByTestId('answers').textContent()).toBe('0');
+      expect(await page.getByTestId('armed').textContent()).toBe('card');
+      const unlinked = page.locator('area[alt="Unlinked region"]');
+      await unlinked.focus();
+      expect(await unlinked.evaluate((el) => document.activeElement === el)).toBe(true);
+      await page.keyboard.press('Enter');
+      expect(await page.getByTestId('answers').textContent()).toBe('1');
+      expect(await page.getByTestId('armed').textContent()).toBe('none');
+    } finally { await page.close(); }
+  });
+
   it('focuses the summary of a closed disclosure and tab-traps its visible controls', async () => {
     const page = await browser.newPage();
     try {

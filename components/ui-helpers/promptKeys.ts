@@ -58,9 +58,13 @@ export const isTyping = (target: unknown): boolean =>
   ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag(target));
 
 export const isControl = (target: unknown): boolean => {
-  if (['BUTTON', 'A', 'SUMMARY'].includes(tag(target))) return true;
+  const name = tag(target);
+  if (['BUTTON', 'A', 'SUMMARY'].includes(name)) return true;
   const get = (target as { getAttribute?: unknown } | null)?.getAttribute;
-  return typeof get === 'function' && (get as (n: string) => unknown).call(target, 'role') === 'button';
+  if (typeof get !== 'function') return false;
+  const attribute = get as (n: string) => unknown;
+  return (name === 'AREA' && typeof attribute.call(target, 'href') === 'string') ||
+    attribute.call(target, 'role') === 'button';
 };
 
 /** Hidden, inert and aria-hidden ancestors do not own keyboard input. */
