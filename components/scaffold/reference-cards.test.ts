@@ -143,7 +143,9 @@ describe('bounded reference card assembly', () => {
 
   it.skipIf(!process.env['PW_CHROMIUM_PATH'] && !fs.existsSync(chromium.executablePath()) && !process.env['CI'])('plays the actual browser game and rejects a disconnected card button', () => {
     const dir = generate('browser');
-    const play = () => consumer(dir, 'tests/scaffold.e2e.mjs');
+    const play = () => spawnSync(process.execPath, ['kit/ci-templates/full-gate.mjs', 'e2e'], {
+      cwd: dir, encoding: 'utf8', env: { ...process.env, E2E_SCRIPTS: 'test:e2e' },
+    });
     const good = play();
     expect(good.status, good.stdout + good.stderr).toBe(0);
     expect(good.stdout).toContain('Card browser acceptance passed');

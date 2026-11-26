@@ -23,7 +23,9 @@ describe('generated expedition compatibility', () => {
   }, 180_000);
 
   it.skipIf(!process.env['PW_CHROMIUM_PATH'] && !fs.existsSync(chromium.executablePath()) && !process.env['CI'])('plays both actual browser routes and rejects a disconnected action control', () => {
-    const run = () => spawnSync(process.execPath, ['tests/scaffold.e2e.mjs'], { cwd: dir, encoding: 'utf8', timeout: 60_000 });
+    const run = () => spawnSync(process.execPath, ['kit/ci-templates/full-gate.mjs', 'e2e'], {
+      cwd: dir, encoding: 'utf8', timeout: 60_000, env: { ...process.env, E2E_SCRIPTS: 'test:e2e' },
+    });
     const good = run();
     expect(good.status, good.stdout + good.stderr).toBe(0);
     expect(good.stdout).toContain('Expedition browser acceptance passed');
