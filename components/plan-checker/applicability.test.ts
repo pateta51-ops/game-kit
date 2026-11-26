@@ -476,6 +476,25 @@ describe('explicit plan applicability', () => {
     expect(result.code, result.output).toBe(0);
   });
 
+  it.each(['**[](/guide)**', '_![](/image.png)_', '***![](/image.png)***', '**_![](/image.png)_**'])(
+    'excludes formatting around hidden evidence: %s', (body) => {
+      fails({ text: PLAN.replace('A move enters an adjacent unblocked space.', body) }, 'rule MOVE-01 has no text');
+      fails({ text: PLAN.replace('Enter the adjacent open space.', body) }, 'SC-01 has no expected outcome');
+    },
+  );
+
+  it.each(['style', 'script'])('does not count inline %s contents as phase citations', (tag) => {
+    fails({ text: PLAN.replace('SC-01, SC-02. Implement', 'Use <' + tag + '>/* SC-01, SC-02 */</' + tag + '>. Implement') }, 'SC-01 is not assigned to any phase');
+  });
+
+  it('retains visible punctuation and visible prose beside inline styling', () => {
+    const text = PLAN.replace('A move enters an adjacent unblocked space.', '**[](/guide)** ?')
+      .replace('Enter the adjacent open space.', '*[](/guide)**')
+      .replace('SC-01, SC-02. Implement', 'Use <style>/* NOT-99 */</style> <span>SC-01, SC-02</span>. Implement');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
   it('still reports broken anchor links in strict mode', () => {
     fails({ text: PLAN.replace('SC-01, SC-02. Implement', 'SC-01, SC-02. [guide](#missing). Implement') }, 'broken anchor #missing');
   });

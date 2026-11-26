@@ -122,6 +122,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from unicodedata import category
 
 # An ID: uppercase family segments, then a number. Examples: KW-ACQ-02, BOT-RES-10, SET-01, IR-07, INV-03, V-12,
 # CARD-001, L-05. Lowercase-free so prose words never match.
@@ -298,6 +299,45 @@ def inline_match(lines: list[str], row: int, start: int, containers: list[int | 
     return result
 
 
+def inline_raw_end(lines: list[str], row: int, end: int, opening: str) -> tuple[int, int]:
+    tag = re.match(r"<(style|script)(?=[ \t\n/>])", opening, re.I)
+    if not tag:
+        return row, end
+    closer = re.compile(r"</" + tag[1] + r"[ \t]*>", re.I)
+    for i in range(row, len(lines)):
+        if close := closer.search(lines[i], end if i == row else 0):
+            return i, close.end()
+    return len(lines) - 1, len(lines[-1])
+
+
+def empty_emphasis(raw: str, line: str) -> str:
+    if raw == line:
+        return line
+    pending, chars, end = [], list(line), 0
+    for run in re.finditer(r"(\\*)(\*+|_+)", raw):
+        start, stop = run.span(2)
+        if line[start:stop] != run[2] or len(run[1]) % 2:
+            continue
+        if line[end:start].strip():
+            pending.clear()
+        end = stop
+        before, after = (raw[start-1] if start else " "), (raw[stop] if stop < len(raw) else " ")
+        before_punct, after_punct = category(before)[0] in "PS", category(after)[0] in "PS"
+        opens = not after.isspace() and (not after_punct or before.isspace() or before_punct)
+        closes = not before.isspace() and (not before_punct or after.isspace() or after_punct)
+        if run[2][0] == "_":
+            opens, closes = opens and (not closes or before_punct), closes and (not opens or after_punct)
+        if closes and pending and pending[-1][2] == run[2] and raw[pending[-1][1]:start].strip():
+            left, right, _ = pending.pop()
+            chars[left:right] = " " * (right - left)
+            chars[start:stop] = " " * (stop - start)
+        elif opens:
+            pending.append((start, stop, run[2]))
+        else:
+            pending.clear()
+    return "".join(chars)
+
+
 def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, str]], bool, list[str]]:
     out, blocks, content, anchors = [], [], [], []
     definitions, reference_uses, openers, brackets, masked = set(), [], [], [], []
@@ -378,7 +418,7 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
                         pos = match.start(2)
                 elif match[2].startswith("<"):
                     if not escaped and (end_of_tag := inline_match(lines, i, match.start(2), containers, INLINE_HTML)):
-                        hidden_row, hidden_end, _ = end_of_tag
+                        hidden_row, hidden_end = inline_raw_end(lines, end_of_tag[0], end_of_tag[1], end_of_tag[2][0])
                         pos = match.start(2)
                 elif match[2].endswith("["):
                     if not escaped or match[2] == "![":
@@ -427,7 +467,7 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
             out[i] = out[i][:a] + " " * (b - a) + out[i][b:]
     for row, start in openers:
         out[row] = out[row][:start] + " " + out[row][start + 1:]
-    return out, blocks, unclosed or fence is not None, anchors
+    return [empty_emphasis(raw, line) for raw, line in zip(lines, out)], blocks, unclosed or fence is not None, anchors
 
 
 def strict_inventory(rules: str, rule_rows: list[list[str]], scenarios: list[list[str]], defined: set[str]) -> list[str]:
