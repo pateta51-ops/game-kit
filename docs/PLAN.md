@@ -459,6 +459,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K778 | Classify receipt-bound consumer gameplay separately from test, reference and authorized production observations, and label legacy static and operator-reported metrics. | S |  | done |
 | K779 | Reconcile recorded provider usage from a completed Codex CLI turn and its retained rollout for record-traced development observations. | S |  | done |
 | K780 | Use a monotonic clock for check elapsed durations and fail receipt finalization when its observed UTC completion precedes its start. | S |  | done |
+| K782 | Preview an exact kit release upgrade from a verified lock, with changed installed component trees, dependency and package changes, static references, migration notes and available checks. | S |  | done |
 
 ## Candidates
 

@@ -2,6 +2,7 @@
 
 1. `node kit/kit.mjs outdated [../game-kit]`: your tag, the latest, the PLAN rows between, and any marked `breaking`.
 2. Upgrade only if a row you need is there. Read each README note marked breaking.
+   For a specific release, use the [upgrade preview](../../tools/package-plan/README.md#preview-a-specific-upgrade) before pulling. Inspect changed component trees, package declarations and available checks against the independently verified release commit.
 3. `node ../game-kit/kit.mjs pull ../game-kit <tag>`: one tag per game; this moves the whole kit, not one component.
 4. If the selected components change npm requirements, run `node ../game-kit/tools/package-plan/plan.mjs .` to compare the pinned package declarations with the game's manifest. Review each conflict or unresolved item before changing a package. See the [package plan](../../tools/package-plan/README.md).
 5. `node kit/kit.mjs check`, then the game's `npm run check`; fix what a breaking row lists.
