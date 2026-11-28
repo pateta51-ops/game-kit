@@ -10,7 +10,7 @@
 //   node kit.mjs worktree --branch <b> | worktree --here | finish [--comment] [--body <PR body file>] | teardown --worktree <dir>   worker commands, plain node (scripts/agent.mjs, pulled as kit/agent.mjs); finish prints PASS|FAIL <sha> (with --check: check passed|failed <sha> (check: <command>), never PASS); without --check it first fails unless each file added under src/ is a line of the PR body's "Built new" section: - <file or folder> | search: <words>; <other words> | nearest: <kit part or none> | why: <reason> (K684; ignore globs: package.json kit.builtNew.ignore; renames are not new; a folder covers files only two levels below src/, e.g. src/ui/motion/)
 //   node kit.mjs claims <file> [--repo <game repo>] [--before <old file>]   K698: the claim lines of one file (as on disk, any path; --before: only new or changed lines) checked with finish's claim rules; exit 1 on claim problems, 2 on usage or a missing file, 0 clean
 //   node kit/kit.mjs outdated [<game-kit checkout>]                                    the game's tag vs the latest, the PLAN rows and breaking notes between them
-//   node <trusted checkout>/kit.mjs check [--source <game-kit checkout>]                checks installed files and managed worker rules against the lock; --source also checks the pin and reconstructs its installed docs; legacy locks have partial coverage (upgrade-kit recipe). The installed CLI can check ordinary drift. K675 also checks component bypass patterns in src/.
+//   node <trusted checkout>/kit.mjs check [--source <game-kit checkout>]                checks installed files and managed worker rules against the lock; --source also checks the pin and reconstructs its installed docs; legacy locks have partial coverage (upgrade-kit recipe). The installed CLI can check ordinary drift. K675 also checks component bypass patterns in src/. K786: three guards that need a game setting (cardIdLiteral in repo-gate.config.json once an engine file imports kit/card-language; a lane running plancheck.py once plan-checker is pulled and docs/BUILD_PLAN*.md exists; a lane running traceability once it is pulled) fail with package.json kit.rules >= 2 (written by `new`), and are warning: lines without it.
 import { execFileSync as x, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
@@ -458,6 +458,22 @@ if (cmd === 'pull') {
     }
     if (hits.length) { console.error('src/ goes around a kit part. Use the hook named, or put // kit-allow <id>: <reason> on the line.\n' + hits.join('\n')); process.exit(1) }
   }
+  // K786: guards that need a game setting. package.json kit.rules >= 2 (written by `new`): each unset one fails; below 2: a warning
+  const J = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')) } catch { return {} } }
+  const pj = J('package.json'), sc = pj.scripts ?? {}, rg = J('repo-gate.config.json'), CR = 'scripts/check-runner.config.json', unset = []
+  const eng = (rg.engineFolders ?? ['src/engine/']).map((d) => d.replace(/\/$/, '')).filter((d) => fs.existsSync(d)).flatMap(walk).find((f) => /\.(m?[jt]sx?|cjs)$/.test(f) && /['"][^'"\n]*kit\/card-language[/'"]/.test(fs.readFileSync(f, 'utf8')))
+  if (eng && !rg.cardIdLiteral) unset.push(eng + ' imports kit/card-language: set "cardIdLiteral" (the regexp of a quoted card id) in repo-gate.config.json, so repo-gate fails card ids written in engine code (CONTENT_ID)')
+  // the scripts the check runs: those named in the check-runner config (all of package.json without one), and the scripts they run with npm
+  const ran = new Set()
+  const reach = (s) => { if (!Object.hasOwn(sc, s) || ran.has(s)) return; ran.add(s); for (const m of String(sc[s]).matchAll(/npm(?: run(?:-script)?)?((?: -\S+)*) ([\w:.-]+)/g)) reach(m[2]) }
+  for (const s of fs.existsSync(CR) ? [...JSON.stringify(J(CR)).matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]) : Object.keys(sc)) reach(s)
+  const runs = (re) => [...ran].some((s) => re.test(sc[s]) || String(sc[s]).split(/\s+/).some((w) => /\.(m?[jt]s|cjs|py|sh)$/.test(w) && !w.startsWith('kit/') && fs.existsSync(w) && re.test(fs.readFileSync(w, 'utf8'))))
+  const wire = ' to package.json and to a lane of ' + CR
+  const plan = lock.components['plan-checker'] && fs.existsSync('docs') && fs.readdirSync('docs').find((f) => /^BUILD_PLAN.*\.md$/.test(f))
+  if (plan && !runs(/plancheck\.(py|ts)/)) unset.push('kit/plan-checker is pulled and docs/' + plan + ' exists: add a script that runs kit/plan-checker/plancheck.py on it' + wire)
+  if (lock.components.traceability && !runs(/kit\/traceability\//)) unset.push('kit/traceability is pulled: add a script that runs kit/traceability/check-traceability.ts' + wire)
+  if (unset.length && pj.kit?.rules >= 2) { console.error('a kit part in use lacks its game setting (package.json kit.rules is 2: these fail).\n' + unset.join('\n')); process.exit(1) }
+  for (const u of unset) console.warn('warning: ' + u)
   const names = Object.keys(lock.components).join(', ') || 'no components'
   console.log(lock.ref ? 'kit ok at ' + lock.ref + ': ' + names : 'kit ok: ' + (Object.entries(lock.components).map(([n, c]) => n + '@' + c.ref).join(', ') || names) + (Object.keys(lock.components).length ? ' (per-component locks: the next pull converts them to one tag)' : ''))
 } else if (cmd === 'outdated') {

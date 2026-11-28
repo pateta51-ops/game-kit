@@ -801,5 +801,8 @@
   {"q": "real gameplay separate from production release", "first": "kit-context"},
   {"q": "codex cli usage export", "first": "reuse-metrics"},
   {"q": "reconcile provider token counts", "first": "reuse-metrics"},
-  {"q": "verify cached input tokens from rollout", "first": "reuse-metrics"}
+  {"q": "verify cached input tokens from rollout", "first": "reuse-metrics"},
+  {"q": "card names in rules code gate", "first": "repo-gate"},
+  {"q": "tests cite rule ids", "first": "traceability"},
+  {"q": "empty working game repo", "first": "scaffold"}
 ]
