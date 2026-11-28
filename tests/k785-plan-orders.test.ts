@@ -10,11 +10,11 @@ afterAll(() => fs.rmSync(root, { recursive: true, force: true }));
 const g = (cwd: string, ...a: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd, encoding: 'utf8' });
 const put = (dir: string, f: string, t = 'x') => { fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true }); fs.writeFileSync(path.join(dir, f), t); };
 let n = 0;
-function game(branch: string, plan: string | Record<string, string>, src: string, rules?: number): string {
+function game(branch: string, plan: string | Record<string, string>, src: string, rules?: number | null): string {
   const name = 'g' + n++, bare = path.join(root, `${name}.git`), main = path.join(root, name);
   g(root, 'init', '-q', '--bare', '-b', 'main', bare);
   g(root, 'clone', '-q', bare, main);
-  const base = { 'src/engine/a.ts': '', 'package.json': JSON.stringify(rules === undefined ? {} : { kit: { rules } }), ...(typeof plan === 'string' ? { 'docs/BUILD_PLAN.md': plan } : plan) };
+  const base = { 'src/engine/a.ts': '', ...(rules === null ? {} : { 'package.json': JSON.stringify(rules === undefined ? {} : { kit: { rules } }) }), ...(typeof plan === 'string' ? { 'docs/BUILD_PLAN.md': plan } : plan) };
   for (const [f, t] of Object.entries(base)) put(main, f, t);
   g(main, 'add', '.');
   g(main, 'commit', '-qm', 'init');
@@ -102,14 +102,61 @@ describe('K785 finish reads the Must use orders of the batch from the committed 
     expect(soft.text).toContain('warning: ');
   });
   it('K785 no batch id in the branch, no plan, no block for the batch, or --check: as before', () => {
-    for (const main of [game('k9-hand', PLAN, HAND, 2), game('batch/b2-hand', {}, HAND, 2), game('batch/b7-hand', PLAN, HAND, 2)]) {
+    for (const main of [game('k9-hand', PLAN, HAND), game('batch/b2-hand', {}, HAND, 2), game('batch/b7-hand', PLAN, HAND, 2)]) {
       const r = run(main);
       expect(r.rc).toBe(0);
       expect(r.text).toMatch(/^PASS [0-9a-f]{40} .*\nORDERS 0\/0\n/);
       expect(r.text).not.toContain('warning');
     }
     const c = run(game('batch/b2-hand', PLAN, HAND, 2), '', ['--check', 'echo hi']);
+    expect(c.text).not.toContain('warning');
     expect(c.rc).toBe(0);
     expect(c.text).toMatch(/^check passed /);
+  });
+  it('K785 review 1: none counts only as the whole value; with other entries or other words it fails naming the plan line and the other order still counts', () => {
+    const mixed = run(game('batch/b2-x', '## Batch B2\nMust use: none, card-pile:Pile\n', HAND, 2));
+    expect(mixed.rc).toBe(1);
+    expect(mixed.ran).toBe(false);
+    expect(mixed.text).toContain('"none"');
+    expect(mixed.text).toContain('Must use: none, card-pile:Pile');
+    expect(mixed.text).toContain('ORDERS 0/1 missing: card-pile (Pile)');
+    const words = run(game('batch/b2-x', '## Batch B2\nMust use: none (searched hand; pile)\n', HAND, 2));
+    expect(words.rc).toBe(1);
+    expect(words.text).toContain('Must use: none (searched hand; pile)');
+    expect(run(game('batch/b2-x', '## Batch B2\n- **Must use:** `none`\n', HAND, 2)).rc).toBe(0);
+  });
+  it('K785 review 2: kit.rules is read from package.json on the merge base, so a branch that removes it still fails; with no package.json there the working tree is read', () => {
+    const main = game('batch/b2-hand', PLAN, HAND, 2);
+    put(main, 'package.json', '{}');
+    g(main, 'commit', '-qam', 'drop the marker');
+    const r = run(main);
+    expect(r.rc).toBe(1);
+    expect(r.ran).toBe(false);
+    expect(r.text).toContain('must use: card-zoom (transcribe)');
+    const late = game('batch/b2-hand', PLAN, HAND, null);
+    put(late, 'package.json', JSON.stringify({ kit: { rules: 2 } }));
+    g(late, 'add', '.');
+    g(late, 'commit', '-qm', 'add package.json');
+    expect(run(late).rc).toBe(1);
+  });
+  it('K785 review 3: kit.rules 2 and a plan with Must use lines but a branch that names no batch: one warning that the orders were not checked, exit 0; none below 2', () => {
+    for (const b of ['batch/s4_x', 'worker/b2-x']) {
+      const r = run(game(b, PLAN, HAND, 2));
+      expect(r.rc).toBe(0);
+      expect(r.ran).toBe(true);
+      expect(r.text.match(/^warning: .*/gm)).toEqual([expect.stringContaining('were not checked: the branch ' + b)]);
+      expect(r.text).toMatch(/^PASS [0-9a-f]{40} .*\nORDERS 0\/0\nwarning: /);
+    }
+    expect(run(game('worker/b2-x', PLAN, HAND)).text).not.toContain('warning');
+    expect(run(game('worker/b2-x', '## Batch B2\n\ntext\n', HAND, 2)).text).not.toContain('warning');
+  });
+  it('K785 review 3: kit.rules 2 and no merge base with main: the same single warning; the result is the one of before (the Built new FAIL, exit 1)', () => {
+    const main = game('batch/b2-hand', PLAN, HAND, 2);
+    g(main, 'update-ref', '-d', 'refs/remotes/origin/main');
+    try { g(main, 'branch', '-qD', 'main'); } catch { /* the first branch had another name */ }
+    const r = run(main);
+    expect(r.rc).toBe(1);
+    expect(r.text).toContain('no merge base');
+    expect(r.text.match(/^warning: .*/gm)).toEqual([expect.stringContaining('were not checked: ')]);
   });
 });
