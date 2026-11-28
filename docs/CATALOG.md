@@ -1631,14 +1631,14 @@ Generate an empty starter or a supported, explicitly configured game slice from 
 Flatbed scans of a game's components to one upright, tightly cropped image per item, plus a review overlay and a
 
 - **Also called:** Turn scans into cropped pictures
-- **Words:** scan, scanner, crop, straighten, image, flatbed, ingest, ingestion, cards
+- **Words:** scan, scanner, crop, straighten, image, flatbed, ingest, ingestion, cards, zone rects, map zones
 - **Release:** 1.0; not seen
 - **The game supplies:** The scan files and the crop settings.
-- **Use it when:** Turning flatbed scans into one cropped upright image per item; a printed board scan with live state drawn into its boxes, die-cut pieces at true size, playmat box detection, tone profile.
+- **Use it when:** Turning flatbed scans into one cropped upright image per item; a printed board scan with live state drawn into its boxes, die-cut pieces at true size, playmat box detection, tone profile; zone rects traced from a map or board scan into board-layout ZoneLayout JSON.
 - **Not for:** Scanning crew boards. Offline scan tools prepare assets. ScanBoard and Piece are available in-game.
 - **Key exports:** Python package `scanpipe`; TS `index.ts` (measureBoxes, planOverlay, clipPathOf, mmStyle, uniformOutlines...), `ui.ts` (ScanBoard, Piece)
 - **Hook:** loadGeometry: load scan board geometry, retry a failed attempt and cache successful measurements
-- **Needs:** nothing
+- **Needs:** [`board-layout`](#board-layout)
 - **Came from:** scanning-pipeline
 - **Docs:** [README](../components/scan-ingest/README.md) ([rules for agents](../components/scan-ingest/README.md#rules-for-agents))
 

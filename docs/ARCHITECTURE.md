@@ -143,7 +143,7 @@ graph LR
   saves["saves"] --> engine_core["engine-core"]
   saves["saves"] --> small_helpers["small-helpers"]
   scaffold["scaffold"]
-  scan_ingest["scan-ingest"]
+  scan_ingest["scan-ingest"] --> board_layout["board-layout"]
   screens["screens"]
   settings["settings"]
   sim_pool["sim-pool"] --> engine_core["engine-core"]
