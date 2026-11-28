@@ -176,16 +176,20 @@ are here (sources in component.json).
 `scanpipe/zones.py`, run as `scripts/trace_zones.py`: the scan's zones as board-layout's `ZoneLayout` JSON,
 `{ "w", "h", "zones": { id: { "r": [x, y, w, h] } } }` (top-left corner, width, height). No game names, colours or
 paths: a game passes them as flags or in a `--config` JSON (keys `colours`, `names`, `zones`, `tol`, `min_area`,
-`prefix`, `size`; flags win).
+`prefix`, `size`, `close`; flags win).
 
     python -I kit/scan-ingest/scripts/trace_zones.py SCAN --out OUT.json [--config cfg.json]
-        [--colour "#dc1e1e"]... [--name id]... [--tol 40] [--min-area 0.0005] [--prefix zone] [--size 1 1] [--overlay O.png]
+        [--colour "#dc1e1e"]... [--name id]... [--tol 40] [--min-area 0.0005] [--prefix zone] [--size 1 1] [--close 5] [--overlay O.png]
 
 - Marker blobs: each pixel within `tol` (per channel) of a `colours` entry; blobs under `min_area` of the scan
   dropped; bounding rects in reading order (rows top to bottom, then left to right), named by `names` in that order
   (a different count exits 1 and writes nothing), else `prefix1..N`.
-- Hand rects: `zones` in the config, `[x, y, w, h]` or `{ "c": [cx, cy], "s": [w, h] }` in scan px, win over a found
-  blob of the same id. A rect off the scan exits 1.
+- Each pixel goes to its nearest listed colour only; gaps up to `close` px inside a marker (a printed label, a JPEG
+  fringe) are closed first (default 5, 0 off). Rows group by the running mean of their centres, so a skewed scan
+  keeps its order.
+- Hand rects: `zones` in the config, `[x, y, w, h]` or `{ "c": [cx, cy], "s": [w, h] }` (`[w]` for a square; corner
+  `cx - w // 2`) in scan px, win over a found blob of the same id; with no `colours`, `names` is not checked. A rect
+  off the scan exits 1; a bad config, colour or hand rect prints one line and exits 2, as does a scan it cannot read.
 - `size W H` rescales to the game's units (`1 1`: fractions of the scan, 4 decimals); default scan px. `--overlay`
   draws the rects and ids on the scan for a look.
 - At content build the game merges the file with board-layout's `withZones`:

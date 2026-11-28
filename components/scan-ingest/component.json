@@ -71,9 +71,7 @@
       "scanpipe/vector.py and scripts/vtrace.py: potrace of a thresholded or k-means-quantised crop (trace-icons.py of Jarl and ER maps, emtrace.py, trace_icons.py of 7IS), symmetry averaging (ER symm.py/symfill.py), SVG retrace per fill colour (7IS icons-retrace.py), proof sheet and fidelity (7IS trace_icons.py), B&W render of PDF pages (Jarl render-bw.py). vtracer, game icon lists, boxes, colours and paths left in the games; STCC repair-rulebook-icons.py is text repair, not tracing, left out."
     ]
   },
-  "needs": [
-    "board-layout"
-  ],
+  "needs": [],
   "packages": [
     "react"
   ]

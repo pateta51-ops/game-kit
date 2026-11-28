@@ -8,12 +8,18 @@ RED = [(100, 80, 60, 60), (300, 90, 80, 50), (520, 70, 50, 70), (140, 300, 70, 7
 BLUE = (600, 300, 40, 40)
 
 
-def map_scan(seed: int = 1) -> np.ndarray:
+def ground(H: int = 420, W: int = 700, seed: int = 1) -> np.ndarray:
     rng = np.random.default_rng(seed)
-    img = np.clip(np.full((420, 700, 3), (190, 215, 230), np.float32) + rng.normal(0, 4, (420, 700, 3)), 0, 255).astype(np.uint8)
-    for x, y, w, h in RED:
-        cv2.rectangle(img, (x, y), (x + w - 1, y + h - 1), (30, 30, 220), cv2.FILLED)
-    x, y, w, h = BLUE
-    cv2.rectangle(img, (x, y), (x + w - 1, y + h - 1), (200, 90, 20), cv2.FILLED)
+    return np.clip(np.full((H, W, 3), (190, 215, 230), np.float32) + rng.normal(0, 4, (H, W, 3)), 0, 255).astype(np.uint8)
+
+
+def boxes(img: np.ndarray, rects, bgr=(30, 30, 220)) -> np.ndarray:
+    for x, y, w, h in rects:
+        cv2.rectangle(img, (x, y), (x + w - 1, y + h - 1), bgr, cv2.FILLED)
+    return img
+
+
+def map_scan(seed: int = 1) -> np.ndarray:
+    img = boxes(boxes(ground(seed=seed), RED), [BLUE], (200, 90, 20))
     cv2.circle(img, (650, 30), 2, (30, 30, 220), cv2.FILLED)
     return img

@@ -1638,7 +1638,7 @@ Flatbed scans of a game's components to one upright, tightly cropped image per i
 - **Not for:** Scanning crew boards. Offline scan tools prepare assets. ScanBoard and Piece are available in-game.
 - **Key exports:** Python package `scanpipe`; TS `index.ts` (measureBoxes, planOverlay, clipPathOf, mmStyle, uniformOutlines...), `ui.ts` (ScanBoard, Piece)
 - **Hook:** loadGeometry: load scan board geometry, retry a failed attempt and cache successful measurements
-- **Needs:** [`board-layout`](#board-layout)
+- **Needs:** nothing
 - **Came from:** scanning-pipeline
 - **Docs:** [README](../components/scan-ingest/README.md) ([rules for agents](../components/scan-ingest/README.md#rules-for-agents))
 
