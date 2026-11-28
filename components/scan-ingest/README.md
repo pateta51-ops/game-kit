@@ -107,11 +107,12 @@ face's turn when an item is flipped like a page). Reading a game's printed codes
 `scanpipe/identify.py` matches each face on its own against the game's built card images: a perceptual hash
 (16 x 16, on a 512 px thumbnail over grey 128) at the 4 quarter turns against every reference face and generic back,
 then SIFT (3000 features, grey, long side 900 px, equalised) with a RANSAC homography (6 px) on the 10 nearest by
-hash; the score is the inlier count. The numbers are `identify.PARAMS`; a plug-in changes them with `identify_params`.
+hash of each kind (fronts, own backs, generic backs); SIFT features of the references are kept for the last `cache`
+(64); the score is the inlier count. The numbers are `identify.PARAMS`; a plug-in changes them with `identify_params`.
 
 - `Refs(fronts, backs=None, generic=None, back_map=None, family=None, variants=None, params=None)`: fronts and own
   backs by card id, generic back designs by design id (dicts of images or files, a folder, or a list; id = file
-  stem), `back_map` card -> design, `family` card -> key (die-cuts of one card), `variants` card -> silhouette variant.
+  stem; two files with one id are refused), `back_map` card -> design, `family` card -> key (die-cuts of one card), `variants` card -> silhouette variant.
 - `identify(crop, refs, item=None)`: `ref`, `face` (front, back or generic), `turn` (clockwise, to read like it),
   `inliers`, `runnerUp`, `runnerUpInliers`, `confidence`, `generic` (nearest design by hash, bits, margin),
   `ambiguous` and `held` (why). Identified: at least 120 inliers and 1.4 times the next best; the next best skips
@@ -122,7 +123,8 @@ hash; the score is the inlier count. The numbers are `identify.PARAMS`; a plug-i
   its own image by at least 40 inliers (measured on demand), or its generic design, the nearest back by hash by 4
   bits or clearly picked by SIFT (40 inliers and 1.4 times any other design). `matches` True, False (the faces
   disagree, or show two cards) or None (nothing identified, no other face known), `held`, `total` inliers.
-- `dedupe(manifests)`: the same card in two items keeps the one with more inliers; the other is held.
+- `dedupe(manifests)`: the same card in two items of a run keeps the one with more front inliers (both faces' inliers
+  break a tie); the other is held. Items a re-scan replaced or holds are left out (it runs after the re-scan plan).
 - Plug-in: `identify_refs` (None: off), `identify_back_refs`, `identify_generic_backs`, `back_map`, `identify_family`,
   `identify_variants`, `identify_params`. Each item records `identity` (with `pair_backs`, the front holds the pair
   check and the back its own face). Items cut off at the scan's edge or under half the smallest kind's area are

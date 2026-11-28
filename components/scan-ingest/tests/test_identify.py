@@ -9,6 +9,7 @@ import cv2
 
 from scanpipe import identify
 from scanpipe.__main__ import main
+from scanpipe.plugins.base import Orientation
 from scanpipe.plugins.contract import problems
 from tests.fake_game import FakeGame
 from tests.synth_faces import face, scanned
@@ -78,25 +79,38 @@ def test_k784_an_item_cut_off_or_too_small_is_not_matched_and_a_weak_guess_never
     assert r["ambiguous"] and not r.get("variantUnread")
 
 
-def test_k784_the_same_card_twice_holds_the_one_with_fewer_inliers():
-    m = {"items": [{"name": n, "flags": [], "identity": {"card": "c0", "total": t, "held": None}}
-                   for n, t in (("x", 300), ("y", 200))]}
-    assert identify.dedupe([m]) == 1
-    assert [it["flags"] for it in m["items"]] == [[], ["IDENTITY_DUPLICATE"]]
+def test_k784_the_same_card_twice_holds_the_one_with_fewer_front_inliers():
+    def it(n, inl, tot, **kw):
+        return {"name": n, "flags": [], "identity": {"card": "c0", "inliers": inl, "total": tot, "held": None}, **kw}
+    m = {"items": [it("x", 300, 300), it("y", 200, 500), it("z", 900, 900, replacedBy="s2.png")]}
+    assert identify.dedupe([m]) == 1                      # front inliers, not a front+back sum; z was replaced
+    assert [i["flags"] for i in m["items"]] == [[], ["IDENTITY_DUPLICATE"], []]
     assert m["items"][1]["identity"]["held"] == "same card as x"
+    m = {"items": [it("x", 300, 300), it("y", 300, 400)]}
+    assert identify.dedupe([m]) == 1 and m["items"][0]["flags"] == ["IDENTITY_DUPLICATE"]   # the back breaks a tie
 
 
-def test_k784_cli_identifies_a_folder_of_crops(tmp_path: Path):
+def test_k784_cli_identifies_a_folder_of_crops(tmp_path: Path, capsys):
     (tmp_path / "refs").mkdir()
     (tmp_path / "crops").mkdir()
     for k, img in FRONTS.items():
         cv2.imwrite(str(tmp_path / "refs" / f"{k}.png"), img)
     cv2.imwrite(str(tmp_path / "crops" / "x.jpg"), scanned(FRONTS["c2"], 90))
-    assert main(["identify", str(tmp_path / "crops"), "--refs", str(tmp_path / "refs"), "--json",
-                 str(tmp_path / "r.json")]) == 0
+    args = ["identify", str(tmp_path / "crops"), "--refs", str(tmp_path / "refs")]
+    assert main([*args, "--json", str(tmp_path / "r.json")]) == 0
     assert json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))["x.jpg"]["ref"] == "c2"
+    assert main([*args, "--min-inliers", "100000"]) == 1
+    cv2.imwrite(str(tmp_path / "refs" / "c2.jpg"), FRONTS["c2"])
+    assert main(args) == 1 and "two reference images have the id c2" in capsys.readouterr().err
+    (tmp_path / "refs" / "c2.jpg").unlink()
     cv2.imwrite(str(tmp_path / "crops" / "y.jpg"), face(98))
-    assert main(["identify", str(tmp_path / "crops"), "--refs", str(tmp_path / "refs")]) == 1
+    assert main(args) == 1
+
+
+def test_k784_the_feature_cache_is_bounded():
+    refs = identify.Refs(FRONTS, params={"cache": 2, "top": 6})
+    identify.identify(scanned(FRONTS["c0"], 0), refs)
+    assert len(refs._feat) == 2
 
 
 def test_k784_off_by_default_and_checked():
@@ -134,3 +148,61 @@ def test_k784_a_run_records_identity_and_flags_a_back_that_is_not_its_fronts(tmp
     assert [("BACK_IDENTITY_MISMATCH" in it["flags"]) for it in front] == [False, False, True]
     back = json.loads((review2 / "s1-b.json").read_text(encoding="utf-8"))["items"]
     assert all(b["identity"]["generic"]["design"] == "classic" for b in back)
+
+
+class Plain(FakeGame):
+    name = "plain-game"
+
+    def orient(self, crop, kind):
+        return Orientation(0, True, "test: as found")
+
+
+def _refs_from_a_first_run(tmp_path, plugin, scans, names):
+    first = tmp_path / "first"
+    main(["scan", "--plugin", plugin, "--out", str(first), "--review", str(tmp_path / "r0"), *names, *scans])
+    refs = tmp_path / "refs"
+    refs.mkdir()
+    for k in ("c1", "c2", "c3"):
+        shutil.copy(first / f"{k}.jpg", refs / f"{k}.jpg")
+    return refs
+
+
+def test_k784_an_unpaired_run_records_each_item_and_holds_a_card_found_twice(tmp_path: Path, monkeypatch):
+    scans = sheets(tmp_path, "s1", 3, 3)[:1]
+    names = ["--name", "c1", "--name", "c2", "--name", "c3"]
+    monkeypatch.setattr(Plain, "identify_refs", str(_refs_from_a_first_run(tmp_path, "tests.test_identify:Plain",
+                                                                            scans, names)))
+    review = tmp_path / "review"
+    shutil.copy(scans[0], tmp_path / "again.png")
+    code = main(["scan", "--plugin", "tests.test_identify:Plain", "--out", str(tmp_path / "out"), "--review",
+                 str(review), *names, "--name", "d1", "--name", "d2", "--name", "d3", scans[0],
+                 str(tmp_path / "again.png")])
+    items = json.loads((review / "s1-a.json").read_text(encoding="utf-8"))["items"]
+    assert [(it["name"], it["identity"]["card"], it["identity"]["held"]) for it in items] == \
+        [("c1", "c1", None), ("c2", "c2", None), ("c3", "c3", None)], items
+    again = json.loads((review / "again.json").read_text(encoding="utf-8"))["items"]
+    assert all("IDENTITY_DUPLICATE" in it["flags"] for it in again) and code == 1
+
+
+def test_k784_a_clean_rescan_of_the_same_card_is_no_duplicate(tmp_path: Path, monkeypatch):
+    names = ["--name", "c1", "--name", "c2", "--name", "c3"]
+    s1, s2 = sheets(tmp_path, "s1", 3, 3), sheets(tmp_path, "s2", 3, 3)
+    monkeypatch.setattr(PairedGame, "rescans", False)
+    refs = _refs_from_a_first_run(tmp_path, "tests.test_pairs_rescan:PairedGame", s1, names)
+    monkeypatch.setattr(PairedGame, "rescans", True)
+    monkeypatch.setattr(PairedGame, "identify_refs", str(refs))
+    backs = tmp_path / "own-backs"
+    backs.mkdir()
+    for k in ("c1", "c2", "c3"):
+        shutil.copy(tmp_path / "first" / f"{k}-b.jpg", backs / f"{k}.jpg")
+    monkeypatch.setattr(PairedGame, "identify_back_refs", str(backs))
+    review = tmp_path / "review"
+    for scans in (s1, s2):    # the second run scans the same three cards again under their names
+        main(["scan", "--plugin", "tests.test_pairs_rescan:PairedGame", "--out", str(tmp_path / "out"), "--review",
+              str(review), *names, *scans])
+    old = json.loads((review / "s1-a.json").read_text(encoding="utf-8"))["items"]
+    new = json.loads((review / "s2-a.json").read_text(encoding="utf-8"))["items"]
+    assert [it["identity"]["matches"] for it in old] == [True, True, True], old
+    assert all(it.get("replacedBy") == "s2-a.png" for it in old), old
+    assert [(it["identity"]["card"], it["flags"].count("IDENTITY_DUPLICATE")) for it in new] == \
+        [("c1", 0), ("c2", 0), ("c3", 0)], new

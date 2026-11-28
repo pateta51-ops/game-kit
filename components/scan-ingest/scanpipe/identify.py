@@ -6,6 +6,7 @@ manifest wiring (plug-in ``identify_refs``, off by default). Numbers in PARAMS; 
 from __future__ import annotations
 
 import math
+from collections import OrderedDict
 from pathlib import Path
 from typing import Optional
 
@@ -18,7 +19,7 @@ from .detect import rotate_quarter
 EXTS = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}
 TURNS = (0, 90, 180, 270)
 PARAMS = {"hash_size": 16, "thumb": 512, "top": 10, "side": 900, "nfeatures": 3000, "ratio": 0.75, "ransac": 6.0,
-          "min_inliers": 120, "margin": 1.4, "other_face_inliers": 40, "back_hash_margin": 4}
+          "min_inliers": 120, "margin": 1.4, "other_face_inliers": 40, "back_hash_margin": 4, "cache": 64}
 SURE = ("high", "medium")
 
 
@@ -84,7 +85,14 @@ def files(src) -> list[Path]:
 def _imgs(src) -> dict:
     if not src:
         return {}
-    return {str(k): v for k, v in src.items()} if isinstance(src, dict) else {p.stem: p for p in files(src)}
+    if isinstance(src, dict):
+        return {str(k): v for k, v in src.items()}
+    out = {}
+    for p in files(src):
+        if p.stem in out:
+            raise ValueError(f"two reference images have the id {p.stem}: {out[p.stem]} and {p}")
+        out[p.stem] = p
+    return out
 
 
 class Refs:
@@ -102,11 +110,15 @@ class Refs:
             raise ValueError("no reference faces")
         self.back_map, self.family, self.variants = back_map or {}, family or {}, variants or {}
         self.hash = {k: _hashes(load(v), self.p)[0] for k, v in self.faces.items()}
-        self._feat = {}
+        self._feat = OrderedDict()
 
     def feat(self, k):
-        if k not in self._feat:
+        if k in self._feat:
+            self._feat.move_to_end(k)
+        else:
             self._feat[k] = features(load(self.faces[k]), self.p)
+            if len(self._feat) > self.p["cache"]:
+                self._feat.popitem(last=False)
         return self._feat[k]
 
     def fam(self, card):
@@ -122,7 +134,9 @@ def _identify(crop, refs: Refs, item: Optional[dict] = None):
     hs = _hashes(crop, p)
     dist = {k: min((int((h != r).sum()), t) for h, t in zip(hs, TURNS)) for k, r in refs.hash.items()}
     f = features(crop, p)
-    sc = {k: _inliers(f, refs.feat(k), p) for k in sorted(dist, key=dist.get)[:p["top"]]}
+    # the nearest by hash taken per kind of face, so generic backs never crowd out a card's faces
+    sc = {k: _inliers(f, refs.feat(k), p) for face in ("front", "back", "generic")
+          for k in sorted((k for k in dist if k[1] == face), key=dist.get)[:p["top"]]}
     gen = sorted((k for k in dist if k[1] == "generic"), key=dist.get)
     out = {"generic": {"design": gen[0][0], "bits": dist[gen[0]][0],
                        "margin": dist[gen[1]][0] - dist[gen[0]][0] if len(gen) > 1 else None}} if gen else {}
@@ -233,16 +247,18 @@ def annotate(man: dict, refs, back: Optional[dict] = None, min_area_mm2: float =
 
 
 def dedupe(manifests: list[dict]) -> int:
-    """The same card found in two items of a run: the one with more inliers in all stays, the other is held (flag
-    IDENTITY_DUPLICATE). Returns how many were held."""
+    """The same card found in two items of a run (items a re-scan replaced or holds left out): the one with more
+    front inliers stays (both faces' inliers break a tie), the other is held (flag IDENTITY_DUPLICATE). Returns how
+    many were held."""
     seen, held = {}, 0
     for m in manifests:
         for it in m["items"]:
             r = it.get("identity")
-            if r and "pairOf" not in it and r.get("card") and not r.get("held"):
+            if r and "pairOf" not in it and r.get("card") and not r.get("held") and not it.get("replacedBy") \
+                    and not it.get("heldFor"):
                 seen.setdefault(r["card"], []).append(it)
     for card, its in seen.items():
-        keep = max(its, key=lambda it: it["identity"]["total"])
+        keep = max(its, key=lambda it: (it["identity"]["inliers"], it["identity"]["total"]))
         for it in its:
             if it is not keep:
                 it["identity"]["held"] = f"same card as {keep['name']}"

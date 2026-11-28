@@ -42,7 +42,11 @@ def main(argv=None) -> int:
     idp.add_argument("--json", type=Path, help="also write the results to this file")
     a = ap.parse_args(argv)
     if a.cmd == "identify":
-        refs = identify.Refs(a.refs, a.backs, a.generic, params={"min_inliers": a.min_inliers})
+        try:
+            refs = identify.Refs(a.refs, a.backs, a.generic, params={"min_inliers": a.min_inliers})
+        except ValueError as e:
+            print(e, file=sys.stderr)
+            return 1
         res = {}
         for f in identify.files(a.crops):
             r = res[f.name] = identify.identify(identify.load(f), refs)
@@ -72,7 +76,11 @@ def main(argv=None) -> int:
         return 1
     problems = 0
     manifests = []
-    refs = identify.refs_for(plugin) if plugin.identify_refs else None
+    try:
+        refs = identify.refs_for(plugin) if plugin.identify_refs else None
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        return 1
     small = 0.5 * min((w * h for w, h in plugin.item_sizes_mm.values()), default=0)  # area in mm2 never matched
 
     def show(man) -> int:
@@ -115,12 +123,13 @@ def main(argv=None) -> int:
             names, turns = names[used:], turns[used:]
             if not (plugin.pair_backs or plugin.rescans):
                 problems += show(man)
-    if refs:
-        held = identify.dedupe(manifests)
-        for man in manifests:
-            rescan.write(review, man)
-        problems += 0 if plugin.rescans else held
     every, ops, changed = rescan.plan(review, manifests, plugin, out) if plugin.rescans else (manifests, [], [])
+    if refs:  # after the re-scan plan: an item a clean re-scan replaced is no duplicate
+        held = identify.dedupe(manifests)
+        if not plugin.rescans:
+            for man in manifests:
+                rescan.write(review, man)
+            problems += held
     pool = [(m, it) for m in every for it in m["items"] if not it.get("replacedBy") and not it.get("heldFor")]
     byname = {it["name"]: it for _, it in pool}
     entries = [e for m, it in pool if "pairOf" not in it
@@ -130,6 +139,9 @@ def main(argv=None) -> int:
         problems += 1
     if plugin.rescans:
         rescan.apply(review, ops, changed)
+        if refs:
+            for man in manifests:
+                rescan.write(review, man)
         shutil.rmtree(dest, ignore_errors=True)
         for man in manifests:
             problems += show(man)
