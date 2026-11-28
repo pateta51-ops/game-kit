@@ -90,10 +90,19 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
                 crop, _ = detect.rectify(k.roi_bgra, key.shifted(k.region, k.origin))
                 w_mm, h_mm = r.w / dpi * MM_PER_IN, r.h / dpi * MM_PER_IN
                 break
+        sil, cast_skip = None, None
         if k is not None and (plugin.cast_kinds.get(kind) or (kind is None and plugin.cast_kinds)):
             # a card: cut again with its outline from geometry, without the shadow it casts (README, *Magenta backing*);
             # an unknown size may be a card with a shadow too wide for its size to be recognised
-            for ck in ([kind] if kind else sorted(plugin.cast_kinds)):
+            cks = [kind] if kind else sorted(plugin.cast_kinds)
+            # K789: the fit is chosen per item, from the silhouette of the plain cut (a notch would be filled by it)
+            if any(c in plugin.silhouette_kinds for c in cks) and crop.ndim == 3 and crop.shape[2] == 4:
+                sil = silhouette.read(silhouette.outline_of(crop[:, :, 3]), crop.shape[1], crop.shape[0],
+                                      silhouette.spec_for(plugin.silhouette_spec))
+            for ck in cks:
+                if not plugin.cast_for(ck, sil if ck in plugin.silhouette_kinds else None, crop):
+                    cast_skip = f"cast_for({ck}): no (silhouette {sil['shape'] if sil else 'not read'})"
+                    continue
                 k2 = key.key_region(full, det.regions[i], det.background, px_per_mm, cast_mm=plugin.cast_kinds[ck],
                                     cast_size_mm=plugin.item_sizes_mm.get(ck), cast_size_tol_mm=plugin.cast_size_tol_mm,
                                     cast_radius_mm=plugin.corner_radius_mm.get(ck))
@@ -103,15 +112,18 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
                     crop = key.cast.rectify(k.roi_bgra, k.fit, r.corners, k.origin)
                     w_mm, h_mm = crop.shape[1] / dpi * MM_PER_IN, crop.shape[0] / dpi * MM_PER_IN
                     flags.extend(f for f in k.cast["flags"] if f not in flags)
+                    sil, cast_skip = None, None
                     break
+            if kind not in plugin.silhouette_kinds:
+                sil = None
         regions.append(r)
         if kind is None:
             flags.append("UNKNOWN_SIZE")
-        sil = None
-        if kind in plugin.silhouette_kinds:
+        if kind in plugin.silhouette_kinds and sil is None:
             if crop.ndim == 3 and crop.shape[2] == 4:
                 outline = silhouette.outline_of(crop[:, :, 3])
             sil = silhouette.read(outline, crop.shape[1], crop.shape[0], silhouette.spec_for(plugin.silhouette_spec))
+        if sil:
             flags.extend(f for f in sil["flags"] if f not in flags)
         o = plugin.orient(images.flatten(crop), kind)
         if not o.confident and sil and sil["rotate"] is not None and sil["confidence"] in ("high", "medium"):
@@ -140,6 +152,7 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
             "pixels": [upright.shape[1], upright.shape[0]], "flags": flags, "region": r.to_json(),
             **({"keyed": True, "rimPx": k.rim_px} if k is not None else {}),
             **({"silhouette": sil} if sil else {}),
+            **({"castSkipped": cast_skip} if cast_skip else {}),
             **({"cast": {kk: v for kk, v in k.cast.items() if kk != "flags"}} if k is not None and k.cast else {}),
         })
         labels.append(str(i + 1))
