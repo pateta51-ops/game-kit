@@ -553,9 +553,12 @@ def dark_red(bgr: np.ndarray) -> np.ndarray:
 
 OPPOSITE = {"top": "bottom", "bottom": "top", "left": "right", "right": "left"}
 SIDES_MIN_MM = 0.25   # a side's band must be this much wider than the opposite side's (a printed rim is on both)
-SOFT_STEP = 6         # K793: a cast shadow darkens toward the card (soft, outside the true edge), a printed rim is
-SOFT_MIN_PX = 4       # flat (crisp, inside it): the leading run of pixels each this much (B+G+R) lighter than the next
-                      # one in, and the one they lead to, this many or more, is shadow whatever the opposite side shows
+SOFT_STEP = 15        # K793: a cast shadow darkens toward the card (soft, outside the true edge), a printed rim is
+SOFT_CH = 3           # flat (crisp, inside it). A soft step: the 2 px mean SOFT_STEP (B+G+R) and every channel SOFT_CH
+SOFT_MIN_PX = 5       # darker one pixel in; the leading steps cover the soft run, shadow at this many px or more when
+                      # the opposite side has no such run (a shadow falls one way; a printed gradient is on every side)
+PART_MIN = 0.1        # a band standing out of the side's line on this share of its rows (beside a notch or a tab) is
+                      # measured on those rows
 
 
 def _side_lines(alpha: np.ndarray, sil: Optional[dict]) -> dict:
@@ -591,9 +594,7 @@ def _side_lines(alpha: np.ndarray, sil: Optional[dict]) -> dict:
         keep = has & ~ex
         if keep.sum() < 10:
             continue
-        # the corners recede: start from the upper quartile, not a fit through them (K793: a band along a part of the
-        # side, beside a notch or tab, is the side's outer line when it is a quarter of the rows or more)
-        a, b = 0.0, float(np.percentile(o[keep], 75))
+        a, b = 0.0, float(np.median(o[keep]))   # the corners recede: start from the median, not a fit through them
         for _ in range(4):
             k2 = keep & (np.abs(o - (a * y + b)) <= 2)
             if k2.sum() < 10:
@@ -606,18 +607,29 @@ def _side_lines(alpha: np.ndarray, sil: Optional[dict]) -> dict:
 def side_bands(crop: np.ndarray, px_per_mm: float, sil: Optional[dict] = None, raw: Optional[np.ndarray] = None) -> dict:
     """K791: per straight side, (the owner's measure, outer share, run width in px). The measure: the outer 0.5 mm along
     the side's line more than 12 % dark red and 0.5-1.5 mm in under 5 %. The run: the median, over the rows on the
-    line, of the dark red run inward from the first dark red pixel within 2 px of the line (at most 1.5 mm). K793: a
-    4th value, the soft run: the median of the run's leading pixels that are each SOFT_STEP lighter than the next, and
-    the darkest one they lead to, read on ``raw`` (the crop's scan pixels, before the cut-out repaints its edge) if given."""
+    line, of the dark red run inward from the first dark red pixel within 2 px of the line (at most 1.5 mm). K793: then
+    the soft run (px, from the first dark red pixel; read on ``raw``, the crop's scan pixels before the cut-out repaints
+    its edge, when given and of the crop's size), the line used, the first red pixel's offset, and whether the band
+    stands out of the side's line on a part of it only (then measured on those rows, against its own line)."""
     alpha = crop[:, :, 3]
     red = dark_red(crop[:, :, :3]) & (alpha > 127)
     n05, n15 = max(1, int(round(0.5 * px_per_mm))), max(2, int(round(1.5 * px_per_mm)))
     res = {}
+    if raw is not None and raw.shape[:2] != crop.shape[:2]:
+        raw = None
+    pix = (crop if raw is None else raw)[:, :, :3].astype(np.float64)
     for side, (k, ok, _t, o, line) in _side_lines(alpha, sil).items():
+        rr = np.rot90(red, k)
+        out = ok & (o - line > 2) & (o - line <= n15)
+        part = out.sum() >= max(10, PART_MIN * ok.sum())
+        if part:   # the band on a part of the side only: the card's edge is the line, the band's line stands out of it
+            d = float(np.median(o[out] - line[out]))
+            part = rr[out][np.arange(out.sum())[:, None], np.clip(np.rint(line[out]).astype(int)[:, None] + 1 + np.arange(int(d))[None, :], 0, rr.shape[1] - 1)].mean() > 0.5
+            if part:
+                line = line + d
         on = ok & (np.abs(o - line) <= 2)
         if on.sum() < 10:
             continue
-        rr = np.rot90(red, k)
         dist = line[on, None] - np.arange(rr.shape[1])[None, :]
         r = rr[on]
         outer, inner = (dist >= 0) & (dist < n05), (dist >= n05) & (dist < n15)
@@ -626,12 +638,14 @@ def side_bands(crop: np.ndarray, px_per_mm: float, sil: Optional[dict] = None, r
         run = np.take_along_axis(r, ri.clip(0, r.shape[1] - 1), axis=1) & (ri >= 0)
         f = np.where(run[:, :3].any(axis=1), run[:, :3].argmax(axis=1), n15)
         ln = np.array([np.argmin(np.append(run[i, f[i]:], False)) for i in range(len(f))])
-        y = np.rot90((crop if raw is None else raw)[:, :, :3].astype(np.int32).sum(axis=2), k)[on]
-        p = np.take_along_axis(y, ri.clip(0, y.shape[1] - 1), axis=1)
-        soft = run[:, :-1] & (p[:, :-1] - p[:, 1:] >= SOFT_STEP) & (np.arange(n15 - 1)[None, :] >= f[:, None])
-        sl = np.array([np.argmin(np.append(soft[i, f[i]:], False)) if f[i] < n15 else 0 for i in range(len(f))])
+        pp = np.rot90(pix, k)[on]
+        pr = np.take_along_axis(pp, ri.clip(0, pp.shape[1] - 1)[:, :, None], axis=1)
+        m = (pr[:, :-1] + pr[:, 1:]) / 2
+        st = (m[:, :-1] - m[:, 1:] >= SOFT_CH).all(axis=2) & ((m[:, :-1] - m[:, 1:]).sum(axis=2) >= SOFT_STEP)
+        st &= run[:, :-2] & run[:, 1:-1] & run[:, 2:]
+        sl = np.array([np.argmin(np.append(st[i, f[i]:], False)) if f[i] < n15 - 2 else 0 for i in range(len(f))])
         res[side] = (bool(share > 0.12 and r[inner].mean() < 0.05), share, int(np.median(np.where(f < n15, f + ln, 0))),
-                     int(np.median(np.where(sl > 0, f + sl + 1, 0))))
+                     int(np.median(np.where(sl > 0, sl + 2, 0))), line, int(np.median(np.where(f < n15, f, 0))), bool(part))
     return res
 
 
@@ -645,30 +659,34 @@ def trim_sides(crop: np.ndarray, px_per_mm: float, sil: Optional[dict] = None,
     axis by half that difference or more. The alpha is then cleared that wide inside the side's line (no card lies
     there); the tab's columns and the notch keep their outline as cut. Returns the crop (cut to what is left) and the
     `cast` record of the manifest.
-    K793: a side the width rule refuses is trimmed by its soft run when that is SOFT_MIN_PX or more (a shadow over a
-    printed rim, or a thin one); given ``size_tol_px`` the size rule is instead that the trim leaves the item no more
-    than that under the kind's size. ``sides`` records per side its band % and why it was or was not trimmed."""
+    K793: a side the width rule refuses is trimmed by its soft run when that is SOFT_MIN_PX or more and the opposite
+    side's is not (a shadow over a printed rim, or a thin one); ``size_tol_px`` is taken off the size rule's margin.
+    ``sides`` records per side its band % and why it was or was not trimmed."""
     out = crop.copy()
     alpha = out[:, :, 3]
     lines = _side_lines(crop[:, :, 3], sil)
+    tol = size_tol_px or 0.0
     bands = side_bands(crop, px_per_mm, sil, raw)
     removed, why = {}, {s: {"bandPct": 0.0, "reason": "no straight run"} for s in SIDES}
-    for side, (_m, share, w, soft) in bands.items():
+    for side, (_m, share, w, soft, line, f0, part) in bands.items():
         opp = bands.get(OPPOSITE[side])
-        why[side] = {"bandPct": round(100 * share, 1), "runPx": w, "oppositePx": opp[2] if opp else 0, "softPx": soft}
+        why[side] = {"bandPct": round(100 * share, 1), "runPx": w, "oppositePx": opp[2] if opp else 0, "softPx": soft, "part": part}
         w -= opp[2] if opp else 0
         if share <= 0.12:
             why[side]["reason"] = "no band"
             continue
+        if why[side]["runPx"] >= int(round(1.5 * px_per_mm)) - 1:   # K793: red on past 1.5 mm is print, not a band
+            why[side]["reason"] = "dark red runs on inward (print)"
+            continue
         reason = "trimmed"
         if w < max(2, SIDES_MIN_MM * px_per_mm):
-            if soft < SOFT_MIN_PX:
-                why[side]["reason"] = "crisp and no wider than the opposite side (a printed rim)"
+            if soft < SOFT_MIN_PX or (opp and opp[3] >= SOFT_MIN_PX):
+                why[side]["reason"] = "no wider than the opposite side, and " + ("crisp (a printed rim)" if soft < SOFT_MIN_PX else "the opposite side as soft (printed)")
                 continue
-            w, reason = soft, "trimmed (soft)"
+            w, reason = f0 + soft, "trimmed (soft)"
         ax = crop.shape[1 if side in ("left", "right") else 0] - size_px[0 if side in ("left", "right") else 1] if size_px else 0
-        k, ok, rows, o, line = lines[side]   # a side the tab stands beyond does not bound the crop: the size says nothing
-        if size_px and line[ok].max() >= np.rot90(alpha, k).shape[1] - 2 and (ax - w < -size_tol_px if size_tol_px is not None else ax < w / 2):
+        k, _ok, rows, _o, _line = lines[side]
+        if size_px and ax < w / 2 - tol:
             why[side]["reason"] = "the crop is not larger than the kind's size"
             continue
         why[side]["reason"] = reason

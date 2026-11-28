@@ -107,13 +107,14 @@ face's turn when an item is flipped like a page). Reading a game's printed codes
   `cast: {mode: "sides", removedMm: {top, right, bottom, left}}` beside `castSkipped`. It is the default because it
   changes a crop only where the band is found, and only on die-cut items that had no clean-up at all;
   `cast_skip_mode = None` keeps the plain cut as before K791. Plain cards keep the fit, unchanged.
-- K793: the notch's rows are left out of the notched side only, and each side's line starts from the upper quartile
-  of its edge, so a band along a quarter of a side or more (beside a notch or a tab) is found. A side the width rule
-  refuses is trimmed by its soft run when that is `SOFT_MIN_PX` (4) or more: the leading pixels each `SOFT_STEP` (B+G+R)
-  lighter than the next one in, read on the scan's own pixels before the cut-out repaints the edge (a shadow darkens
-  toward the card; a printed rim is flat). Given the kind's size, a trim must leave the item no more than
-  `cast_size_tol_mm` under it (before, the crop had to be larger by half the band), and a side a tab stands beyond is
-  not held to the size. `cast.sides` records per side `bandPct`, `runPx`, `oppositePx`, `softPx` and `reason`.
+- K793: the notch's rows are left out of the notched side only. A band standing out of a side's line on a tenth of its
+  rows or more (beside a notch or a tab) is measured on those rows, against its own line (`part`). A side whose dark
+  red run reaches 1.5 mm is print and is never trimmed. A side the width rule refuses is trimmed by its soft run when
+  that is `SOFT_MIN_PX` (5) or more and the opposite side's is not (a shadow falls one way; a printed gradient is on
+  every side): the soft run is the leading 2 px means each `SOFT_STEP` (B+G+R) and `SOFT_CH` per channel darker one
+  pixel in, read on the scan's own pixels before the cut-out repaints the edge. The size rule takes the plug-in's
+  `cast_size_tol_mm` off its margin (the crop larger than the kind's size by half the band, less the tolerance).
+  `cast.sides` records per side `bandPct`, `runPx`, `oppositePx`, `softPx`, `part` and `reason`.
 
 ## Backs, descreen, re-scans and pack entries (optional, off by default)
 
