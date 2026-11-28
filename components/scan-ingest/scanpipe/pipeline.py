@@ -10,6 +10,8 @@ import json
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
+
 from . import detect, images, key, review, silhouette, sleeves, tone
 from .plugins.base import Orientation, Plugin
 
@@ -134,7 +136,10 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
             if cast_skip and plugin.cast_skip_mode == "sides" and sil and crop.ndim == 3 and crop.shape[2] == 4 \
                     and sil["shape"] in {shape_names.get(s, s) for s in ("notched", "tabbed")}:
                 size = plugin.item_sizes_mm.get(kind) if kind else None
-                crop, sides_cast = key.cast.trim_sides(crop, px_per_mm, sil, (size[0] * px_per_mm, size[1] * px_per_mm) if size else None)
+                (oy, ox), (rh, rw) = k.origin[::-1], k.roi_bgra.shape[:2]   # K793: the shadow's profile, before the repaint
+                raw = detect.rectify(np.dstack([full[oy:oy + rh, ox:ox + rw], k.roi_bgra[:, :, 3]]), key.shifted(k.region, k.origin))[0]
+                crop, sides_cast = key.cast.trim_sides(crop, px_per_mm, sil, (size[0] * px_per_mm, size[1] * px_per_mm) if size else None,
+                                                     plugin.cast_size_tol_mm * px_per_mm, raw if raw.shape == crop.shape else None)
                 if any(sides_cast["removedMm"].values()):
                     # the silhouette of the final crop: notchSpan, tabX and the turn refer to it
                     sil = silhouette.read(silhouette.outline_of(crop[:, :, 3]), crop.shape[1], crop.shape[0],
