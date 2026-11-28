@@ -76,14 +76,17 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
             def mode(kd):
                 return plugin.thick_kinds[kd], kd not in plugin.printed_edge_kinds
             modes = [mode(kind)] if kind else sorted({mode(kd) for kd in plugin.thick_kinds})
+            # the plain cut a drop_light cut is judged against is without the mark too (None: no mark)
+            ref_drop = key.key_region(full, det.regions[i], det.background, px_per_mm, drop_light=True)
             for shadow_mm, neutral in modes:
                 # K792: the colour rule, and the shadow as the backing darkened (a black, red or coloured piece is
                 # not); the cut nearest the kind's size wins, a plausible one first in printed_edge mode
                 best = None
                 # K794: each cut again without a lighter-than-backing mark touching the piece (drop_light)
                 for drop in (False, True):
-                    # the plain cut a drop_light cut is judged against is without the mark too
-                    ref = (key.key_region(full, det.regions[i], det.background, px_per_mm, drop_light=True) or k) if drop else k
+                    ref = ref_drop if drop else k
+                    if ref is None:
+                        continue
                     for tinted in (False, True):
                         k2 = key.key_region(full, det.regions[i], det.background, px_per_mm, shadow_mm, neutral,
                                             tinted_shadow=tinted, drop_light=drop)
@@ -92,16 +95,24 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
                         wh = (k2.region.w / dpi * MM_PER_IN, k2.region.h / dpi * MM_PER_IN)
                         kind2 = plugin.classify(*wh)
                         name2 = "tinted" if tinted else "colour"
-                        thick_cands.append({"cut": name2, "sizeMm": [round(wh[0], 1), round(wh[1], 1)], "kind": kind2,
+                        thick_cands.append({"mode": [shadow_mm, "plain" if neutral else "printed_edge"], "cut": name2,
+                                            "sizeMm": [round(wh[0], 1), round(wh[1], 1)], "kind": kind2,
                                             **({"dropLight": True} if drop else {})})
                         if kind2 is None or kind2 not in plugin.thick_kinds or mode(kind2) != (shadow_mm, neutral):
                             continue
                         sz = plugin.item_sizes_mm.get(kind2)
-                        # K794: a wide shadow takes more of the plain cut than REMOVED_MAX: the share of the plain
-                        # cut beyond the kind's size is allowed on top
-                        pw, ph = ref.region.w / dpi * MM_PER_IN, ref.region.h / dpi * MM_PER_IN
-                        extra = max(0.0, 1 - sz[0] * sz[1] / (pw * ph)) if sz else 0.0
-                        ok = neutral or key.plausible_shadow(ref, k2, key.REMOVED_MAX + extra)
+                        if drop and sz and any(a < b * (1 - plugin.size_tolerance) for a, b in zip(sorted(wh), sorted(sz))):
+                            continue   # dropping the mark never leaves less than the kind
+                        # K794: a wide shadow takes more of the plain cut than REMOVED_MAX: the pixel share of the
+                        # plain cut beyond the kind's size (the cut's pixels scaled to the kind's size) is allowed on
+                        # top, at most REMOVED_EXTRA_MAX, and only when what is removed is the backing darkened
+                        extra = 0.0
+                        if sz and not neutral:
+                            a1, a0 = (k2.roi_bgra[..., 3] > 128).sum(), (ref.roi_bgra[..., 3] > 128).sum()
+                            extra = min(key.REMOVED_EXTRA_MAX, max(0.0, 1 - a1 * sz[0] * sz[1] / (wh[0] * wh[1]) / a0))
+                            if extra and key.removed_tinted(full, ref, k2, det.background) < key.TINTED_REMOVED:
+                                extra = 0.0
+                        ok = neutral or key.plausible_shadow(ref, k2, key.REMOVED_MAX + float(extra))
                         thick_cands[-1].update(oneSided=[round(v, 2) for v in key.one_sided(ref, k2)], plausible=ok)
                         off = max(abs(a - b) for a, b in zip(sorted(wh), sorted(sz))) if sz else 0.0
                         if best is None or (not best[0] and ok) or (ok == best[0] and off < best[1]):

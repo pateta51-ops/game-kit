@@ -9,9 +9,10 @@ import cv2
 import numpy as np
 from PIL import Image
 
+from scanpipe import key
 from scanpipe.__main__ import main
 from scanpipe.plugins.base import Plugin
-from tests.synth import MM, magenta_sheet
+from tests.synth import MM, magenta_sheet, rounded_alpha
 
 DPI = 300
 PX = DPI / 25.4
@@ -30,8 +31,12 @@ class WoodEdge(Wood):
     printed_edge_kinds = frozenset(Wood.item_sizes_mm)
 
 
+class WoodCard(Wood):
+    item_sizes_mm = {**Wood.item_sizes_mm, "card": (63.2, 88.4)}
+
+
 def disc(bgr: tuple, w: float, h: float, shadow_mm: float = 3.0, mark: Optional[tuple] = None,
-         ring: Optional[tuple] = None) -> np.ndarray:
+         ring: Optional[tuple] = None, centre: Optional[tuple] = None, border: Optional[tuple] = None) -> np.ndarray:
     """An elliptic piece (BGRA) and its soft shadow down and to the right: black at partial alpha, the backing
     darkened. ``mark`` (dx, dy, rx, ry mm from the centre) is a pale blot on the backing under it; ``ring`` (BGR, mm)
     a band of that colour along its edge."""
@@ -56,6 +61,11 @@ def disc(bgr: tuple, w: float, h: float, shadow_mm: float = 3.0, mark: Optional[
         inner = np.zeros(m.shape, np.uint8)
         cv2.ellipse(inner, c, (d[0] // 2 - b, d[1] // 2 - b), 0, 0, 360, 255, -1)
         img[inner > 0] = (*bgr, 255)
+    if centre:   # (BGR, radius mm): a dark print in the middle
+        cv2.circle(img, c, int(centre[1] * PX), (*centre[0], 255), -1)
+    if border:   # (BGR, mm): printed along the edge on the shadow's side only
+        moved = np.roll(np.roll(m, -int(border[1] * PX * 0.8), 0), -int(border[1] * PX * 0.6), 1)
+        img[(m > 0) & (moved == 0)] = (*border[0], 255)
     return img
 
 
@@ -91,8 +101,10 @@ def test_k794_printed_edge_wooden_pieces_with_a_wide_shadow_lose_it(tmp_path: Pa
         for i, (it, (_c, _w, _h, kind)) in enumerate(zip(got, PIECES)):
             clean(it, kind, 0.2 + 0.3 * i)
             # the manifest records the plain cut and each candidate, the chosen one among them
-            assert it["thickPlainMm"][1] > Wood.item_sizes_mm[kind][1] + 2 and len(it["thickCuts"]) >= 2, it
+            assert it["thickPlainMm"][1] > Wood.item_sizes_mm[kind][1] + 2 and it["thickCuts"], it
             assert it["sizeMm"] in [c["sizeMm"] for c in it["thickCuts"]], it
+            assert "+dropLight" not in it["thickCut"] and not any(c.get("dropLight") for c in it["thickCuts"]), it
+            assert {tuple(c["mode"]) for c in it["thickCuts"]} == {(8.0, "printed_edge" if plugin == "WoodEdge" else "plain")}, it
 
 
 def test_k794_a_pale_mark_touching_a_black_disc_is_not_cut_with_it(tmp_path: Path):
@@ -104,9 +116,55 @@ def test_k794_a_pale_mark_touching_a_black_disc_is_not_cut_with_it(tmp_path: Pat
         for it, fx in zip(got, (0.2, 0.5, 0.8)):
             clean(it, "disc18", fx)
             assert it["thickCut"].endswith("+dropLight"), it
+            assert any(c.get("dropLight") and c["sizeMm"] == it["sizeMm"] for c in it["thickCuts"]), it
 
 
 def test_k794_a_black_disc_with_a_pale_edge_ring_keeps_its_ring(tmp_path: Path):
     it = scan(tmp_path, [(disc((25, 25, 25), 18, 18, ring=(PALE, 1.0)), 0.5, 0.5, 0.0)], "Wood")[0]
     clean(it, "disc18", 0.5)
     assert not it["thickCut"].endswith("+dropLight"), it
+
+
+def without_drop(monkeypatch, tmp_path: Path, items: list, plugin: str) -> list:
+    """The same scan with no drop_light cut, as before K794."""
+    real = key.key_region
+    monkeypatch.setattr(key, "key_region", lambda *a, drop_light=False, **kw: None if drop_light else real(*a, **kw))
+    try:
+        return scan(tmp_path, items, plugin)
+    finally:
+        monkeypatch.setattr(key, "key_region", real)
+
+
+def same(a: list, b: list) -> None:
+    assert [(x["kind"], x["sizeMm"], x["region"], x["flags"], x.get("thickCut")) for x in a] ==            [(x["kind"], x["sizeMm"], x["region"], x["flags"], x.get("thickCut")) for x in b]
+
+
+def test_k794_a_white_piece_with_a_dark_centre_and_a_pale_yellow_piece_keep_their_body(tmp_path: Path, monkeypatch):
+    items = [(disc((235, 240, 245), 18, 18, centre=((40, 40, 40), 4.0)), 0.3, 0.5, 0.0),
+             (disc((150, 235, 250), 18, 18), 0.7, 0.5, 0.0)]
+    for plugin in ("Wood", "WoodEdge"):
+        now = scan(tmp_path / plugin / "now", items, plugin)
+        same(now, without_drop(monkeypatch, tmp_path / plugin / "before", items, plugin))
+        for it, fx in zip(now, (0.3, 0.7)):
+            clean(it, "disc18", fx)
+            assert not any(c.get("dropLight") for c in it["thickCuts"]), it
+
+
+def test_k794_a_printed_edge_piece_keeps_a_dark_border_on_its_shadow_side(tmp_path: Path):
+    it = scan(tmp_path, [(disc((200, 205, 210), 18, 18, 4.5, border=((30, 30, 120), 1.0)), 0.5, 0.5, 0.0)], "WoodEdge")[0]
+    clean(it, "disc18", 0.5)
+    crop = np.array(Image.open(it["file"])).astype(int)
+    a = crop[..., 3] > 128
+    # the border (about 7 % of the piece) is on the crop: red pixels (RGBA) along one edge
+    red = a & (crop[..., 0] > crop[..., 1] + 40)
+    assert red.sum() > 0.04 * a.sum(), (red.sum(), a.sum())
+
+
+def test_k794_a_card_and_an_unknown_size_piece_come_out_as_before(tmp_path: Path, monkeypatch):
+    w, h = int(round(63.2 * PX)), int(round(88.4 * PX))
+    card = np.dstack([np.full((h, w, 3), (215, 220, 224), np.uint8), rounded_alpha(w, h, int(3 * PX))])
+    items = [(card, 0.25, 0.5, 0.0), (disc((200, 120, 40), 30, 30, mark=(16, 0, 4, 3)), 0.7, 0.5, 0.0)]
+    now = scan(tmp_path / "now", items, "WoodCard")
+    same(now, without_drop(monkeypatch, tmp_path / "before", items, "WoodCard"))
+    assert now[0]["kind"] == "card" and "thickCuts" not in now[0], now[0]
+    assert now[1]["kind"] is None and "UNKNOWN_SIZE" in now[1]["flags"] and now[1]["thickCuts"], now[1]

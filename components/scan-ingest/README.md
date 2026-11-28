@@ -65,10 +65,11 @@ A `thick_kinds` item (K792) is cut twice: by the colour rule (backing-hued or gr
 within 8 degrees of the backing's: a black, red or coloured piece is not). The cut nearest the kind's size wins, in
 printed_edge mode a one-sided one first; the manifest's `thickCut` (`colour` or `tinted`) says which. A piece darker
 than the sheet and of its hue is taken for shadow by both: its plain cut is kept and flagged `UNKNOWN_SIZE`.
-K794: each cut is also tried without a mark lighter than the backing that touches the piece (`+dropLight` in
-`thickCut`), and in printed_edge mode a wide shadow may take more than a fifth of the plain cut, as much again as the
-plain cut lies beyond the kind's size. The manifest records every candidate (`thickCuts`: cut, size, kind, one-sidedness,
-plausible) and the plain cut's size (`thickPlainMm`).
+K794: each cut is also tried without a mark lighter than the backing that touches the piece and is under a quarter of
+it (`+dropLight` in `thickCut`; never a cut smaller than the kind), and in printed_edge mode a wide shadow may take more
+than a fifth of the plain cut: the pixel share beyond the kind's size, at most 0.2 more, and only when what is removed
+is mostly the backing darkened. The manifest records every candidate (`thickCuts`: mode, cut, size, kind,
+one-sidedness, plausible) and the plain cut's size (`thickPlainMm`).
 
 `tests/fake_game.py` is a small example. `--plugin` refuses a class that is not a `Plugin` subclass, and reports an
 error in its constructor as one line. A game checks its own plug-in in a test:
