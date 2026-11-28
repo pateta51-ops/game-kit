@@ -407,6 +407,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K738 | cheat-options (new): cheats declared as data (number or toggle, once at set-up or each round start) applied as recorded debug set edits behind allowCheats; game-store applies them and gives cheated; table-panels GameOver cheated mark; set-up fields through screens extra | M |  | done |
 | K739 | search: the opponent part's lookAhead and evaluate (a greedy one-ply driver) lists first for "look ahead greedy player" and "greedy driver", not only the K424 candidate row | S |  | done |
 | K740 | llm-playtester: claude-haiku-5-5 price (with the over-100K-token rate) so --model claude-haiku-5-5 no longer throws "No price for model" | S |  | done |
+| K785 | finish: a batch's Must use orders are read from the game's committed build plan (the batch named by the branch), merged with the PR body's; a FAIL with package.json kit.rules 2 or more, a warning below | S |  | done |
 
 ## Asked for by the owner
 
@@ -462,6 +463,8 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K782 | Preview an exact kit release upgrade from a verified lock, with changed installed component trees, dependency and package changes, static references, migration notes and available checks. | S |  | done |
 | K783 | Claim lines: the six-word reason is required when nearest is none, and two phrasings made of the same words fail. | S |  | done |
 | K784 | `scan-ingest`: say which card a crop shows by matching it against the game's built card images (perceptual hash at 4 turns, then a feature-match inlier count), and use it to check that a paired back belongs to its front. | M |  | done |
+| K786 | Guards that need a game setting stop being silent to-dos: `kit.mjs new` writes `kit.rules: 2` into the new game's `package.json`, and `kit.mjs check` in a game names what to set and where when an engine file imports `kit/card-language` without repo-gate's `cardIdLiteral`, when `plan-checker` is pulled with a `docs/BUILD_PLAN*.md` and no lane runs `plancheck.py`, or when `traceability` is pulled and no lane runs it; a failure with `kit.rules` 2 or more, a warning below. | S |  | done |
+| K788 | plan-checker `--batch`: a listed subsection whose parent section is not listed adds the parent's lead text (the lines before its first subsection) to the "Read first" ranges. | S |  | done |
 
 ## Candidates
 

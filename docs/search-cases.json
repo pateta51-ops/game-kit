@@ -520,6 +520,9 @@
   { "q": "kit gap claim needs search", "first": "plan-checker" },
   { "q": "doc says not in the kit", "first": "plan-checker" },
   { "q": "check plan claims against kit", "first": "plan-checker" },
+  { "q": "batch line ranges", "first": "plan-checker" },
+  { "q": "plan batch ranges", "first": "plan-checker" },
+  { "q": "batch lead text", "first": "plan-checker" },
   { "q": "animation queue", "first": "motion-frame" },
   { "q": "event queue for animations", "first": "motion-frame" },
   { "q": "timer for bot thinking delay", "first": "paced-view" },
@@ -804,5 +807,8 @@
   {"q": "real gameplay separate from production release", "first": "kit-context"},
   {"q": "codex cli usage export", "first": "reuse-metrics"},
   {"q": "reconcile provider token counts", "first": "reuse-metrics"},
-  {"q": "verify cached input tokens from rollout", "first": "reuse-metrics"}
+  {"q": "verify cached input tokens from rollout", "first": "reuse-metrics"},
+  {"q": "card names in rules code gate", "first": "repo-gate"},
+  {"q": "tests cite rule ids", "first": "traceability"},
+  {"q": "empty working game repo", "first": "scaffold"}
 ]
