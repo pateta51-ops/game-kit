@@ -727,7 +727,7 @@
   { "q": "question box", "first": "prompt-host" },
   { "q": "scan geometry retry", "first": "scan-ingest" },
   { "q": "scan cropped pictures", "first": "scan-ingest" },
-  { "q": "die-cut card cast shadow band straight sides", "first": "scan-ingest" },
+  { "q": "cast shadow band on die-cut cards", "first": "scan-ingest" },
   { "q": "scan board geometry", "first": "scan-ingest" },
   { "q": "identify scanned card crop", "first": "scan-ingest" },
   { "q": "recognise scanned card", "first": "scan-ingest" },
