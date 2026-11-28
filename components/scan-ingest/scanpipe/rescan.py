@@ -41,13 +41,14 @@ def plan(review_dir: Path, run: list[dict], plugin, out_dir: Path) -> tuple[list
     ours = {m["scan"] for m in run}
     every = [m for m in manifests(review_dir).values() if m["scan"] not in ours]
     ops, changed = [], {m["scan"]: m for m in run}
-    olds_of = lambda name: [(e, it) for e in every for it in e["items"] if it["name"] == name and not it.get("replacedBy")]
-    held = {n["name"] for m in run for n in m["items"] if needs_attention(n["flags"]) and olds_of(n["name"])}
+    held = set()
     for m in run:
         stem = Path(m["scan"]).stem
         for n in m["items"]:
             staged = Path(n["file"])
             olds = [(e, it) for e in every for it in e["items"] if it["name"] == n["name"] and not it.get("replacedBy")]
+            if olds and needs_attention(n["flags"]):
+                held.add(n["name"])
             if olds and (n["name"] in held or n.get("pairOf") in held):
                 n["heldFor"] = [e["scan"] for e, _ in olds]
                 final = plugin.file_for(out_dir, f"{n['name']}.held-{stem}", staged.suffix[1:])
@@ -57,7 +58,9 @@ def plan(review_dir: Path, run: list[dict], plugin, out_dir: Path) -> tuple[list
                     it["replacedBy"] = m["scan"]
                     n.setdefault("replaces", []).append(e["scan"])
                     changed[e["scan"]] = e
-                    if Path(it["file"]) != final:
+                    if e["scan"] in ours:  # scanned earlier in this run: its crop is never moved out of staging
+                        ops = [o for o in ops if o[1] != Path(it["file"])]
+                    elif Path(it["file"]) != final:
                         ops.insert(0, (Path(it["file"]), None))
             ops.append((staged, final))
             n["file"] = str(final)
