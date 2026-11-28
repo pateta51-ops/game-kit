@@ -1,12 +1,12 @@
-"""Synthetic card faces for the identify tests: random shapes, lines and text on a pale ground (seeded)."""
+"""Synthetic card faces for the identify tests: random shapes, lines and text on a mottled ground (seeded)."""
 import cv2
 import numpy as np
 
 
 def face(seed: int, w: int = 300, h: int = 420) -> np.ndarray:
     rng = np.random.default_rng(seed)
-    img = np.full((h, w, 3), 235, np.uint8)
-    for _ in range(40):
+    img = cv2.resize(rng.integers(120, 240, (14, 10, 3)).astype(np.uint8), (w, h), interpolation=cv2.INTER_CUBIC)
+    for _ in range(60):
         c = tuple(int(v) for v in rng.integers(0, 200, 3))
         x, y = int(rng.integers(0, w)), int(rng.integers(0, h))
         k = rng.integers(0, 4)

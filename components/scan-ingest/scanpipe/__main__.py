@@ -35,17 +35,18 @@ def main(argv=None) -> int:
     rs.add_argument("--write", type=Path, help="also write the report to this file (e.g. RESCAN.md)")
     idp = sub.add_parser("identify", help="say which reference image (built card face) each crop shows")
     idp.add_argument("crops", nargs="+", type=Path, help="crop files or folders")
-    idp.add_argument("--refs", nargs="+", required=True, type=Path, help="reference image files or folders (id = file stem)")
-    idp.add_argument("--top", type=int, default=8, help="references feature-matched, the closest by hash")
-    idp.add_argument("--min-inliers", type=int, default=40)
+    idp.add_argument("--refs", nargs="+", required=True, type=Path, help="card fronts: files or folders (id = file stem)")
+    idp.add_argument("--backs", nargs="+", type=Path, help="cards' own backs, by card id")
+    idp.add_argument("--generic", nargs="+", type=Path, help="generic back designs, by design id")
+    idp.add_argument("--min-inliers", type=int, default=identify.PARAMS["min_inliers"])
     idp.add_argument("--json", type=Path, help="also write the results to this file")
     a = ap.parse_args(argv)
     if a.cmd == "identify":
-        refs = identify.Refs.load(a.refs)
+        refs = identify.Refs(a.refs, a.backs, a.generic, params={"min_inliers": a.min_inliers})
         res = {}
         for f in identify.files(a.crops):
-            r = res[f.name] = identify.identify(identify.load(f), refs, a.top, a.min_inliers)
-            print(f"{f.name}: {r['ref']} turn {r['turn']} inliers {r['inliers']} (runner-up {r['runnerUp']} "
+            r = res[f.name] = identify.identify(identify.load(f), refs)
+            print(f"{f.name}: {r['ref']} {r['face']} turn {r['turn']} inliers {r['inliers']} (runner-up {r['runnerUp']} "
                   f"{r['runnerUpInliers']}){'  AMBIGUOUS' if r['ambiguous'] else ''}")
         if a.json:
             a.json.write_text(json.dumps(res, indent=2) + "\n", encoding="utf-8")
@@ -71,8 +72,8 @@ def main(argv=None) -> int:
         return 1
     problems = 0
     manifests = []
-    refs = identify.Refs.load(plugin.identify_refs) if plugin.identify_refs else None
-    back_refs = identify.Refs.load(plugin.identify_back_refs) if refs and plugin.identify_back_refs else None
+    refs = identify.refs_for(plugin) if plugin.identify_refs else None
+    small = 0.5 * min((w * h for w, h in plugin.item_sizes_mm.values()), default=0)  # area in mm2 never matched
 
     def show(man) -> int:
         n = 0
@@ -101,19 +102,24 @@ def main(argv=None) -> int:
         if back:
             pairs.pair_manifests(manifests[-2], man, plugin, dest)
             if refs:
-                identify.annotate(manifests[-2], plugin, refs, man, back_refs)
+                identify.annotate(manifests[-2], refs, man, small)
             rescan.write(review, manifests[-2])
             rescan.write(review, man)
             if not plugin.rescans:
                 problems += show(manifests[-2]) + show(man)
         else:
             if refs and not plugin.pair_backs:
-                identify.annotate(man, plugin, refs)
+                identify.annotate(man, refs, None, small)
                 rescan.write(review, man)
             used = len(man["items"])
             names, turns = names[used:], turns[used:]
             if not (plugin.pair_backs or plugin.rescans):
                 problems += show(man)
+    if refs:
+        held = identify.dedupe(manifests)
+        for man in manifests:
+            rescan.write(review, man)
+        problems += 0 if plugin.rescans else held
     every, ops, changed = rescan.plan(review, manifests, plugin, out) if plugin.rescans else (manifests, [], [])
     pool = [(m, it) for m in every for it in m["items"] if not it.get("replacedBy") and not it.get("heldFor")]
     byname = {it["name"]: it for _, it in pool}
