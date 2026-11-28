@@ -64,6 +64,7 @@ DECON_CORNER_MM = 0.3       # ... pixel up to this far in is judged on its own c
 SHADOW_DARKER = 25.0    # thick items (shadow_mm > 0): a shadow pixel is this much darker than the backing (OpenCV L) ...
 SHADOW_NEUTRAL = 12.0   # ... and either has the backing's hue or is nearly grey (chroma under this): the cut side
 SHADOW_HUE_DEG = 60.0   # the dark cut side of a magenta-backed board reads dark red, 35-45 degrees from the magenta
+MARK_LIGHTER = 15.0     # drop_light: a mark is this much lighter than the backing (OpenCV L)
 SHADOW_TINT_DEG = 8.0   # tinted_shadow: a shadow pixel's BGR is within this angle of the backing's (a red piece: about 14)
 
 
@@ -102,7 +103,7 @@ def _hue_deg(a: np.ndarray, b: np.ndarray) -> np.ndarray:
 def key_region(full: np.ndarray, r: Region, bgm: Background, px_per_mm: float, shadow_mm: float = 0.0,
                neutral_shadow: bool = True, cast_mm: float = 0.0, cast_size_mm: Optional[tuple] = None,
                cast_size_tol_mm: float = 0.0, cast_radius_mm: Optional[float] = None,
-               tinted_shadow: bool = False) -> Optional[Keyed]:
+               tinted_shadow: bool = False, drop_light: bool = False) -> Optional[Keyed]:
     """Cut one detected item out of a coloured backing; None when no piece is found under the item's centre.
 
     ``shadow_mm`` is for thick items (board pieces about 2 mm thick): on the side away from the scanner's lamp they show
@@ -140,6 +141,19 @@ def key_region(full: np.ndarray, r: Region, bgm: Background, px_per_mm: float, s
     if not (0 <= cy < lbl.shape[0] and 0 <= cx < lbl.shape[1]) or lbl[cy, cx] == 0:
         return None
     piece = (lbl == lbl[cy, cx]).astype(np.uint8)
+    if drop_light:
+        # K794: a mark on the backing lighter than it (pale ink, a scuff) touching the piece is not the piece: a light
+        # blob reaching the piece's outer edge, away from its centre, is dropped
+        light = ((piece > 0) & (lab[..., 0] > surf[..., 0] + MARK_LIGHTER)).astype(np.uint8)
+        _n, ll = cv2.connectedComponents(light)
+        rim0 = (piece > 0) & (cv2.erode(piece, np.ones((5, 5), np.uint8)) == 0)
+        drop = np.unique(ll[rim0 & (light > 0)])
+        piece[np.isin(ll, drop[(drop > 0) & (drop != ll[cy, cx])])] = 0
+        piece = cv2.morphologyEx(piece, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+        _n, lbl = cv2.connectedComponents(piece)
+        if lbl[cy, cx] == 0:
+            return None
+        piece = (lbl == lbl[cy, cx]).astype(np.uint8)
 
     band_k = 2 * max(1, int(round(RIM_BAND_MM * px_per_mm))) + 1
     a, b = lab[..., 1] - 128.0, lab[..., 2] - 128.0
@@ -451,10 +465,10 @@ def shifted(r: Region, origin: tuple) -> Region:
     return s
 
 
-def plausible_shadow(plain: Keyed, cut: Keyed) -> bool:
+def plausible_shadow(plain: Keyed, cut: Keyed, max_share: float = REMOVED_MAX) -> bool:
     """Whether what ``cut`` removed from ``plain`` looks like a cut side and shadow: on one side, and not too much."""
     side, share = one_sided(plain, cut)
-    return side >= ONE_SIDED_MIN and share <= REMOVED_MAX
+    return side >= ONE_SIDED_MIN and share <= max_share
 
 
 def one_sided(plain: Keyed, cut: Keyed) -> tuple:
