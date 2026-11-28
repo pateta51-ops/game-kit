@@ -62,7 +62,7 @@ def test_k789_a_plain_card_still_gets_the_cast_fit(tmp_path: Path):
 
 def test_k789_a_notched_card_of_the_same_size_skips_the_fit_and_keeps_its_silhouette_flags(tmp_path: Path):
     it = scan(tmp_path, die_cut("core"), "SilGame")
-    assert it["kind"] == "card" and "cast" not in it
+    assert it["kind"] == "card" and it["cast"]["mode"] == "sides"   # K791: the fit skipped, the straight sides trimmed
     assert [s["shape"] for s in SEEN] == ["notched"]        # read notched on the shadowed plain cut
     assert it["silhouette"] == SEEN[0]
     assert it["castSkipped"] == "cast_for(card): no (silhouette notched)"
@@ -74,7 +74,7 @@ def test_k789_a_notched_card_of_the_same_size_skips_the_fit_and_keeps_its_silhou
 
 def test_k789_a_tabbed_card_skips_the_fit(tmp_path: Path):
     it = scan(tmp_path, die_cut("upgrade"), "SilGame")
-    assert it["kind"] == "card" and "cast" not in it
+    assert it["kind"] == "card" and it["cast"]["mode"] == "sides"
     assert it["silhouette"]["shape"] == "tabbed" and it["castSkipped"] == "cast_for(card): no (silhouette tabbed)"
 
 

@@ -541,3 +541,112 @@ def rectify(roi_bgra: np.ndarray, fit: CastFit, portrait_corners: list, origin: 
     dst = np.float32([[-0.5, -0.5], [W - 0.5, -0.5], [W - 0.5, H - 0.5], [-0.5, H - 0.5]])
     M = cv2.getPerspectiveTransform(src, dst)
     return cv2.warpPerspective(roi_bgra, M, (W, H), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+
+
+SIDES = {"top": -1, "right": 0, "bottom": 1, "left": 2}  # np.rot90 turn that brings the side to the right (K791)
+
+
+def dark_red(bgr: np.ndarray) -> np.ndarray:
+    """K791: the cast band's colour on magenta: r - g > 45, r - b > 15, r < 190."""
+    b, g, r = (bgr[..., i].astype(np.int16) for i in range(3))
+    return (r - g > 45) & (r - b > 15) & (r < 190)
+
+OPPOSITE = {"top": "bottom", "bottom": "top", "left": "right", "right": "left"}
+SIDES_MIN_MM = 0.25   # a side's band must be this much wider than the opposite side's (a printed rim is on both)
+
+
+def _side_lines(alpha: np.ndarray, sil: Optional[dict]) -> dict:
+    """Per side (turned to the right): rows to fit on, rows to trim (all but the tab's), outer edge per row, and the
+    straight side's line. The notch's rows (left and right sides) and the tab's rows (left and right) and columns
+    (its edge) are left out of the fit, from the silhouette's extents, with margins from the notch's depth and the tab's height."""
+    H, W = alpha.shape
+    rows_out, cols_out, cols_tab = np.zeros(H, bool), np.zeros(W, bool), np.zeros(W, bool)
+    if sil and sil.get("notch"):
+        m = 0.3 * sil["notchDepth"] * W   # the notch's walls: steeper than about 1 in 3 (the shapes read)
+        rows_out[max(0, int(sil["notchSpan"][0] * H - m)):min(H, int(np.ceil(sil["notchSpan"][1] * H + m)) + 1)] = True
+    if sil and sil.get("tab"):
+        th = sil["tabHeight"] * H
+        r = slice(0, min(H, int(np.ceil(2 * th)) + 1)) if sil["tab"] == "top" else slice(max(0, int(H - 2 * th)), H)
+        rows_out[r] = True
+        cols_tab[max(0, int(sil["tabX"][0] * W - th / 4)):min(W, int(np.ceil(sil["tabX"][1] * W + th / 4)) + 1)] = True
+    seen = alpha > 127
+    out = {}
+    for side, k in SIDES.items():
+        aa = np.rot90(seen, k)
+        L, n = aa.shape
+        # rotated row i is original y (right), H-1-y (left), x (top), W-1-x (bottom)
+        ex = {"right": rows_out, "left": rows_out[::-1], "top": cols_out, "bottom": cols_out[::-1]}[side].copy()
+        tab = np.zeros(L, bool)
+        if sil and sil.get("tab") == side:
+            tab = cols_tab if side == "top" else cols_tab[::-1]
+        ex |= tab
+        has = aa.any(axis=1)
+        o = (n - 1 - aa[:, ::-1].argmax(axis=1)).astype(np.float64)
+        y = np.arange(L, dtype=np.float64)
+        keep = has & ~ex
+        if keep.sum() < 10:
+            continue
+        a, b = 0.0, float(np.median(o[keep]))   # the corners recede: start from the median, not a fit through them
+        for _ in range(4):
+            k2 = keep & (np.abs(o - (a * y + b)) <= 2)
+            if k2.sum() < 10:
+                break
+            a, b = np.polyfit(y[k2], o[k2], 1)
+        out[side] = (k, has & ~ex, ~tab, o, a * y + b)
+    return out
+
+
+def side_bands(crop: np.ndarray, px_per_mm: float, sil: Optional[dict] = None) -> dict:
+    """K791: per straight side, (the owner's measure, outer share, run width in px). The measure: the outer 0.5 mm along
+    the side's line more than 12 % dark red and 0.5-1.5 mm in under 5 %. The run: the median, over the rows on the
+    line, of the dark red run inward from the first dark red pixel within 2 px of the line (at most 1.5 mm)."""
+    alpha = crop[:, :, 3]
+    red = dark_red(crop[:, :, :3]) & (alpha > 127)
+    n05, n15 = max(1, int(round(0.5 * px_per_mm))), max(2, int(round(1.5 * px_per_mm)))
+    res = {}
+    for side, (k, ok, _t, o, line) in _side_lines(alpha, sil).items():
+        on = ok & (np.abs(o - line) <= 2)
+        if on.sum() < 10:
+            continue
+        rr = np.rot90(red, k)
+        dist = line[on, None] - np.arange(rr.shape[1])[None, :]
+        r = rr[on]
+        outer, inner = (dist >= 0) & (dist < n05), (dist >= n05) & (dist < n15)
+        share = float(r[outer].mean())
+        ri = np.rint(line[on]).astype(int)[:, None] - np.arange(n15)[None, :]
+        run = np.take_along_axis(r, ri.clip(0, r.shape[1] - 1), axis=1) & (ri >= 0)
+        f = np.where(run[:, :3].any(axis=1), run[:, :3].argmax(axis=1), n15)
+        ln = np.array([np.argmin(np.append(run[i, f[i]:], False)) for i in range(len(f))])
+        res[side] = (bool(share > 0.12 and r[inner].mean() < 0.05), share, int(np.median(np.where(f < n15, f + ln, 0))))
+    return res
+
+
+def trim_sides(crop: np.ndarray, px_per_mm: float, sil: Optional[dict] = None,
+               size_px: Optional[tuple] = None) -> tuple[np.ndarray, dict]:
+    """K791 (cast mode "sides"): a die-cut card's cast band taken off its straight sides only. A side is trimmed when
+    its outer 0.5 mm is more than 12 % dark red, its dark red run is wider than the opposite side's by SIDES_MIN_MM or
+    more (a cast shadow falls away from the lamp, a printed rim is on every side: only the difference is shadow), and,
+    given the kind's size (``size_px``, short and long, the crop being portrait), the crop is larger than it on that
+    axis by half that difference or more. The alpha is then cleared that wide inside the side's line (no card lies
+    there); the tab's columns and the notch keep their outline as cut. Returns the crop (cut to what is left) and the
+    `cast` record of the manifest."""
+    out = crop.copy()
+    alpha = out[:, :, 3]
+    lines = _side_lines(crop[:, :, 3], sil)
+    bands = side_bands(crop, px_per_mm, sil)
+    removed = {}
+    for side, (_m, share, w) in bands.items():
+        opp = bands.get(OPPOSITE[side])
+        w -= opp[2] if opp else 0
+        if share <= 0.12 or w < max(2, SIDES_MIN_MM * px_per_mm):
+            continue
+        if size_px and crop.shape[1 if side in ("left", "right") else 0] - size_px[0 if side in ("left", "right") else 1] < w / 2:
+            continue
+        k, _ok, rows, o, line = lines[side]
+        aa = np.rot90(alpha, k)   # a view: writing it writes alpha; beyond line - w there is no card on any row
+        aa[rows[:, None] & (np.arange(aa.shape[1])[None, :] > np.rint(line)[:, None] - w)] = 0
+        removed[side] = round(w / px_per_mm, 2)
+    ys, xs = np.nonzero(alpha)
+    if ys.size:
+        out = out[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+    return out, {"mode": "sides", "removedMm": {s: removed.get(s, 0.0) for s in SIDES}}

@@ -24,7 +24,7 @@ content pack. Real scans never enter the kit; the tests draw their own sheets.
 6. Real scans never enter the kit (its tests draw their own sheets); keep the game's plug-in and tools in the game, outside `kit/`.
 7. For printed boards (`index.ts`, `ui.ts`) pass the game's scan, box list and state: `ScanBoard` draws the scan and calls `render(id, sizePx)` in each box; frames and colours stay in the game.
 8. Tesseract is optional and only for reading print; without it callers get None and one warning.
-9. A kind that comes both plain and die-cut in one size: put it in both `cast_kinds` and `silhouette_kinds` (the fit is then skipped on notched and tabbed items, unknown sizes included, `castSkipped` in the manifest), or override `cast_for`; never fit a die-cut card.
+9. A kind that comes both plain and die-cut in one size: put it in both `cast_kinds` and `silhouette_kinds` (the fit is then skipped on notched and tabbed items, unknown sizes included, `castSkipped` in the manifest), or override `cast_for`; never fit a die-cut card. Such a skipped item has its band taken off its straight sides (`cast_skip_mode = "sides"`, the default; `None` keeps the plain cut); read `cast.removedMm` in the manifest.
 10. Treat `loadGeometry` returning `null` as an unsuccessful attempt: keep fallback geometry and call again when the image is available. Concurrent calls share one attempt; only successful geometry is cached. A failed optional store read falls back to decoding, and a failed store write leaves decoded geometry usable. Change the key when the scan or its asks change.
 11. To say which card a crop shows, give the plug-in `identify_refs` (the game's built card images) or run `python -m scanpipe identify CROPS --refs REFS`; trust `identity.card` only when `held` is empty (the item is flagged otherwise; the CLI exits 1).
 12. Trace a map's zone rects with `scripts/trace_zones.py` (marker colours, names and hand rects from the game's config) and merge the JSON with board-layout's `withZones` at content build; never hand-copy rects into code. Pass `--name` so a missed or extra blob exits 1.
@@ -88,6 +88,19 @@ face's turn when an item is flipped like a page). Reading a game's printed codes
   its silhouette (flags included) and is recorded as the item's `castSkipped` (the reason); a fitted crop has its
   silhouette read again. Hook `cast_for(kind, silhouette, crop) -> bool` decides instead: called for each cast kind
   tried (every one for an item of unknown size), `silhouette` None for a kind not in `silhouette_kinds`.
+- K791, cast mode "sides" (`cast_skip_mode = "sides"`, the default): where the fit is skipped on a notched or tabbed
+  item, the dark red band it casts is taken off its straight sides only (`cast.trim_sides`). Each side is a line
+  fitted to its outer edge pixels, leaving out the notch's and the tab's rows and the tab's columns (from the
+  silhouette's extents). A side is trimmed when its outer 0.5 mm is more than 12 % dark red (r-g > 45, r-b > 15,
+  r < 190), its dark red run is at least 0.25 mm wider than the opposite side's (a cast shadow falls away from the
+  lamp; a printed dark red rim is on every side, so only the difference is taken), and the crop is larger than the
+  kind's size on that axis by half that width or more; the alpha is then cleared that wide inside the line. The owner's
+  measure (`cast.side_bands`, outer 0.5 mm over 12 % and 0.5-1.5 mm in under 5 %) is reported per side. The tab's
+  columns and the notch keep their outline as the plain cut read it (the band inside a notch and above a tab stays).
+  After a trim the silhouette is read again on the final crop (notchSpan, tabX, the turn). The manifest records
+  `cast: {mode: "sides", removedMm: {top, right, bottom, left}}` beside `castSkipped`. It is the default because it
+  changes a crop only where the band is found, and only on die-cut items that had no clean-up at all;
+  `cast_skip_mode = None` keeps the plain cut as before K791. Plain cards keep the fit, unchanged.
 
 ## Backs, descreen, re-scans and pack entries (optional, off by default)
 
