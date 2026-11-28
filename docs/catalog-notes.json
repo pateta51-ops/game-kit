@@ -1983,7 +1983,7 @@
   },
   "scan-ingest": {
     "mechanics": "none: content tooling (art, scans, card data)",
-    "use": "Turning flatbed scans into one cropped upright image per item; a printed board scan with live state drawn into its boxes, die-cut pieces at true size, playmat box detection, tone profile; which built card image a crop shows, and whether a paired back belongs to its front.",
+    "use": "Turning flatbed scans into one cropped upright image per item; a printed board scan with live state drawn into its boxes, die-cut pieces at true size, playmat box detection, tone profile; which built card image a crop shows, and whether a paired back belongs to its front; zone rects traced from a scan into board-layout ZoneLayout JSON.",
     "not": "Scanning crew boards. Offline scan tools prepare assets. ScanBoard and Piece are available in-game.",
     "title": "Turn scans into cropped pictures",
     "tags": [
@@ -2001,7 +2001,9 @@
       "notched card scan",
       "die-cut card scan",
       "identify",
-      "recognise"
+      "recognise",
+      "zone rects",
+      "zone rectangles"
     ],
     "visible": false,
     "release": 1,

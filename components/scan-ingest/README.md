@@ -27,6 +27,7 @@ content pack. Real scans never enter the kit; the tests draw their own sheets.
 9. A kind that comes both plain and die-cut in one size: put it in both `cast_kinds` and `silhouette_kinds` (the fit is then skipped on notched and tabbed items, unknown sizes included, `castSkipped` in the manifest), or override `cast_for`; never fit a die-cut card.
 10. Treat `loadGeometry` returning `null` as an unsuccessful attempt: keep fallback geometry and call again when the image is available. Concurrent calls share one attempt; only successful geometry is cached. A failed optional store read falls back to decoding, and a failed store write leaves decoded geometry usable. Change the key when the scan or its asks change.
 11. To say which card a crop shows, give the plug-in `identify_refs` (the game's built card images) or run `python -m scanpipe identify CROPS --refs REFS`; trust `identity.card` only when `held` is empty (the item is flagged otherwise; the CLI exits 1).
+12. Trace a map's zone rects with `scripts/trace_zones.py` (marker colours, names and hand rects from the game's config) and merge the JSON with board-layout's `withZones` at content build; never hand-copy rects into code. Pass `--name` so a missed or extra blob exits 1.
 
 **Common mistakes:**
 - A `--plugin` class that is not a `Plugin` subclass: refused.
@@ -208,6 +209,34 @@ are here (sources in component.json).
 - `scanpipe/tone.py`: `profile(img)` (black point, median, white point per channel), `fit(flats, references, name)`
   (a non-decreasing per-channel curve from items scanned both ways), `save`, `apply_curve`, `delta_e`.
 - Outline tracing: `silhouette.outline_of(mask)` (above).
+
+## Zone rects of a map or board scan (Python, K427)
+
+`scanpipe/zones.py`, run as `scripts/trace_zones.py`: the scan's zones as board-layout's `ZoneLayout` JSON,
+`{ "w", "h", "zones": { id: { "r": [x, y, w, h] } } }` (top-left corner, width, height). No game names, colours or
+paths: a game passes them as flags or in a `--config` JSON (keys `colours`, `names`, `zones`, `tol`, `min_area`,
+`prefix`, `size`, `close`; flags win).
+
+    python -I kit/scan-ingest/scripts/trace_zones.py SCAN --out OUT.json [--config cfg.json]
+        [--colour "#dc1e1e"]... [--name id]... [--tol 40] [--min-area 0.0005] [--prefix zone] [--size 1 1] [--close 5] [--overlay O.png]
+
+- Marker blobs: each pixel within `tol` (per channel) of a `colours` entry; blobs under `min_area` of the scan
+  dropped; bounding rects in reading order (rows top to bottom, then left to right), named by `names` in that order
+  (a different count exits 1 and writes nothing), else `prefix1..N`.
+- Each pixel goes to its nearest listed colour only; gaps up to `close` px inside a marker (a printed label, a JPEG
+  fringe) are closed first (default 5, 0 off). Rows group by the running mean of their centres, so a skewed scan
+  keeps its order.
+- Hand rects: `zones` in the config, `[x, y, w, h]` or `{ "c": [cx, cy], "s": [w, h] }` (`[w]` for a square; corner
+  `cx - w // 2`) in scan px, win over a found blob of the same id; with no `colours`, `names` is not checked. A rect
+  off the scan exits 1; a bad config, colour or hand rect prints one line and exits 2, as does a scan it cannot read.
+- `size W H` rescales to the game's units (`1 1`: fractions of the scan, 4 decimals); default scan px. `--overlay`
+  draws the rects and ids on the scan for a look.
+- At content build the game merges the file with board-layout's `withZones`:
+
+      const t = JSON.parse(text) as ZoneLayout;
+      const L = withZones(base, Object.fromEntries(Object.entries(t.zones).map(([k, z]) => [k, z.r])));
+
+In Python: `from scanpipe import zones` (`find`, `trace`, `layout`, `overlay`, `main`).
 
 ## Tests
 

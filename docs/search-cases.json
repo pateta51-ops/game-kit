@@ -812,5 +812,8 @@
   { "q": "die-cut card scan cast shadow fit", "first": "scan-ingest" },
   { "q": "cast shadow fit for scanned cards", "first": "scan-ingest" },
   { "q": "card names in rules code gate", "first": "repo-gate" },
-  { "q": "tests cite rule ids", "first": "traceability" }
+  { "q": "tests cite rule ids", "first": "traceability" },
+  {"q": "trace zone rects from a scan", "first": "scan-ingest"},
+  {"q": "scan zone rects layout json", "first": "scan-ingest"},
+  {"q": "board scan zone rectangles", "first": "scan-ingest"}
 ]

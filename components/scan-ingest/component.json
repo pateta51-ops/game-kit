@@ -35,6 +35,13 @@
         "paths": [
           "scripts/measure-mat-spots.py in scanpipe/playmats.py (ink by ground, enclosed boxes, rows, zigzag track fit; mat names and counts left in the game)"
         ]
+      },
+      {
+        "game": "astra-imperium",
+        "commit": "main of 28 Nov 2026",
+        "paths": [
+          "scripts/content/trace-maps.py as scanpipe/zones.py and scripts/trace_zones.py (hand rects and centre squares, normalised x,y,w,h out, overlay; marker-colour blob tracing, reading order, name count check and board-layout ZoneLayout output added; map ids, rects, content/maps.json and paths left in the game)"
+        ]
       }
     ]
   },
