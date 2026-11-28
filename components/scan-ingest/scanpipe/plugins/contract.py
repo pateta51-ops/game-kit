@@ -78,6 +78,14 @@ def problems(p: Plugin) -> list[str]:
     for attr in ("pair_backs", "rescans"):
         if not isinstance(getattr(p, attr), bool):
             out.append(f"{attr}: True or False")
+    for attr in ("identify_refs", "identify_back_refs"):
+        v = getattr(p, attr)
+        if v is not None and not isinstance(v, (str, Path, list, tuple, dict)):
+            out.append(f"{attr}: None, a folder, a list of image files, or {{id: file}}")
+    if not isinstance(p.back_map, dict) or any(not isinstance(v, (str, list, tuple)) for v in p.back_map.values()):
+        out.append("back_map: front id -> back id or a list of back ids")
+    if not isinstance(p.identify_min_inliers, int) or p.identify_min_inliers < 4:
+        out.append("identify_min_inliers: a whole number of 4 or more")
     if not isinstance(p.back_suffix, str) or not p.back_suffix or \
             p.file_for(Path("out"), "a" + p.back_suffix, "png") == p.file_for(Path("out"), "a", "png"):
         out.append("back_suffix: a non-empty text that gives a back its own file")

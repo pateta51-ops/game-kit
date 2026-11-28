@@ -25,6 +25,7 @@ content pack. Real scans never enter the kit; the tests draw their own sheets.
 7. For printed boards (`index.ts`, `ui.ts`) pass the game's scan, box list and state: `ScanBoard` draws the scan and calls `render(id, sizePx)` in each box; frames and colours stay in the game.
 8. Tesseract is optional and only for reading print; without it callers get None and one warning.
 9. Treat `loadGeometry` returning `null` as an unsuccessful attempt: keep fallback geometry and call again when the image is available. Concurrent calls share one attempt; only successful geometry is cached. A failed optional store read falls back to decoding, and a failed store write leaves decoded geometry usable. Change the key when the scan or its asks change.
+10. To say which card a crop shows, give the plug-in `identify_refs` (the game's built card images) or run `python -m scanpipe identify CROPS --refs REFS`; trust `identity.ref` only when `ambiguous` is false (exit status 1 otherwise).
 
 **Common mistakes:**
 - A `--plugin` class that is not a `Plugin` subclass: refused.
@@ -100,6 +101,26 @@ face's turn when an item is flipped like a page). Reading a game's printed codes
 - Hooks `entry(item, back, manifest) -> dict | None` and `write_entries(project, out_dir, entries) -> problems`: the
   game turns each crop (with its paired back) into its content-pack entry, and writes them after the run. With
   `rescans` every item no re-scan replaced is passed, otherwise the run's items.
+
+## Which card a crop shows (optional, off by default, K784)
+
+`scanpipe/identify.py` matches a crop against reference images (the game's built card faces): a perceptual hash at
+the 4 quarter turns keeps the `top` closest references (default 8), then SIFT matches and a RANSAC homography count
+the inliers of each; the most inliers wins.
+
+- `identify(crop, refs, top=8, min_inliers=40, margin=1.5)` returns `ref`, `turn` (the clockwise turn of the crop
+  that reads like the reference), `inliers`, `hash` (bits apart), `runnerUp`, `runnerUpInliers`, `confidence`
+  (1 - runner-up / best) and `ambiguous` (fewer than `min_inliers`, or the best not `margin` times the runner-up;
+  unrelated images give about 15 to 25 inliers). `refs` is a `Refs`, `{id: image or file}`, a folder or a list of
+  files and folders (id = the file's stem); build `Refs.load(...)` once for many crops.
+- `check_back(front_id, back_crop, back_refs, back_map=None)`: the back identified among `back_refs`, with
+  `expected` (`back_map[front_id]`, an id or a list; no map: the back reference with the front's id) and `matches`
+  (True, False, or None when the back is ambiguous or nothing is expected).
+- Plug-in: `identify_refs` (None: off), `identify_back_refs` (default `identify_refs`), `back_map`,
+  `identify_min_inliers` (40). Each item then records `identity` (a back's adds `expected` and `matches`); flags
+  `IDENTITY_AMBIGUOUS` (on the item) and, with `pair_backs`, `BACK_IDENTITY_MISMATCH` (on the front).
+- `python -m scanpipe identify CROPS... --refs REFS... [--top 8] [--min-inliers 40] [--json OUT]`: one line per crop;
+  exit status 1 when one is ambiguous.
 
 ## Two items scanned touching
 

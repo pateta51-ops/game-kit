@@ -57,6 +57,14 @@ class Plugin:
     back_suffix = "-b"
     # Optional: a later scan of an item with the same name supersedes the earlier crop (scanpipe/rescan.py).
     rescans = False
+    # Optional (scanpipe/identify.py): the game's built card images (a folder, a list of files, or {id: file}); each
+    # item then records ``identity`` (which one it shows) and IDENTITY_AMBIGUOUS when unsure. With pair_backs, a back
+    # is identified among identify_back_refs (default identify_refs) and must be back_map[front id] (an id or a list of
+    # ids; empty: the back reference with the front's id), else the front gets BACK_IDENTITY_MISMATCH.
+    identify_refs = None
+    identify_back_refs = None
+    back_map: dict = {}
+    identify_min_inliers = 40  # random matches give about 15 to 25 inliers
     out_dpi: Optional[float] = 300.0  # crops are downscaled to this resolution (None keeps the scan's)
     jpeg_quality = 92
 

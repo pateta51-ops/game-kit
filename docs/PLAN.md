@@ -461,6 +461,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K780 | Use a monotonic clock for check elapsed durations and fail receipt finalization when its observed UTC completion precedes its start. | S |  | done |
 | K782 | Preview an exact kit release upgrade from a verified lock, with changed installed component trees, dependency and package changes, static references, migration notes and available checks. | S |  | done |
 | K783 | Claim lines: the six-word reason is required when nearest is none, and two phrasings made of the same words fail. | S |  | done |
+| K784 | `scan-ingest`: say which card a crop shows by matching it against the game's built card images (perceptual hash at 4 turns, then a feature-match inlier count), and use it to check that a paired back belongs to its front. | M |  | done |
 
 ## Candidates
 
