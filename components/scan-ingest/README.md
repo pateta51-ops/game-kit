@@ -111,6 +111,7 @@ face's turn when an item is flipped like a page). Reading a game's printed codes
   item gets `replacedBy`, the new one `replaces` (`scanpipe/rescan.py`). A re-scan with a flag that asks for a look
   replaces nothing: it is written as `<name>.held-<scan>` with `heldFor`, and the earlier crop stays. Crops are written
   to `<out>/.staging` and moved only after `write_entries`, so an error there leaves the earlier crops in place.
+  One run may scan a name twice: the later scan replaces (or is held for) the earlier one the same way.
   Without `rescans`, a back crop never overwrites one of another run (flag `BACK_NAME_TAKEN`, it keeps its own name).
   `python -m scanpipe rescan REVIEW_DIR
   [--write RESCAN.md]` lists the items still worth scanning again (off the glass, or a flag that asks for a look),

@@ -105,10 +105,10 @@ def main(argv=None) -> int:
         shutil.rmtree(dest, ignore_errors=True)
     for k, scan in enumerate(a.scans):
         back = plugin.pair_backs and k % 2 == 1
-        man = process_scan(scan, plugin, dest, review, None if back else names, a.dpi, None if back else turns, a.tone)
+        man = process_scan(scan, plugin, dest / str(k) if plugin.rescans else dest, review, None if back else names, a.dpi, None if back else turns, a.tone)
         manifests.append(man)
         if back:
-            pairs.pair_manifests(manifests[-2], man, plugin, dest)
+            pairs.pair_manifests(manifests[-2], man, plugin, dest / str(k) if plugin.rescans else dest)
             if refs:
                 identify.annotate(manifests[-2], refs, man, small)
             rescan.write(review, manifests[-2])
