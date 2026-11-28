@@ -101,7 +101,7 @@ describe('K698 finish checks claim lines in the role documents', () => {
     expect(c.text).toContain('kit.claimDocs: must be a list of glob strings');
   });
   it('K698 a claim naming a kit row that is done fails: "the kit row is done: pull it"; an open row passes', () => {
-    const tail = ' | search: lit card; shiny tile | nearest: none | why: x';
+    const tail = ' | search: lit card; shiny tile | nearest: none | why: no part keeps this card lit';
     const r = run(game(doc('Kit gap K500: lit tile' + tail)));
     expect(r.rc).toBe(1);
     expect(r.text).toContain('the kit row is done: pull it (K500)');
@@ -193,7 +193,7 @@ describe('K698 claims <file>: ordinary text passes, only changed lines, exit cod
     expect(m.text).toContain('cannot read');
     put(d, 'empty.md', '');
     expect(cmd([path.join(d, 'empty.md'), '--repo', path.join(d, 'nowhere')]).rc).toBe(0);
-    put(d, 'c.md', 'A kit gap | search: playable highlight; lit card\nThe kit has no log.\n');
+    put(d, 'c.md', 'A kit gap | search: playable highlight; lit card | nearest: none | why: no part keeps this card lit\nThe kit has no log.\n');
     const r = cmd([path.join(d, 'c.md')]);
     expect(r.rc).toBe(1);
     expect(r.text).toContain('c.md:2: The kit has no log.');
@@ -223,6 +223,19 @@ describe('K698 claims <file>: ordinary text passes, only changed lines, exit cod
     expect(ms).toBeLessThan(15000);
   });
 });
+describe('K783 claim lines with nothing found', () => {
+  const none = () => 'not in the kit by that name';
+  const run = (tail: string) => claims([{ file: 'a.md', n: 1, text: 'The kit has no log | ' + tail }], none);
+  it('K783 a short reason fails when nearest is none', () => {
+    expect(run('search: dice log; roll record | nearest: none | why: because').join('\n')).toContain('why: needs a reason of six words or more');
+  });
+  it('K783 the same phrasing twice fails', () => {
+    expect(run('search: dice log; log dice | nearest: none | why: no part keeps a record of rolls').join('\n')).toContain('the two phrasings are the same words');
+  });
+  it('K783 two phrasings and a full reason pass', () => {
+    expect(run('search: dice log; roll record | nearest: none | why: no part keeps a record of rolls')).toEqual([]);
+  });
+});
 describe('K698 claims cache', () => {
   it('K698 each distinct phrasing runs once per command', () => {
     const calls: string[] = [];
@@ -247,7 +260,7 @@ describe('K698 the checker\'s own searches write no miss log', () => {
   it('K698 claims passes KIT_NO_MISS_LOG=1 to every search it spawns', () => {
     const d = fs.mkdtempSync(path.join(root, 'env-'));
     put(d, 'kit/kit.mjs', "console.log(process.env.KIT_NO_MISS_LOG === '1' ? 'count: x\\nnot in the kit by that name' : 'glow: x highlight')\n");
-    put(d, 'a.md', 'A kit gap | search: playable highlight; lit highlight\n');
+    put(d, 'a.md', 'A kit gap | search: playable highlight; lit highlight | nearest: none | why: no part keeps this card lit\n');
     const out: string[] = [];
     expect(claimsCmd([path.join(d, 'a.md'), '--repo', d], { out: (l) => void out.push(l), err: (l) => void out.push(l) }, '')).toBe(0);
     expect(out.join('\n')).toBe('claims ok: a.md');

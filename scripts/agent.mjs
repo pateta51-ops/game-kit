@@ -287,12 +287,15 @@ export function claims(lines, search, dirs = []) {
     for (const id of new Set(text.match(/\bK\d+\b/g) ?? [])) if (doneRow(dirs, id)) bad.push(`${at}\n  the kit row is done: pull it (${id})`)
     if (ph.length < 2) { bad.push(`${at}\n  a claim needs search: <words>; <other words> (two phrasings run with kit/kit.mjs search and effects)`); continue }
     const near = (get('nearest').replace(/`/g, '').match(/[\w./-]+/g) ?? []).filter((t) => t !== 'none'), why = get('why').split(/\s+/).filter(Boolean).length
+    const key = (p) => [...new Set(p.toLowerCase().split(/\W+/).filter(Boolean))].sort().join(' '), b0 = bad.length
+    if (new Set(ph.map(key)).size < ph.length) bad.push(`${at}\n  the two phrasings are the same words: search again in other words`)
     if (search) for (const p of ph) for (const cmd of ['search', 'effects']) {
       const ps = claimParts(out(p, cmd), p)
       if (!ps.length) continue
       const hit = ps.some((q) => near.some((t) => t === q || q.startsWith(t + '/') || t.startsWith(q + '/')))
       if (!hit || why < 6) bad.push(`${at}\n  check: search finds ${ps[0]} (${cmd} "${p}"); use it, or write nearest: ${ps[0]} | why: <reason of six words or more>`)
     }
+    if (why < 6 && bad.length === b0) bad.push(`${at}\n  why: needs a reason of six words or more`)
   }
   return bad
 }
