@@ -816,7 +816,7 @@
   {"q": "trace zone rects from a scan", "first": "scan-ingest"},
   {"q": "scan zone rects layout json", "first": "scan-ingest"},
   {"q": "board scan zone rectangles", "first": "scan-ingest"},
-  {"q": "rescan replaces earlier crop", "first": "scan-ingest"},
-  {"q": "scan a card again under its name", "first": "scan-ingest"},
+  {"q": "rescan same name", "first": "scan-ingest"},
+  {"q": "rescan a card under the same name", "first": "scan-ingest"},
   {"q": "scan cards into cropped pictures", "first": "scan-ingest"}
 ]
