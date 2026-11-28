@@ -422,6 +422,33 @@ describe('plancheck --batch read-first ranges (K515)', () => {
   });
 });
 
+describe('plancheck --batch parent lead text (K788)', () => {
+  const run = (read: string): { code: number | null; out: string } => {
+    const f = join(tmp('pc-lead-'), 'PLAN.md');
+    writeFileSync(f, `# Plan\n\n## Batch S1\n\n**Read first:** ${read}\n\nBody.\n\n## 7. Effects\n\nLead table.\n\n### 7.1 One\n\na\n\n### 7.2 Two\n\nb\n\n## 8. Empty\n\n### 8.1 Sub\n\nc\n\n## 9. Deep\n\nNine.\n\n### 9.1 Mid\n\nMid.\n\n#### 9.1.1 Leaf\n\nd\n`);
+    const py = candidates(process.env, process.platform)[0] ?? ['python'];
+    const o = spawnSync(py[0] ?? 'python', [...py.slice(1), '-X', 'utf8', fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, '--batch', 'S1'], { encoding: 'utf-8' });
+    return { code: o.status, out: o.stdout.slice(o.stdout.indexOf('"Read first" sections')).replace(/\r/g, '') };
+  };
+  const ranges = (o: string): string[] => o.split('\n').slice(1).filter(Boolean);
+  it('a listed subsection adds its unlisted parent lead text, once, before the subsections', () => {
+    const o = run('§7.1, §7.2');
+    expect(o.code).toBe(0);
+    expect(ranges(o.out)).toEqual(['  §7 (lead text): lines 9-11  7. Effects', '  §7.1: lines 13-16  7.1 One', '  §7.2: lines 17-20  7.2 Two']);
+    expect(ranges(run('§7.1').out)).toEqual(['  §7 (lead text): lines 9-11  7. Effects', '  §7.1: lines 13-16  7.1 One']);
+  });
+  it('a listed parent prints as before; a parent with no lead text adds nothing', () => {
+    const o = run('§7, §7.1, §8.1');
+    expect(o.code).toBe(0);
+    expect(ranges(o.out)).toEqual(['  §7: lines 9-20  7. Effects', '  §7.1: lines 13-16  7.1 One', '  §8.1: lines 23-26  8.1 Sub']);
+  });
+  it('parents at every level', () => {
+    const o = run('§9.1.1');
+    expect(o.code).toBe(0);
+    expect(ranges(o.out)).toEqual(['  §9 (lead text): lines 27-29  9. Deep', '  §9.1 (lead text): lines 31-33  9.1 Mid', '  §9.1.1: lines 35-38  9.1.1 Leaf']);
+  });
+});
+
 describe('plancheck kit checks (K525)', () => {
   const git = (cwd: string, ...a: string[]): void => void spawnSync('git', ['-C', cwd, ...a]);
   const kit = tmp('kit525-');

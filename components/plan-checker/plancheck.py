@@ -813,7 +813,18 @@ def extract(path: Path, lines: list[str], heads: list[tuple[int, int, str]]) -> 
         print(f"BRIEF §{r}: section {r} of docs/experience/BRIEF.md")
     if reads:
         print(f'"Read first" sections in {path} (Read with these line ranges, or --section N.N):')
+        led = set(reads)
         for r in dict.fromkeys(reads):
+            parts = r.split(".")
+            for p in (".".join(parts[:n]) for n in range(1, len(parts))):  # K788: an unlisted parent's lead text
+                k = None if p in led else numbered(heads, p)
+                led.add(p)
+                if k is not None and k + 1 < len(heads) and heads[k + 1][1] > heads[k][1]:
+                    a, b = heads[k][0], heads[k + 1][0]
+                    while b > a + 1 and not lines[b - 1].strip():
+                        b -= 1
+                    if b > a + 1:
+                        print(f"  §{p} (lead text): lines {a + 1}-{b}  {heads[k][2]}")
             k = numbered(heads, r)
             if k is None:
                 print(f"  §{r}: not found")
