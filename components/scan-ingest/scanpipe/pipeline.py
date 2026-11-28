@@ -114,9 +114,9 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
                     flags.extend(f for f in k.cast["flags"] if f not in flags)
                     sil, cast_skip = None, None
                     break
-            names = silhouette.spec_for(plugin.silhouette_spec)["names"]
+            shape_names = silhouette.spec_for(plugin.silhouette_spec)["names"]
             if cast_skip and plugin.cast_skip_mode == "sides" and sil and crop.ndim == 3 and crop.shape[2] == 4 \
-                    and sil["shape"] in {names.get(s, s) for s in ("notched", "tabbed")}:
+                    and sil["shape"] in {shape_names.get(s, s) for s in ("notched", "tabbed")}:
                 size = plugin.item_sizes_mm.get(kind) if kind else None
                 crop, sides_cast = key.cast.trim_sides(crop, px_per_mm, sil, (size[0] * px_per_mm, size[1] * px_per_mm) if size else None)
                 if any(sides_cast["removedMm"].values()):

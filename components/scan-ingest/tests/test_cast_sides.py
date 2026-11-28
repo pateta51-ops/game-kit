@@ -58,6 +58,7 @@ def run(tmp_path: Path, face: np.ndarray, plugin: str, sides: tuple) -> tuple[di
         main(["scan", "--plugin", f"tests.test_cast_sides:{plugin}", "--out", str(tmp_path / "out"),
               str(save(sheet_of(face, sides), tmp_path / "d.tif")), "--name", "card", "--turn", "0", "--tone", "none"])
     (it,) = json.loads((tmp_path / "scan-review" / "d.json").read_text(encoding="utf-8"))["items"]
+    assert Path(it["file"]).stem == "card", it["file"]   # --name survives the silhouette spec
     return it, cv2.imread(it["file"], cv2.IMREAD_UNCHANGED)
 
 
