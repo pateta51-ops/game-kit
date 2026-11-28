@@ -14,11 +14,18 @@ const put = (f: string, s: string) => {
   fs.mkdirSync(path.dirname(f), { recursive: true });
   fs.writeFileSync(f, s);
 };
-const check = (pulled: string[], files: Record<string, unknown>) => {
+const check = (pulled: string[], files: Record<string, unknown>, branch?: Record<string, unknown>) => {
   const g = path.join(tmp, 'game' + String(++n));
   fs.mkdirSync(g);
   expect(spawnSync('node', [path.join(src, 'kit.mjs'), 'pull', src, 'b1', ...pulled], { cwd: g, encoding: 'utf8' }).status).toBe(0);
   for (const [f, s] of Object.entries(files)) put(path.join(g, f), typeof s === 'string' ? s : JSON.stringify(s));
+  if (branch) {
+    git(g, 'init', '-q', '-b', 'main');
+    git(g, 'add', '-A');
+    git(g, 'commit', '-qm', 'main');
+    git(g, 'switch', '-qc', 'work');
+    for (const [f, s] of Object.entries(branch)) put(path.join(g, f), typeof s === 'string' ? s : JSON.stringify(s));
+  }
   return spawnSync('node', [path.join(g, 'kit/kit.mjs'), 'check'], { cwd: g, encoding: 'utf8' });
 };
 const RULES2 = { kit: { rules: 2 } };
@@ -102,6 +109,62 @@ describe('K786: kit check fails a guard whose game setting is unset', () => {
     const bare = check(['traceability'], { 'package.json': { ...RULES2, scripts: { check: 'npm run trace', trace: 'node kit/traceability/check-traceability.ts' } } });
     expect(bare.stderr).toBe('');
     expect(bare.status).toBe(0);
+  });
+
+  it('K786: card-language imported only in an engine test passes with rules 2, and fails with engineTests: true', () => {
+    const files = { 'src/engine/rules.test.ts': ENGINE['src/engine/rules.ts'], 'src/engine/__tests__/helper.ts': ENGINE['src/engine/rules.ts'], 'package.json': RULES2 };
+    const ok = check(['engine-core'], { ...files, 'repo-gate.config.json': {} });
+    expect(ok.stderr).toBe('');
+    expect(ok.status).toBe(0);
+    const tests = check(['engine-core'], { ...files, 'repo-gate.config.json': { engineTests: true } });
+    expect(tests.status).toBe(1);
+    expect(tests.stderr).toContain('imports kit/card-language: set "cardIdLiteral"');
+  });
+
+  it('K786: a repo-gate.config.json that does not parse is named as unreadable: fails with rules 2, warns without the marker', () => {
+    const bad = check(['engine-core'], { ...ENGINE, 'package.json': RULES2, 'repo-gate.config.json': '{ "engineFolders": [' });
+    expect(bad.status).toBe(1);
+    expect(bad.stderr).toMatch(/^repo-gate\.config\.json could not be read \(.+\): fix it/m);
+    expect(bad.stderr).not.toContain('cardIdLiteral" (');
+    const warn = check(['engine-core'], { ...ENGINE, 'package.json': {}, 'repo-gate.config.json': 'nope' });
+    expect(warn.status).toBe(0);
+    expect(warn.stderr).toMatch(/^warning: repo-gate\.config\.json could not be read \(.+\): fix it/m);
+    expect(warn.stderr.trim().split('\n')).toHaveLength(1);
+  });
+
+  it('K786: backslashes in engineFolders and in a script command read as forward slashes', () => {
+    const folder = check(['engine-core'], { 'src/rules/cards.ts': ENGINE['src/engine/rules.ts'], 'package.json': RULES2, 'repo-gate.config.json': { engineFolders: ['.\\src\\rules\\'] } });
+    expect(folder.status).toBe(1);
+    expect(folder.stderr).toContain('src/rules/cards.ts imports kit/card-language');
+    const script = check(['traceability'], { 'package.json': { ...RULES2, scripts: { trace: 'node kit\\traceability\\check-traceability.ts' } } });
+    expect(script.stderr).toBe('');
+    expect(script.status).toBe(0);
+    const file = check(['traceability'], { 'tools/trace.mjs': "import '../kit/traceability/check-traceability.ts'\n", 'package.json': { ...RULES2, scripts: { trace: 'node tools\\trace.mjs' } } });
+    expect(file.stderr).toBe('');
+    expect(file.status).toBe(0);
+  });
+
+  it('K786: kit.rules lowered on a branch fails naming the old value; raised, equal or outside git is unchanged', () => {
+    const lowered = check(['traceability'], { 'package.json': RULES2 }, { 'package.json': {} });
+    expect(lowered.status).toBe(1);
+    expect(lowered.stderr).toContain('kit.rules lowered from 2: restore it in package.json');
+    expect(lowered.stderr).toContain('kit/traceability is pulled');
+    const clean = check(['engine-core'], { 'package.json': RULES2 }, { 'package.json': { kit: { rules: 1 } } });
+    expect(clean.status).toBe(1);
+    expect(clean.stderr).toContain('kit.rules lowered from 2: restore it in package.json');
+    const raised = check(['traceability'], { 'package.json': {} }, { 'package.json': RULES2 });
+    expect(raised.status).toBe(1);
+    expect(raised.stderr).not.toContain('lowered');
+    const equal = check(['engine-core'], { 'package.json': RULES2 }, { 'src/a.ts': 'export const a = 1;\n' });
+    expect(equal.stderr).toBe('');
+    expect(equal.status).toBe(0);
+    const never = check(['traceability'], { 'package.json': {} }, { 'src/a.ts': 'export const a = 1;\n' });
+    expect(never.status).toBe(0);
+    expect(never.stderr).toContain('warning: kit/traceability is pulled');
+    expect(never.stderr).not.toContain('lowered');
+    const noGit = check(['traceability'], { 'package.json': {} });
+    expect(noGit.status).toBe(0);
+    expect(noGit.stderr).not.toContain('lowered');
   });
 
   it('K786: a game with none of the three parts in use is unchanged, with or without the marker', () => {
