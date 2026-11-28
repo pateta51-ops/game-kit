@@ -70,13 +70,14 @@ class Plugin:
 
     def cast_for(self, kind: str, silhouette: Optional[dict], crop: np.ndarray) -> bool:
         """Whether a cast_kinds item gets the cast-shadow fit, given its silhouette (read on the plain cut when the kind
-        is in silhouette_kinds, else None) and that cut (BGRA). Default: yes, unless the silhouette is not plain or
-        round (the fitted rounded rectangle would fill a notch or cut a tab)."""
+        is in silhouette_kinds, else None) and that cut (BGRA). Default: yes, unless the silhouette is notched or tabbed
+        (in silhouette_spec's names): the fitted rounded rectangle would fill the notch with backing. Irregular, unknown
+        and unread shapes keep the fit."""
         if silhouette is None:
             return True
         from ..silhouette import spec_for
         names = spec_for(self.silhouette_spec)["names"]
-        return silhouette["shape"] in {names.get(s, s) for s in ("plain", "round")}
+        return silhouette["shape"] not in {names.get(s, s) for s in ("notched", "tabbed")}
 
     def orient(self, crop: np.ndarray, kind: Optional[str]) -> Orientation:
         return Orientation(0, False, "no orientation rule")
