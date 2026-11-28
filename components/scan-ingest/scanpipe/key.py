@@ -64,6 +64,10 @@ DECON_CORNER_MM = 0.3       # ... pixel up to this far in is judged on its own c
 SHADOW_DARKER = 25.0    # thick items (shadow_mm > 0): a shadow pixel is this much darker than the backing (OpenCV L) ...
 SHADOW_NEUTRAL = 12.0   # ... and either has the backing's hue or is nearly grey (chroma under this): the cut side
 SHADOW_HUE_DEG = 60.0   # the dark cut side of a magenta-backed board reads dark red, 35-45 degrees from the magenta
+MARK_LIGHTER = 15.0     # drop_light: a mark is this much lighter than the backing (OpenCV L) ...
+MARK_MAX_SHARE = 0.25   # ... and smaller than this share of the piece it touches
+REMOVED_EXTRA_MAX = 0.2   # plausible_shadow: at most this much on top of REMOVED_MAX for a wide shadow (pipeline)
+TINTED_REMOVED = 0.5    # ... and only when this share of what is removed is the backing darkened
 SHADOW_TINT_DEG = 8.0   # tinted_shadow: a shadow pixel's BGR is within this angle of the backing's (a red piece: about 14)
 
 
@@ -102,7 +106,7 @@ def _hue_deg(a: np.ndarray, b: np.ndarray) -> np.ndarray:
 def key_region(full: np.ndarray, r: Region, bgm: Background, px_per_mm: float, shadow_mm: float = 0.0,
                neutral_shadow: bool = True, cast_mm: float = 0.0, cast_size_mm: Optional[tuple] = None,
                cast_size_tol_mm: float = 0.0, cast_radius_mm: Optional[float] = None,
-               tinted_shadow: bool = False) -> Optional[Keyed]:
+               tinted_shadow: bool = False, drop_light: bool = False) -> Optional[Keyed]:
     """Cut one detected item out of a coloured backing; None when no piece is found under the item's centre.
 
     ``shadow_mm`` is for thick items (board pieces about 2 mm thick): on the side away from the scanner's lamp they show
@@ -140,6 +144,23 @@ def key_region(full: np.ndarray, r: Region, bgm: Background, px_per_mm: float, s
     if not (0 <= cy < lbl.shape[0] and 0 <= cx < lbl.shape[1]) or lbl[cy, cx] == 0:
         return None
     piece = (lbl == lbl[cy, cx]).astype(np.uint8)
+    if drop_light:
+        # K794: a mark on the backing lighter than it (pale ink, a scuff) touching the piece is not the piece: a light
+        # blob reaching the piece's outer edge, away from its centre and small beside it (MARK_MAX_SHARE; a light piece
+        # with a dark centre is its own light body), is dropped
+        light = ((piece > 0) & (lab[..., 0] > surf[..., 0] + MARK_LIGHTER)).astype(np.uint8)
+        _n, ll, lst, _ = cv2.connectedComponentsWithStats(light)
+        rim0 = (piece > 0) & (cv2.erode(piece, np.ones((5, 5), np.uint8)) == 0)
+        drop = np.unique(ll[rim0 & (light > 0)])
+        drop = [j for j in drop if j > 0 and j != ll[cy, cx] and lst[j, cv2.CC_STAT_AREA] < MARK_MAX_SHARE * piece.sum()]
+        if not drop:
+            return None
+        piece[np.isin(ll, drop)] = 0
+        piece = cv2.morphologyEx(piece, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+        _n, lbl = cv2.connectedComponents(piece)
+        if lbl[cy, cx] == 0:
+            return None
+        piece = (lbl == lbl[cy, cx]).astype(np.uint8)
 
     band_k = 2 * max(1, int(round(RIM_BAND_MM * px_per_mm))) + 1
     a, b = lab[..., 1] - 128.0, lab[..., 2] - 128.0
@@ -451,15 +472,13 @@ def shifted(r: Region, origin: tuple) -> Region:
     return s
 
 
-def plausible_shadow(plain: Keyed, cut: Keyed) -> bool:
+def plausible_shadow(plain: Keyed, cut: Keyed, max_share: float = REMOVED_MAX) -> bool:
     """Whether what ``cut`` removed from ``plain`` looks like a cut side and shadow: on one side, and not too much."""
     side, share = one_sided(plain, cut)
-    return side >= ONE_SIDED_MIN and share <= REMOVED_MAX
+    return side >= ONE_SIDED_MIN and share <= max_share
 
 
-def one_sided(plain: Keyed, cut: Keyed) -> tuple:
-    """How far the pixels ``cut`` removed from ``plain`` lie to one side, in radii of the plain piece (0: evenly all
-    round; about 0.65-0.8: a crescent on one side, as a cut side and shadow are), and their share of the piece."""
+def _removed(plain: Keyed, cut: Keyed) -> tuple:
     def mask(k: Keyed, origin, shape):
         out = np.zeros(shape, bool)
         a = k.roi_bgra[..., 3] > 128
@@ -473,7 +492,30 @@ def one_sided(plain: Keyed, cut: Keyed) -> tuple:
     shape = (max(plain.origin[1] + plain.roi_bgra.shape[0], cut.origin[1] + cut.roi_bgra.shape[0]) - origin[1],
              max(plain.origin[0] + plain.roi_bgra.shape[1], cut.origin[0] + cut.roi_bgra.shape[1]) - origin[0])
     a0, a1 = mask(plain, origin, shape), mask(cut, origin, shape)
-    removed = a0 & ~a1
+    return origin, a0, a1, a0 & ~a1
+
+
+def removed_tinted(full: np.ndarray, plain: Keyed, cut: Keyed, bgm: Background) -> float:
+    """K794: the share of the pixels ``cut`` removed from ``plain`` that are the backing darkened (as the tinted cut
+    reads a shadow) in the scan ``full``."""
+    (ox, oy), _a0, _a1, removed = _removed(plain, cut)
+    ys, xs = np.nonzero(removed)
+    ok = (ys + oy < full.shape[0]) & (xs + ox < full.shape[1])
+    ys, xs = ys[ok], xs[ok]
+    if not len(ys):
+        return 0.0
+    surf = bgm.surface(removed.shape, (float(ox), float(oy)), 1.0)[ys, xs]
+    sb = cv2.cvtColor(np.clip(surf, 0, 255).astype(np.uint8)[None], cv2.COLOR_LAB2BGR)[0].astype(np.float32)
+    p = full[ys + oy, xs + ox].astype(np.float32)
+    L = cv2.cvtColor(p.astype(np.uint8)[None], cv2.COLOR_BGR2LAB)[0][:, 0].astype(np.float32)
+    cos = (p * sb).sum(axis=1) / (np.linalg.norm(p, axis=1) * np.linalg.norm(sb, axis=1) + 1e-6)
+    return float(((cos > np.cos(np.radians(SHADOW_TINT_DEG))) & (L < surf[:, 0] - RIM_DARKER)).mean())
+
+
+def one_sided(plain: Keyed, cut: Keyed) -> tuple:
+    """How far the pixels ``cut`` removed from ``plain`` lie to one side, in radii of the plain piece (0: evenly all
+    round; about 0.65-0.8: a crescent on one side, as a cut side and shadow are), and their share of the piece."""
+    _o, a0, _a1, removed = _removed(plain, cut)
     if not removed.any() or not a0.any():
         return 1.0, 0.0
     ys, xs = np.nonzero(a0)

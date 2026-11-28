@@ -72,39 +72,62 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
             crop, outline = detect.rectify(full, r)
         w_mm, h_mm = r.w / dpi * MM_PER_IN, r.h / dpi * MM_PER_IN
         kind = plugin.classify(w_mm, h_mm)
-        thick_cut = None
+        thick_cut, thick_cands, plain_mm = None, [], [round(w_mm, 1), round(h_mm, 1)]
         if k is not None and (plugin.thick_kinds.get(kind) or (kind is None and plugin.thick_kinds)):
             # thick board: cut again without its cut side and shadow (an unknown size may be one with its shadow)
             def mode(kd):
                 return plugin.thick_kinds[kd], kd not in plugin.printed_edge_kinds
             modes = [mode(kind)] if kind else sorted({mode(kd) for kd in plugin.thick_kinds})
+            # the plain cut a drop_light cut is judged against is without the mark too (None: no mark)
+            ref_drop = key.key_region(full, det.regions[i], det.background, px_per_mm, drop_light=True)
             for shadow_mm, neutral in modes:
                 # K792: the colour rule, and the shadow as the backing darkened (a black, red or coloured piece is
                 # not); the cut nearest the kind's size wins, a plausible one first in printed_edge mode
                 best = None
-                for tinted in (False, True):
-                    k2 = key.key_region(full, det.regions[i], det.background, px_per_mm, shadow_mm, neutral,
-                                        tinted_shadow=tinted)
-                    if k2 is None:
+                # K794: each cut again without a lighter-than-backing mark touching the piece (drop_light)
+                for drop in (False, True):
+                    ref = ref_drop if drop else k
+                    if ref is None:
                         continue
-                    wh = (k2.region.w / dpi * MM_PER_IN, k2.region.h / dpi * MM_PER_IN)
-                    kind2 = plugin.classify(*wh)
-                    if kind2 is None or kind2 not in plugin.thick_kinds or mode(kind2) != (shadow_mm, neutral):
-                        continue
-                    ok = neutral or key.plausible_shadow(k, k2)
-                    sz = plugin.item_sizes_mm.get(kind2)
-                    off = max(abs(a - b) for a, b in zip(sorted(wh), sorted(sz))) if sz else 0.0
-                    if best is None or (not best[0] and ok) or (ok == best[0] and off < best[1]):
-                        best = (ok, off, k2, kind2, tinted)
+                    for tinted in (False, True):
+                        k2 = key.key_region(full, det.regions[i], det.background, px_per_mm, shadow_mm, neutral,
+                                            tinted_shadow=tinted, drop_light=drop)
+                        if k2 is None:
+                            continue
+                        wh = (k2.region.w / dpi * MM_PER_IN, k2.region.h / dpi * MM_PER_IN)
+                        kind2 = plugin.classify(*wh)
+                        name2 = "tinted" if tinted else "colour"
+                        thick_cands.append({"mode": [shadow_mm, "plain" if neutral else "printed_edge"], "cut": name2,
+                                            "sizeMm": [round(wh[0], 1), round(wh[1], 1)], "kind": kind2,
+                                            **({"dropLight": True} if drop else {})})
+                        if kind2 is None or kind2 not in plugin.thick_kinds or mode(kind2) != (shadow_mm, neutral):
+                            continue
+                        sz = plugin.item_sizes_mm.get(kind2)
+                        if drop and sz and any(a < b * (1 - plugin.size_tolerance) for a, b in zip(sorted(wh), sorted(sz))):
+                            continue   # dropping the mark never leaves less than the kind
+                        # K794: a wide shadow takes more of the plain cut than REMOVED_MAX: the pixel share of the
+                        # plain cut beyond the kind's size (the cut's pixels scaled to the kind's size) is allowed on
+                        # top, at most REMOVED_EXTRA_MAX, and only when what is removed is the backing darkened
+                        extra = 0.0
+                        if sz and not neutral:
+                            a1, a0 = (k2.roi_bgra[..., 3] > 128).sum(), (ref.roi_bgra[..., 3] > 128).sum()
+                            extra = min(key.REMOVED_EXTRA_MAX, max(0.0, 1 - a1 * sz[0] * sz[1] / (wh[0] * wh[1]) / a0))
+                            if extra and key.removed_tinted(full, ref, k2, det.background) < key.TINTED_REMOVED:
+                                extra = 0.0
+                        ok = neutral or key.plausible_shadow(ref, k2, key.REMOVED_MAX + float(extra))
+                        thick_cands[-1].update(oneSided=[round(v, 2) for v in key.one_sided(ref, k2)], plausible=ok)
+                        off = max(abs(a - b) for a, b in zip(sorted(wh), sorted(sz))) if sz else 0.0
+                        if best is None or (not best[0] and ok) or (ok == best[0] and off < best[1]):
+                            best = (ok, off, k2, kind2, name2 + ("+dropLight" if drop else ""))
                 if best is None:
                     continue
-                _ok, _off, k2, kind2, tinted = best
+                _ok, _off, k2, kind2, name2 = best
                 if not neutral and not _ok:
                     # the piece's own edge colour was taken for shadow all round: keep the plain cut-out
                     flags.append("SHADOW_KEPT_CHECK_CROP")
                     break
                 k, r, kind = k2, k2.region, kind2
-                thick_cut = "tinted" if tinted else "colour"
+                thick_cut = name2
                 crop, _ = detect.rectify(k.roi_bgra, key.shifted(k.region, k.origin))
                 w_mm, h_mm = r.w / dpi * MM_PER_IN, r.h / dpi * MM_PER_IN
                 break
@@ -185,6 +208,7 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
             **({"silhouette": sil} if sil else {}),
             **({"castSkipped": cast_skip} if cast_skip else {}),
             **({"thickCut": thick_cut} if thick_cut else {}),
+            **({"thickCuts": thick_cands, "thickPlainMm": plain_mm} if thick_cands else {}),
             **({"cast": {kk: v for kk, v in k.cast.items() if kk != "flags"}} if k is not None and k.cast else {}),
             **({"cast": sides_cast} if sides_cast else {}),
         })

@@ -1631,7 +1631,7 @@ Generate an empty starter or a supported, explicitly configured game slice from 
 Flatbed scans of a game's components to one upright, tightly cropped image per item, plus a review overlay and a
 
 - **Also called:** Turn scans into cropped pictures
-- **Words:** scan, scanner, crop, rescan a card under the same name, straighten, image, flatbed, ingest, ingestion, cards, cast shadow, cast shadow fit, notched card scan, die-cut card scan, identify, recognise, zone rects, zone rectangles
+- **Words:** scan, scanner, crop, rescan a card under the same name, straighten, image, flatbed, ingest, ingestion, cards, cast shadow, cast shadow fit, notched card scan, die-cut card scan, wooden piece shadow, printed edge shadow kept, mark on the backing touching a piece, identify, recognise, zone rects, zone rectangles
 - **Release:** 1.0; not seen
 - **The game supplies:** The scan files and the crop settings.
 - **Use it when:** Turning flatbed scans into one cropped upright image per item; a printed board scan with live state drawn into its boxes, die-cut pieces at true size, playmat box detection, tone profile; which built card image a crop shows, and whether a paired back belongs to its front; zone rects traced from a scan into board-layout ZoneLayout JSON.

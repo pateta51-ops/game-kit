@@ -28,6 +28,7 @@ content pack. Real scans never enter the kit; the tests draw their own sheets.
 10. Treat `loadGeometry` returning `null` as an unsuccessful attempt: keep fallback geometry and call again when the image is available. Concurrent calls share one attempt; only successful geometry is cached. A failed optional store read falls back to decoding, and a failed store write leaves decoded geometry usable. Change the key when the scan or its asks change.
 11. To say which card a crop shows, give the plug-in `identify_refs` (the game's built card images) or run `python -m scanpipe identify CROPS --refs REFS`; trust `identity.card` only when `held` is empty (the item is flagged otherwise; the CLI exits 1).
 12. Trace a map's zone rects with `scripts/trace_zones.py` (marker colours, names and hand rects from the game's config) and merge the JSON with board-layout's `withZones` at content build; never hand-copy rects into code. Pass `--name` so a missed or extra blob exits 1.
+13. For a thick piece that came out wrong, read `thickCuts` and `thickPlainMm` in the manifest before changing a size or a mode: they show which cut was nearest and why it was refused.
 
 **Common mistakes:**
 - A `--plugin` class that is not a `Plugin` subclass: refused.
@@ -64,6 +65,11 @@ A `thick_kinds` item (K792) is cut twice: by the colour rule (backing-hued or gr
 within 8 degrees of the backing's: a black, red or coloured piece is not). The cut nearest the kind's size wins, in
 printed_edge mode a one-sided one first; the manifest's `thickCut` (`colour` or `tinted`) says which. A piece darker
 than the sheet and of its hue is taken for shadow by both: its plain cut is kept and flagged `UNKNOWN_SIZE`.
+K794: each cut is also tried without a mark lighter than the backing that touches the piece and is under a quarter of
+it (`+dropLight` in `thickCut`; never a cut smaller than the kind), and in printed_edge mode a wide shadow may take more
+than a fifth of the plain cut: the pixel share beyond the kind's size, at most 0.2 more, and only when what is removed
+is mostly the backing darkened. The manifest records every candidate (`thickCuts`: mode, cut, size, kind,
+one-sidedness, plausible) and the plain cut's size (`thickPlainMm`).
 
 `tests/fake_game.py` is a small example. `--plugin` refuses a class that is not a `Plugin` subclass, and reports an
 error in its constructor as one line. A game checks its own plug-in in a test:
