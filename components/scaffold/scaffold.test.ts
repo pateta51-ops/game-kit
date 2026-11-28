@@ -41,6 +41,7 @@ describe('scaffold (K204)', () => {
     expect(r.status).toBe(0);
     const pkg = fs.readFileSync(path.join(out, 'package.json'), 'utf8');
     expect(pkg).toContain('--port 4199');
+    expect((JSON.parse(pkg) as { kit: unknown }).kit).toEqual({ e2eRoots: ['src/ui'], rules: 2 });
     expect(fs.readFileSync(path.join(out, 'vite.config.ts'), 'utf8')).toContain('port: 6990');
     expect(fs.readFileSync(path.join(out, 'vite.config.ts'), 'utf8')).toContain('port: 6991');
     expect(fs.existsSync(path.join(out, '.github', 'workflows', 'ci.yml'))).toBe(true);

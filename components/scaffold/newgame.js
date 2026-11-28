@@ -40,7 +40,9 @@ export function newGame(o) {
   step('files', () => {
     if (made) return 'skipped, ' + dir + ' already has files'
     if (remote && !existing && fs.existsSync(mark('partial'))) fs.rmSync(dir, { recursive: true, force: true })
+    const pkg = path.join(dir, 'package.json'), had = fs.existsSync(pkg)
     try { scaffold({ ...o, dir, repo, ...(remote || existing ? { git: false } : {}) }) } catch (e) { if (remote && !existing && fs.existsSync(dir)) fs.writeFileSync(mark('partial'), ''); throw e }
+    if (!had && fs.existsSync(pkg)) { const p = JSON.parse(fs.readFileSync(pkg, 'utf8')); p.kit = { ...p.kit, rules: 2 }; fs.writeFileSync(pkg, JSON.stringify(p, null, 2) + '\n') }
     if (remote && !existing) fs.writeFileSync(mark('done'), '')
   })
   if (!remote) { log('--no-remote: git commit and GitHub repo skipped'); return done }
