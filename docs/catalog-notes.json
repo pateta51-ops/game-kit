@@ -1995,7 +1995,11 @@
       "flatbed",
       "ingest",
       "ingestion",
-      "cards"
+      "cards",
+      "cast shadow",
+      "cast shadow fit",
+      "notched card scan",
+      "die-cut card scan"
     ],
     "visible": false,
     "release": 1,
