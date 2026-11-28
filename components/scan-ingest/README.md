@@ -59,6 +59,11 @@ A subclass of `scanpipe.plugins.base.Plugin`, kept in the game's repository:
 - hooks: `classify(w_mm, h_mm)`, `orient(crop, kind) -> Orientation(turn, confident, why)`, `default_out(project)`,
   `file_for(out_dir, name, ext)`, `cast_for(kind, silhouette, crop)`, `preflight(project, names, scans)`, `finish(project, out_dir, manifests)`.
 
+A `thick_kinds` item (K792) is cut twice: by the colour rule (backing-hued or grey dark pixels, or in
+`printed_edge_kinds` the red ramp and the near-black cut side) and with the shadow taken as the backing darkened (BGR
+within 8 degrees of the backing's: a black, red or coloured piece is not). The cut nearest the kind's size wins, in
+printed_edge mode a one-sided one first.
+
 `tests/fake_game.py` is a small example. `--plugin` refuses a class that is not a `Plugin` subclass, and reports an
 error in its constructor as one line. A game checks its own plug-in in a test:
 

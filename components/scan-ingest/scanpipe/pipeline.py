@@ -76,13 +76,26 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
                 return plugin.thick_kinds[kd], kd not in plugin.printed_edge_kinds
             modes = [mode(kind)] if kind else sorted({mode(kd) for kd in plugin.thick_kinds})
             for shadow_mm, neutral in modes:
-                k2 = key.key_region(full, det.regions[i], det.background, px_per_mm, shadow_mm, neutral)
-                if k2 is None:
+                # K792: the colour rule, and the shadow as the backing darkened (a black, red or coloured piece is
+                # not); the cut nearest the kind's size wins, a plausible one first in printed_edge mode
+                best = None
+                for tinted in (False, True):
+                    k2 = key.key_region(full, det.regions[i], det.background, px_per_mm, shadow_mm, neutral,
+                                        tinted_shadow=tinted)
+                    if k2 is None:
+                        continue
+                    wh = (k2.region.w / dpi * MM_PER_IN, k2.region.h / dpi * MM_PER_IN)
+                    kind2 = plugin.classify(*wh)
+                    if kind2 is None or kind2 not in plugin.thick_kinds or mode(kind2) != (shadow_mm, neutral):
+                        continue
+                    ok = neutral or key.plausible_shadow(k, k2)
+                    off = max(abs(a - b) for a, b in zip(sorted(wh), sorted(plugin.item_sizes_mm[kind2])))
+                    if best is None or (not best[0] and ok) or (ok == best[0] and off < best[1]):
+                        best = (ok, off, k2, kind2)
+                if best is None:
                     continue
-                kind2 = plugin.classify(k2.region.w / dpi * MM_PER_IN, k2.region.h / dpi * MM_PER_IN)
-                if kind2 is None or kind2 not in plugin.thick_kinds or mode(kind2) != (shadow_mm, neutral):
-                    continue
-                if not neutral and not key.plausible_shadow(k, k2):
+                _ok, _off, k2, kind2 = best
+                if not neutral and not _ok:
                     # the piece's own edge colour was taken for shadow all round: keep the plain cut-out
                     flags.append("SHADOW_KEPT_CHECK_CROP")
                     break

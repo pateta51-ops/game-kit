@@ -117,6 +117,7 @@
   { "q": "once per round ability limit", "first": "turn-flow" },
   { "q": "offline pwa", "first": "offline" },
   { "q": "scan ingestion", "first": "scan-ingest" },
+  { "q": "wooden piece cast shadow magenta scan", "first": "scan-ingest" },
   { "q": "flatbed scan crop cards", "first": "scan-ingest" },
   { "q": "golden replay file", "first": "replay-cli" },
   { "q": "game adapter for language model", "first": "llm-playtester" },
