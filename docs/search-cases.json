@@ -801,5 +801,8 @@
   {"q": "real gameplay separate from production release", "first": "kit-context"},
   {"q": "codex cli usage export", "first": "reuse-metrics"},
   {"q": "reconcile provider token counts", "first": "reuse-metrics"},
-  {"q": "verify cached input tokens from rollout", "first": "reuse-metrics"}
+  {"q": "verify cached input tokens from rollout", "first": "reuse-metrics"},
+  {"q": "scan notched card cast shadow", "first": "scan-ingest"},
+  {"q": "skip cast shadow fit on die-cut card scan", "first": "scan-ingest"},
+  {"q": "cast shadow fit per scanned card silhouette", "first": "scan-ingest"}
 ]

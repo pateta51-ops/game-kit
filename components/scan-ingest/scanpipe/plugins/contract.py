@@ -61,6 +61,9 @@ def problems(p: Plugin) -> list[str]:
         if not (isinstance(o, Orientation) and o.turn in (0, 90, 180, 270) and isinstance(o.confident, bool)
                 and isinstance(o.why, str)):
             out.append(f"orient({kind!r}): an Orientation with turn 0, 90, 180 or 270, confident and why")
+    for kind in p.cast_kinds:
+        if not isinstance(p.cast_for(kind, None, np.zeros((40, 30, 4), np.uint8)), bool):
+            out.append(f"cast_for({kind!r}): True or False")
     project = Path("project")
     d = p.default_out(project)
     if not isinstance(d, Path) or project not in d.parents:

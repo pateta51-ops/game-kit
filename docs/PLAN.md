@@ -560,6 +560,7 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K674 | card-zones capacity: an `onLeave` hook called after the excess cards move, for the game's own events and effect ends | S | Dice Commandos | done |
 | K677 | card-harness restrictions check: case-sensitive and start-anchored phrases, and per-key notPhrases | S | Dice Commandos | done |
 | K682 | `engine-core` `ctx.rng`: real named streams (one per purpose, such as dice and shuffles), each seeded from the game seed, so that drawing from one never moves another. | S | Dice Commandos | candidate |
+| K789 | `scan-ingest`: choose the cast-shadow fit per item after the silhouette is read (skip it on notched or tabbed cards, or let a plug-in hook decide), so a kind that comes both plain and die-cut can use it. | S | Unstoppable (28 Nov 2026) | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
