@@ -57,6 +57,18 @@ class Plugin:
     back_suffix = "-b"
     # Optional: a later scan of an item with the same name supersedes the earlier crop (scanpipe/rescan.py).
     rescans = False
+    # Optional (scanpipe/identify.py): the game's built card fronts by card id (a folder, a list of files, or
+    # {id: file}); each item then records ``identity``. Own back images by card id, generic back designs by design id,
+    # back_map card id -> design, identify_family card id -> family key (die-cuts of one card, never each other's
+    # runner-up), identify_variants card id -> the silhouette variant telling cards that share art apart,
+    # identify_params overrides identify.PARAMS. Flags IDENTITY_AMBIGUOUS, BACK_IDENTITY_MISMATCH, IDENTITY_DUPLICATE.
+    identify_refs = None
+    identify_back_refs = None
+    identify_generic_backs = None
+    back_map: dict = {}
+    identify_family: dict = {}
+    identify_variants: dict = {}
+    identify_params: dict = {}
     out_dpi: Optional[float] = 300.0  # crops are downscaled to this resolution (None keeps the scan's)
     jpeg_quality = 92
 
@@ -67,6 +79,17 @@ class Plugin:
             if e <= self.size_tolerance and (err is None or e < err):
                 best, err = kind, e
         return best
+
+    def cast_for(self, kind: str, silhouette: Optional[dict], crop: np.ndarray) -> bool:
+        """Whether a cast_kinds item gets the cast-shadow fit, given its silhouette (read on the plain cut when the kind
+        is in silhouette_kinds, else None) and that cut (BGRA). Default: yes, unless the silhouette is notched or tabbed
+        (in silhouette_spec's names): the fitted rounded rectangle would fill the notch with backing. Irregular, unknown
+        and unread shapes keep the fit."""
+        if silhouette is None:
+            return True
+        from ..silhouette import spec_for
+        names = spec_for(self.silhouette_spec)["names"]
+        return silhouette["shape"] not in {names.get(s, s) for s in ("notched", "tabbed")}
 
     def orient(self, crop: np.ndarray, kind: Optional[str]) -> Orientation:
         return Orientation(0, False, "no orientation rule")

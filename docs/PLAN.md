@@ -462,6 +462,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K780 | Use a monotonic clock for check elapsed durations and fail receipt finalization when its observed UTC completion precedes its start. | S |  | done |
 | K782 | Preview an exact kit release upgrade from a verified lock, with changed installed component trees, dependency and package changes, static references, migration notes and available checks. | S |  | done |
 | K783 | Claim lines: the six-word reason is required when nearest is none, and two phrasings made of the same words fail. | S |  | done |
+| K784 | `scan-ingest`: say which card a crop shows by matching it against the game's built card images (perceptual hash at 4 turns, then a feature-match inlier count), and use it to check that a paired back belongs to its front. | M |  | done |
 | K786 | Guards that need a game setting stop being silent to-dos: `kit.mjs new` writes `kit.rules: 2` into the new game's `package.json`, and `kit.mjs check` in a game names what to set and where when an engine file imports `kit/card-language` without repo-gate's `cardIdLiteral`, when `plan-checker` is pulled with a `docs/BUILD_PLAN*.md` and no lane runs `plancheck.py`, or when `traceability` is pulled and no lane runs it; a failure with `kit.rules` 2 or more, a warning below. | S |  | done |
 | K788 | plan-checker `--batch`: a listed subsection whose parent section is not listed adds the parent's lead text (the lines before its first subsection) to the "Read first" ranges. | S |  | done |
 
@@ -563,6 +564,7 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K674 | card-zones capacity: an `onLeave` hook called after the excess cards move, for the game's own events and effect ends | S | Dice Commandos | done |
 | K677 | card-harness restrictions check: case-sensitive and start-anchored phrases, and per-key notPhrases | S | Dice Commandos | done |
 | K682 | `engine-core` `ctx.rng`: real named streams (one per purpose, such as dice and shuffles), each seeded from the game seed, so that drawing from one never moves another. | S | Dice Commandos | candidate |
+| K789 | `scan-ingest`: choose the cast-shadow fit per item after the silhouette is read (skip it on notched or tabbed cards, or let a plug-in hook decide), so a kind that comes both plain and die-cut can use it. | S | Unstoppable (28 Nov 2026) | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
