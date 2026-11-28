@@ -463,6 +463,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K782 | Preview an exact kit release upgrade from a verified lock, with changed installed component trees, dependency and package changes, static references, migration notes and available checks. | S |  | done |
 | K783 | Claim lines: the six-word reason is required when nearest is none, and two phrasings made of the same words fail. | S |  | done |
 | K786 | Guards that need a game setting stop being silent to-dos: `kit.mjs new` writes `kit.rules: 2` into the new game's `package.json`, and `kit.mjs check` in a game names what to set and where when an engine file imports `kit/card-language` without repo-gate's `cardIdLiteral`, when `plan-checker` is pulled with a `docs/BUILD_PLAN*.md` and no lane runs `plancheck.py`, or when `traceability` is pulled and no lane runs it; a failure with `kit.rules` 2 or more, a warning below. | S |  | done |
+| K788 | plan-checker `--batch`: a listed subsection whose parent section is not listed adds the parent's lead text (the lines before its first subsection) to the "Read first" ranges. | S |  | done |
 
 ## Candidates
 

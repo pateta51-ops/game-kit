@@ -8,7 +8,7 @@ The plan checker: `plancheck.py` checks a game's build plan (Markdown) for balan
 
 **You must:**
 1. Run `python kit/plan-checker/plancheck.py docs/PLAN.md` in the game's check chain (Python 3 needed); exit 1 lists problems, nothing is written.
-2. A worker prints its batch with `--batch <id>` and Reads only the line ranges it lists; `--section N.N` prints one section. Never open the plan whole.
+2. A worker prints its batch with `--batch <id>` and Reads only the line ranges it lists; `--section N.N` prints one section. Never open the plan whole. For a listed subsection (`§7.1`) whose parent (`§7`) is not listed, `--batch` also lists the parent's lead text (the lines before its first subsection) as `§7 (lead text)`: Read it too.
 3. Keep each id defined once, every cited scenario defined and every scenario cited by a phase.
 4. Keep the session plan complete: every phase in one batch row, every batch with a Model and a Confidence percentage.
 5. Keep the test-depth text in the plan (`expectNotOffered`, "default-off", "LLM playtest", `llm-playtester` in a phase, e2e and `heavy` in the preamble), or pass `--depth-optional` for an older plan. For an explicitly scoped non-card or no-LLM workflow, use the strict applicability profile below instead of a legacy optional flag.
