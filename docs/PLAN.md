@@ -407,6 +407,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K738 | cheat-options (new): cheats declared as data (number or toggle, once at set-up or each round start) applied as recorded debug set edits behind allowCheats; game-store applies them and gives cheated; table-panels GameOver cheated mark; set-up fields through screens extra | M |  | done |
 | K739 | search: the opponent part's lookAhead and evaluate (a greedy one-ply driver) lists first for "look ahead greedy player" and "greedy driver", not only the K424 candidate row | S |  | done |
 | K740 | llm-playtester: claude-haiku-5-5 price (with the over-100K-token rate) so --model claude-haiku-5-5 no longer throws "No price for model" | S |  | done |
+| K785 | finish: a batch's Must use orders are read from the game's committed build plan (the batch named by the branch), merged with the PR body's; a FAIL with package.json kit.rules 2 or more, a warning below | S |  | done |
 
 ## Asked for by the owner
 
