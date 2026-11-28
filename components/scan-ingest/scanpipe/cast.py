@@ -553,6 +553,12 @@ def dark_red(bgr: np.ndarray) -> np.ndarray:
 
 OPPOSITE = {"top": "bottom", "bottom": "top", "left": "right", "right": "left"}
 SIDES_MIN_MM = 0.25   # a side's band must be this much wider than the opposite side's (a printed rim is on both)
+SOFT_STEP = 15        # K793: a cast shadow darkens toward the card (soft, outside the true edge), a printed rim is
+SOFT_CH = 3           # flat (crisp, inside it). A soft step: the 2 px mean SOFT_STEP (B+G+R) and every channel SOFT_CH
+SOFT_MIN_PX = 5       # darker one pixel in; the leading steps cover the soft run, shadow at this many px or more when
+                      # the opposite side has no such run (a shadow falls one way; a printed gradient is on every side)
+PART_MIN = 0.1        # a band standing out of the side's line on this share of its rows (beside a notch or a tab) is
+                      # measured on those rows
 
 
 def _side_lines(alpha: np.ndarray, sil: Optional[dict]) -> dict:
@@ -560,10 +566,10 @@ def _side_lines(alpha: np.ndarray, sil: Optional[dict]) -> dict:
     straight side's line. The notch's rows (left and right sides) and the tab's rows (left and right) and columns
     (its edge) are left out of the fit, from the silhouette's extents, with margins from the notch's depth and the tab's height."""
     H, W = alpha.shape
-    rows_out, cols_out, cols_tab = np.zeros(H, bool), np.zeros(W, bool), np.zeros(W, bool)
-    if sil and sil.get("notch"):
+    rows_out, cols_out, cols_tab, notch = np.zeros(H, bool), np.zeros(W, bool), np.zeros(W, bool), np.zeros(H, bool)
+    if sil and sil.get("notch"):   # K793: on the notched side only (the opposite side runs straight beside it)
         m = 0.3 * sil["notchDepth"] * W   # the notch's walls: steeper than about 1 in 3 (the shapes read)
-        rows_out[max(0, int(sil["notchSpan"][0] * H - m)):min(H, int(np.ceil(sil["notchSpan"][1] * H + m)) + 1)] = True
+        notch[max(0, int(sil["notchSpan"][0] * H - m)):min(H, int(np.ceil(sil["notchSpan"][1] * H + m)) + 1)] = True
     if sil and sil.get("tab"):
         th = sil["tabHeight"] * H
         r = slice(0, min(H, int(np.ceil(2 * th)) + 1)) if sil["tab"] == "top" else slice(max(0, int(H - 2 * th)), H)
@@ -576,6 +582,8 @@ def _side_lines(alpha: np.ndarray, sil: Optional[dict]) -> dict:
         L, n = aa.shape
         # rotated row i is original y (right), H-1-y (left), x (top), W-1-x (bottom)
         ex = {"right": rows_out, "left": rows_out[::-1], "top": cols_out, "bottom": cols_out[::-1]}[side].copy()
+        if sil and sil.get("notch") == side:
+            ex |= notch if side == "right" else notch[::-1]
         tab = np.zeros(L, bool)
         if sil and sil.get("tab") == side:
             tab = cols_tab if side == "top" else cols_tab[::-1]
@@ -596,19 +604,32 @@ def _side_lines(alpha: np.ndarray, sil: Optional[dict]) -> dict:
     return out
 
 
-def side_bands(crop: np.ndarray, px_per_mm: float, sil: Optional[dict] = None) -> dict:
+def side_bands(crop: np.ndarray, px_per_mm: float, sil: Optional[dict] = None, raw: Optional[np.ndarray] = None) -> dict:
     """K791: per straight side, (the owner's measure, outer share, run width in px). The measure: the outer 0.5 mm along
     the side's line more than 12 % dark red and 0.5-1.5 mm in under 5 %. The run: the median, over the rows on the
-    line, of the dark red run inward from the first dark red pixel within 2 px of the line (at most 1.5 mm)."""
+    line, of the dark red run inward from the first dark red pixel within 2 px of the line (at most 1.5 mm). K793: then
+    the soft run (px, from the first dark red pixel; read on ``raw``, the crop's scan pixels before the cut-out repaints
+    its edge, when given and of the crop's size), the line used, the first red pixel's offset, and whether the band
+    stands out of the side's line on a part of it only (then measured on those rows, against its own line)."""
     alpha = crop[:, :, 3]
     red = dark_red(crop[:, :, :3]) & (alpha > 127)
     n05, n15 = max(1, int(round(0.5 * px_per_mm))), max(2, int(round(1.5 * px_per_mm)))
     res = {}
+    if raw is not None and raw.shape[:2] != crop.shape[:2]:
+        raw = None
+    pix = (crop if raw is None else raw)[:, :, :3].astype(np.float64)
     for side, (k, ok, _t, o, line) in _side_lines(alpha, sil).items():
+        rr = np.rot90(red, k)
+        out = ok & (o - line > 2) & (o - line <= n15)
+        part = out.sum() >= max(10, PART_MIN * ok.sum())
+        if part:   # the band on a part of the side only: the card's edge is the line, the band's line stands out of it
+            d = float(np.median(o[out] - line[out]))
+            part = rr[out][np.arange(out.sum())[:, None], np.clip(np.rint(line[out]).astype(int)[:, None] + 1 + np.arange(int(d))[None, :], 0, rr.shape[1] - 1)].mean() > 0.5
+            if part:
+                line = line + d
         on = ok & (np.abs(o - line) <= 2)
         if on.sum() < 10:
             continue
-        rr = np.rot90(red, k)
         dist = line[on, None] - np.arange(rr.shape[1])[None, :]
         r = rr[on]
         outer, inner = (dist >= 0) & (dist < n05), (dist >= n05) & (dist < n15)
@@ -617,36 +638,62 @@ def side_bands(crop: np.ndarray, px_per_mm: float, sil: Optional[dict] = None) -
         run = np.take_along_axis(r, ri.clip(0, r.shape[1] - 1), axis=1) & (ri >= 0)
         f = np.where(run[:, :3].any(axis=1), run[:, :3].argmax(axis=1), n15)
         ln = np.array([np.argmin(np.append(run[i, f[i]:], False)) for i in range(len(f))])
-        res[side] = (bool(share > 0.12 and r[inner].mean() < 0.05), share, int(np.median(np.where(f < n15, f + ln, 0))))
+        pp = np.rot90(pix, k)[on]
+        pr = np.take_along_axis(pp, ri.clip(0, pp.shape[1] - 1)[:, :, None], axis=1)
+        m = (pr[:, :-1] + pr[:, 1:]) / 2
+        st = (m[:, :-1] - m[:, 1:] >= SOFT_CH).all(axis=2) & ((m[:, :-1] - m[:, 1:]).sum(axis=2) >= SOFT_STEP)
+        st &= run[:, :-2] & run[:, 1:-1] & run[:, 2:]
+        sl = np.array([np.argmin(np.append(st[i, f[i]:], False)) if f[i] < n15 - 2 else 0 for i in range(len(f))])
+        res[side] = (bool(share > 0.12 and r[inner].mean() < 0.05), share, int(np.median(np.where(f < n15, f + ln, 0))),
+                     int(np.median(np.where(sl > 0, sl + 2, 0))), line, int(np.median(np.where(f < n15, f, 0))), bool(part))
     return res
 
 
 def trim_sides(crop: np.ndarray, px_per_mm: float, sil: Optional[dict] = None,
-               size_px: Optional[tuple] = None) -> tuple[np.ndarray, dict]:
+               size_px: Optional[tuple] = None, size_tol_px: Optional[float] = None,
+               raw: Optional[np.ndarray] = None) -> tuple[np.ndarray, dict]:
     """K791 (cast mode "sides"): a die-cut card's cast band taken off its straight sides only. A side is trimmed when
     its outer 0.5 mm is more than 12 % dark red, its dark red run is wider than the opposite side's by SIDES_MIN_MM or
     more (a cast shadow falls away from the lamp, a printed rim is on every side: only the difference is shadow), and,
     given the kind's size (``size_px``, short and long, the crop being portrait), the crop is larger than it on that
     axis by half that difference or more. The alpha is then cleared that wide inside the side's line (no card lies
     there); the tab's columns and the notch keep their outline as cut. Returns the crop (cut to what is left) and the
-    `cast` record of the manifest."""
+    `cast` record of the manifest.
+    K793: a side the width rule refuses is trimmed by its soft run when that is SOFT_MIN_PX or more and the opposite
+    side's is not (a shadow over a printed rim, or a thin one); ``size_tol_px`` is taken off the size rule's margin.
+    ``sides`` records per side its band % and why it was or was not trimmed."""
     out = crop.copy()
     alpha = out[:, :, 3]
     lines = _side_lines(crop[:, :, 3], sil)
-    bands = side_bands(crop, px_per_mm, sil)
-    removed = {}
-    for side, (_m, share, w) in bands.items():
+    tol = size_tol_px or 0.0
+    bands = side_bands(crop, px_per_mm, sil, raw)
+    removed, why = {}, {s: {"bandPct": 0.0, "reason": "no straight run"} for s in SIDES}
+    for side, (_m, share, w, soft, line, f0, part) in bands.items():
         opp = bands.get(OPPOSITE[side])
+        why[side] = {"bandPct": round(100 * share, 1), "runPx": w, "oppositePx": opp[2] if opp else 0, "softPx": soft, "part": part}
         w -= opp[2] if opp else 0
-        if share <= 0.12 or w < max(2, SIDES_MIN_MM * px_per_mm):
+        if share <= 0.12:
+            why[side]["reason"] = "no band"
             continue
-        if size_px and crop.shape[1 if side in ("left", "right") else 0] - size_px[0 if side in ("left", "right") else 1] < w / 2:
+        if why[side]["runPx"] >= int(round(1.5 * px_per_mm)) - 1:   # K793: red on past 1.5 mm is print, not a band
+            why[side]["reason"] = "dark red runs on inward (print)"
             continue
-        k, _ok, rows, o, line = lines[side]
+        reason = "trimmed"
+        if w < max(2, SIDES_MIN_MM * px_per_mm):
+            if soft < SOFT_MIN_PX or (opp and opp[3] >= SOFT_MIN_PX):
+                why[side]["reason"] = "no wider than the opposite side, and " + ("crisp (a printed rim)" if soft < SOFT_MIN_PX else "the opposite side as soft (printed)")
+                continue
+            w, reason = f0 + soft, "trimmed (soft)"
+        ax = crop.shape[1 if side in ("left", "right") else 0] - size_px[0 if side in ("left", "right") else 1] if size_px else 0
+        k, _ok, rows, _o, _line = lines[side]
+        if size_px and ax < w / 2 - tol:
+            why[side]["reason"] = "the crop is not larger than the kind's size"
+            continue
+        why[side]["reason"] = reason
         aa = np.rot90(alpha, k)   # a view: writing it writes alpha; beyond line - w there is no card on any row
         aa[rows[:, None] & (np.arange(aa.shape[1])[None, :] > np.rint(line)[:, None] - w)] = 0
         removed[side] = round(w / px_per_mm, 2)
     ys, xs = np.nonzero(alpha)
     if ys.size:
         out = out[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
-    return out, {"mode": "sides", "removedMm": {s: removed.get(s, 0.0) for s in SIDES}}
+    return out, {"mode": "sides", "removedMm": {s: removed.get(s, 0.0) for s in SIDES}, "sides": why}

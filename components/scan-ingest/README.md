@@ -24,7 +24,7 @@ content pack. Real scans never enter the kit; the tests draw their own sheets.
 6. Real scans never enter the kit (its tests draw their own sheets); keep the game's plug-in and tools in the game, outside `kit/`.
 7. For printed boards (`index.ts`, `ui.ts`) pass the game's scan, box list and state: `ScanBoard` draws the scan and calls `render(id, sizePx)` in each box; frames and colours stay in the game.
 8. Tesseract is optional and only for reading print; without it callers get None and one warning.
-9. A kind that comes both plain and die-cut in one size: put it in both `cast_kinds` and `silhouette_kinds` (the fit is then skipped on notched and tabbed items, unknown sizes included, `castSkipped` in the manifest), or override `cast_for`; never fit a die-cut card. Such a skipped item has its band taken off its straight sides (`cast_skip_mode = "sides"`, the default; `None` keeps the plain cut); read `cast.removedMm` in the manifest.
+9. A kind that comes both plain and die-cut in one size: put it in both `cast_kinds` and `silhouette_kinds` (the fit is then skipped on notched and tabbed items, unknown sizes included, `castSkipped` in the manifest), or override `cast_for`; never fit a die-cut card. Such a skipped item has its band taken off its straight sides (`cast_skip_mode = "sides"`, the default; `None` keeps the plain cut); read `cast.removedMm` in the manifest, and `cast.sides` (per side `bandPct` and the `reason` it was or was not trimmed, K793) before changing a threshold.
 10. Treat `loadGeometry` returning `null` as an unsuccessful attempt: keep fallback geometry and call again when the image is available. Concurrent calls share one attempt; only successful geometry is cached. A failed optional store read falls back to decoding, and a failed store write leaves decoded geometry usable. Change the key when the scan or its asks change.
 11. To say which card a crop shows, give the plug-in `identify_refs` (the game's built card images) or run `python -m scanpipe identify CROPS --refs REFS`; trust `identity.card` only when `held` is empty (the item is flagged otherwise; the CLI exits 1).
 12. Trace a map's zone rects with `scripts/trace_zones.py` (marker colours, names and hand rects from the game's config) and merge the JSON with board-layout's `withZones` at content build; never hand-copy rects into code. Pass `--name` so a missed or extra blob exits 1.
@@ -113,6 +113,14 @@ face's turn when an item is flipped like a page). Reading a game's printed codes
   `cast: {mode: "sides", removedMm: {top, right, bottom, left}}` beside `castSkipped`. It is the default because it
   changes a crop only where the band is found, and only on die-cut items that had no clean-up at all;
   `cast_skip_mode = None` keeps the plain cut as before K791. Plain cards keep the fit, unchanged.
+- K793: the notch's rows are left out of the notched side only. A band standing out of a side's line on a tenth of its
+  rows or more (beside a notch or a tab) is measured on those rows, against its own line (`part`). A side whose dark
+  red run reaches 1.5 mm is print and is never trimmed. A side the width rule refuses is trimmed by its soft run when
+  that is `SOFT_MIN_PX` (5) or more and the opposite side's is not (a shadow falls one way; a printed gradient is on
+  every side): the soft run is the leading 2 px means each `SOFT_STEP` (B+G+R) and `SOFT_CH` per channel darker one
+  pixel in, read on the scan's own pixels before the cut-out repaints the edge. The size rule takes the plug-in's
+  `cast_size_tol_mm` off its margin (the crop larger than the kind's size by half the band, less the tolerance).
+  `cast.sides` records per side `bandPct`, `runPx`, `oppositePx`, `softPx`, `part` and `reason`.
 
 ## Backs, descreen, re-scans and pack entries (optional, off by default)
 
