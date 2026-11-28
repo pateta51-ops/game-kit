@@ -117,7 +117,12 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
             names = silhouette.spec_for(plugin.silhouette_spec)["names"]
             if cast_skip and plugin.cast_skip_mode == "sides" and sil and crop.ndim == 3 and crop.shape[2] == 4 \
                     and sil["shape"] in {names.get(s, s) for s in ("notched", "tabbed")}:
-                crop, sides_cast = key.cast.trim_sides(crop, px_per_mm, sil)
+                size = plugin.item_sizes_mm.get(kind) if kind else None
+                crop, sides_cast = key.cast.trim_sides(crop, px_per_mm, sil, (size[0] * px_per_mm, size[1] * px_per_mm) if size else None)
+                if any(sides_cast["removedMm"].values()):
+                    # the silhouette of the final crop: notchSpan, tabX and the turn refer to it
+                    sil = silhouette.read(silhouette.outline_of(crop[:, :, 3]), crop.shape[1], crop.shape[0],
+                                          silhouette.spec_for(plugin.silhouette_spec))
                 w_mm, h_mm = crop.shape[1] / dpi * MM_PER_IN, crop.shape[0] / dpi * MM_PER_IN
             if kind not in plugin.silhouette_kinds:
                 sil = None

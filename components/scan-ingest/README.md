@@ -90,13 +90,17 @@ face's turn when an item is flipped like a page). Reading a game's printed codes
   tried (every one for an item of unknown size), `silhouette` None for a kind not in `silhouette_kinds`.
 - K791, cast mode "sides" (`cast_skip_mode = "sides"`, the default): where the fit is skipped on a notched or tabbed
   item, the dark red band it casts is taken off its straight sides only (`cast.trim_sides`). Each side is a line
-  fitted to its outer edge pixels away from the notch, the tab (from the silhouette) and the corners; a side has the
-  band when its outer 0.5 mm is more than 12 % dark red (r-g > 45, r-b > 15, r < 190) and 0.5-1.5 mm in under 5 %
-  (`cast.side_bands`), and then the alpha is cleared the band's width inside the line. The tab's columns and the notch
-  keep their outline as the plain cut read it (the band inside a notch stays), and the silhouette is not read again.
-  The manifest records `cast: {mode: "sides", removedMm: {top, right, bottom, left}}` beside `castSkipped`. It is the
-  default because it changes a crop only where the measure finds the band, and only on die-cut items that had no
-  clean-up at all; `cast_skip_mode = None` keeps the plain cut as before K791. Plain cards keep the fit, unchanged.
+  fitted to its outer edge pixels, leaving out the notch's and the tab's rows and the tab's columns (from the
+  silhouette's extents). A side is trimmed when its outer 0.5 mm is more than 12 % dark red (r-g > 45, r-b > 15,
+  r < 190), its dark red run is at least 0.25 mm wider than the opposite side's (a cast shadow falls away from the
+  lamp; a printed dark red rim is on every side, so only the difference is taken), and the crop is larger than the
+  kind's size on that axis by half that width or more; the alpha is then cleared that wide inside the line. The owner's
+  measure (`cast.side_bands`, outer 0.5 mm over 12 % and 0.5-1.5 mm in under 5 %) is reported per side. The tab's
+  columns and the notch keep their outline as the plain cut read it (the band inside a notch and above a tab stays).
+  After a trim the silhouette is read again on the final crop (notchSpan, tabX, the turn). The manifest records
+  `cast: {mode: "sides", removedMm: {top, right, bottom, left}}` beside `castSkipped`. It is the default because it
+  changes a crop only where the band is found, and only on die-cut items that had no clean-up at all;
+  `cast_skip_mode = None` keeps the plain cut as before K791. Plain cards keep the fit, unchanged.
 
 ## Backs, descreen, re-scans and pack entries (optional, off by default)
 
