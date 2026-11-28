@@ -70,6 +70,7 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
             crop, outline = detect.rectify(full, r)
         w_mm, h_mm = r.w / dpi * MM_PER_IN, r.h / dpi * MM_PER_IN
         kind = plugin.classify(w_mm, h_mm)
+        thick_cut = None
         if k is not None and (plugin.thick_kinds.get(kind) or (kind is None and plugin.thick_kinds)):
             # thick board: cut again without its cut side and shadow (an unknown size may be one with its shadow)
             def mode(kd):
@@ -89,17 +90,19 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
                     if kind2 is None or kind2 not in plugin.thick_kinds or mode(kind2) != (shadow_mm, neutral):
                         continue
                     ok = neutral or key.plausible_shadow(k, k2)
-                    off = max(abs(a - b) for a, b in zip(sorted(wh), sorted(plugin.item_sizes_mm[kind2])))
+                    sz = plugin.item_sizes_mm.get(kind2)
+                    off = max(abs(a - b) for a, b in zip(sorted(wh), sorted(sz))) if sz else 0.0
                     if best is None or (not best[0] and ok) or (ok == best[0] and off < best[1]):
-                        best = (ok, off, k2, kind2)
+                        best = (ok, off, k2, kind2, tinted)
                 if best is None:
                     continue
-                _ok, _off, k2, kind2 = best
+                _ok, _off, k2, kind2, tinted = best
                 if not neutral and not _ok:
                     # the piece's own edge colour was taken for shadow all round: keep the plain cut-out
                     flags.append("SHADOW_KEPT_CHECK_CROP")
                     break
                 k, r, kind = k2, k2.region, kind2
+                thick_cut = "tinted" if tinted else "colour"
                 crop, _ = detect.rectify(k.roi_bgra, key.shifted(k.region, k.origin))
                 w_mm, h_mm = r.w / dpi * MM_PER_IN, r.h / dpi * MM_PER_IN
                 break
@@ -176,6 +179,7 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
             **({"keyed": True, "rimPx": k.rim_px} if k is not None else {}),
             **({"silhouette": sil} if sil else {}),
             **({"castSkipped": cast_skip} if cast_skip else {}),
+            **({"thickCut": thick_cut} if thick_cut else {}),
             **({"cast": {kk: v for kk, v in k.cast.items() if kk != "flags"}} if k is not None and k.cast else {}),
             **({"cast": sides_cast} if sides_cast else {}),
         })
