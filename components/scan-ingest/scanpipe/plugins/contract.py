@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .. import silhouette
+from .. import identify, silhouette
 from .base import Orientation, Plugin
 
 
@@ -85,6 +85,18 @@ def problems(p: Plugin) -> list[str]:
     for attr in ("pair_backs", "rescans"):
         if not isinstance(getattr(p, attr), bool):
             out.append(f"{attr}: True or False")
+    for attr in ("identify_refs", "identify_back_refs", "identify_generic_backs"):
+        v = getattr(p, attr)
+        if v is not None and not isinstance(v, (str, Path, list, tuple, dict)):
+            out.append(f"{attr}: None, a folder, a list of image files, or {{id: file}}")
+    for attr in ("back_map", "identify_family", "identify_variants"):
+        v = getattr(p, attr)
+        if not isinstance(v, dict) or any(not isinstance(x, str) for x in v.values()):
+            out.append(f"{attr}: card id -> a text")
+    v = p.identify_params
+    if not isinstance(v, dict) or set(v) - set(identify.PARAMS) or any(
+            not isinstance(x, (int, float)) or x <= 0 for x in v.values()):
+        out.append("identify_params: keys of identify.PARAMS, numbers above 0")
     if not isinstance(p.back_suffix, str) or not p.back_suffix or \
             p.file_for(Path("out"), "a" + p.back_suffix, "png") == p.file_for(Path("out"), "a", "png"):
         out.append("back_suffix: a non-empty text that gives a back its own file")

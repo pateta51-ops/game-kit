@@ -26,6 +26,7 @@ content pack. Real scans never enter the kit; the tests draw their own sheets.
 8. Tesseract is optional and only for reading print; without it callers get None and one warning.
 9. A kind that comes both plain and die-cut in one size: put it in both `cast_kinds` and `silhouette_kinds` (the fit is then skipped on notched and tabbed items, unknown sizes included, `castSkipped` in the manifest), or override `cast_for`; never fit a die-cut card.
 10. Treat `loadGeometry` returning `null` as an unsuccessful attempt: keep fallback geometry and call again when the image is available. Concurrent calls share one attempt; only successful geometry is cached. A failed optional store read falls back to decoding, and a failed store write leaves decoded geometry usable. Change the key when the scan or its asks change.
+11. To say which card a crop shows, give the plug-in `identify_refs` (the game's built card images) or run `python -m scanpipe identify CROPS --refs REFS`; trust `identity.card` only when `held` is empty (the item is flagged otherwise; the CLI exits 1).
 
 **Common mistakes:**
 - A `--plugin` class that is not a `Plugin` subclass: refused.
@@ -107,6 +108,37 @@ face's turn when an item is flipped like a page). Reading a game's printed codes
 - Hooks `entry(item, back, manifest) -> dict | None` and `write_entries(project, out_dir, entries) -> problems`: the
   game turns each crop (with its paired back) into its content-pack entry, and writes them after the run. With
   `rescans` every item no re-scan replaced is passed, otherwise the run's items.
+
+## Which card a crop shows (optional, off by default, K784)
+
+`scanpipe/identify.py` matches each face on its own against the game's built card images: a perceptual hash
+(16 x 16, on a 512 px thumbnail over grey 128) at the 4 quarter turns against every reference face and generic back,
+then SIFT (3000 features, grey, long side 900 px, equalised) with a RANSAC homography (6 px) on the 10 nearest by
+hash of each kind (fronts, own backs, generic backs); SIFT features of the references are kept for the last `cache`
+(64); the score is the inlier count. The numbers are `identify.PARAMS`; a plug-in changes them with `identify_params`.
+
+- `Refs(fronts, backs=None, generic=None, back_map=None, family=None, variants=None, params=None)`: fronts and own
+  backs by card id, generic back designs by design id (dicts of images or files, a folder, or a list; id = file
+  stem; two files with one id are refused), `back_map` card -> design, `family` card -> key (die-cuts of one card), `variants` card -> silhouette variant.
+- `identify(crop, refs, item=None)`: `ref`, `face` (front, back or generic), `turn` (clockwise, to read like it),
+  `inliers`, `runnerUp`, `runnerUpInliers`, `confidence`, `generic` (nearest design by hash, bits, margin),
+  `ambiguous` and `held` (why). Identified: at least 120 inliers and 1.4 times the next best; the next best skips
+  the same family's other die-cuts, and a generic back after a generic back. Cards sharing art (a family with
+  `variants`) take the variant from the item's silhouette, only after a confident match; none confident: held,
+  `variantUnread`.
+- `check_pair(front_crop, back_crop, refs, items)`: one face confidently card X, the other must fit X's other face:
+  its own image by at least 40 inliers (measured on demand), or its generic design, the nearest back by hash by 4
+  bits or clearly picked by SIFT (40 inliers and 1.4 times any other design). `matches` True, False (the faces
+  disagree, or show two cards) or None (nothing identified, no other face known), `held`, `total` inliers.
+- `dedupe(manifests)`: the same card in two items of a run keeps the one with more front inliers (both faces' inliers
+  break a tie); the other is held. Items a re-scan replaced or holds are left out (it runs after the re-scan plan).
+- Plug-in: `identify_refs` (None: off), `identify_back_refs`, `identify_generic_backs`, `back_map`, `identify_family`,
+  `identify_variants`, `identify_params`. Each item records `identity` (with `pair_backs`, the front holds the pair
+  check and the back its own face). Items cut off at the scan's edge or under half the smallest kind's area are
+  not matched (`skipped`). Flags: `IDENTITY_AMBIGUOUS`, `VARIANT_UNREAD`, `BACK_IDENTITY_MISMATCH` (on the front),
+  `IDENTITY_DUPLICATE`.
+- `python -m scanpipe identify CROPS... --refs FRONTS... [--backs ...] [--generic ...] [--min-inliers 120]
+  [--json OUT]`: one line per crop; exit status 1 when one is ambiguous.
 
 ## Two items scanned touching
 

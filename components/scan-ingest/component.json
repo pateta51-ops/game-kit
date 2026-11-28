@@ -45,6 +45,7 @@
       "scanpipe/sleeves.py: the clear-sleeve block of ufp_ingest/detect.py (sleeve_sized, _component_at, _card_in_sleeve, unsleeve); the sleeve sizes in mm became plug-in attributes with defaults from the card's size.",
       "scanpipe/silhouette.py: analyze and orient of ufp_ingest/silhouette.py; shapes core/upgrade renamed notched/tabbed (plug-in names them), scan side a/b replaced by an optional expected face, the game's notch centre and variants moved to the plug-in's silhouette_spec; load_spec, slot_flags, suggest_face, short_note left in the game.",
       "scanpipe/pairs.py: pair_regions and pair_leftovers of ufp_ingest/batch.py, on manifest regions; the back crops renamed after their front. scanpipe/rescan.py: grid and off_glass_mm of ufp_ingest/rescan.py and the replaces bookkeeping of build.replaced_slots, by item name; transcript verdicts, die-cut size baselines and sharpness left in the game. images.descreen from imp_ingest/images.py (the BGRA version).",
+      "scanpipe/identify.py: the method of a one-off script that matched re-scans to built card images (perceptual hash at 4 turns, SIFT and a RANSAC homography inlier count), written new with the paired-back check and the plug-in fields; game names and paths left in the game.",
       "tests/synth_sleeves.py: silhouette masks, bordered faces, backings, sleeve and paste of tests/synth.py; test_sleeves.py and test_silhouette.py without the batch, rescan and validate tests."
     ]
   },

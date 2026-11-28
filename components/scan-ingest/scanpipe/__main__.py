@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import sys
 from pathlib import Path
 
-from . import pairs, plugins, rescan
+from . import identify, pairs, plugins, rescan
 from .flags import needs_attention
 from .pipeline import process_scan
 
@@ -32,7 +33,28 @@ def main(argv=None) -> int:
     rs = sub.add_parser("rescan", help="list the items worth scanning again (replaced items left out)")
     rs.add_argument("review", type=Path, help="the folder of the manifests")
     rs.add_argument("--write", type=Path, help="also write the report to this file (e.g. RESCAN.md)")
+    idp = sub.add_parser("identify", help="say which reference image (built card face) each crop shows")
+    idp.add_argument("crops", nargs="+", type=Path, help="crop files or folders")
+    idp.add_argument("--refs", nargs="+", required=True, type=Path, help="card fronts: files or folders (id = file stem)")
+    idp.add_argument("--backs", nargs="+", type=Path, help="cards' own backs, by card id")
+    idp.add_argument("--generic", nargs="+", type=Path, help="generic back designs, by design id")
+    idp.add_argument("--min-inliers", type=int, default=identify.PARAMS["min_inliers"])
+    idp.add_argument("--json", type=Path, help="also write the results to this file")
     a = ap.parse_args(argv)
+    if a.cmd == "identify":
+        try:
+            refs = identify.Refs(a.refs, a.backs, a.generic, params={"min_inliers": a.min_inliers})
+        except ValueError as e:
+            print(e, file=sys.stderr)
+            return 1
+        res = {}
+        for f in identify.files(a.crops):
+            r = res[f.name] = identify.identify(identify.load(f), refs)
+            print(f"{f.name}: {r['ref']} {r['face']} turn {r['turn']} inliers {r['inliers']} (runner-up {r['runnerUp']} "
+                  f"{r['runnerUpInliers']}){'  AMBIGUOUS' if r['ambiguous'] else ''}")
+        if a.json:
+            a.json.write_text(json.dumps(res, indent=2) + "\n", encoding="utf-8")
+        return 1 if any(r["ambiguous"] for r in res.values()) else 0
     if a.cmd == "rescan":
         text, n = rescan.report(a.review)
         print(text)
@@ -54,6 +76,12 @@ def main(argv=None) -> int:
         return 1
     problems = 0
     manifests = []
+    try:
+        refs = identify.refs_for(plugin) if plugin.identify_refs else None
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        return 1
+    small = 0.5 * min((w * h for w, h in plugin.item_sizes_mm.values()), default=0)  # area in mm2 never matched
 
     def show(man) -> int:
         n = 0
@@ -81,16 +109,27 @@ def main(argv=None) -> int:
         manifests.append(man)
         if back:
             pairs.pair_manifests(manifests[-2], man, plugin, dest)
+            if refs:
+                identify.annotate(manifests[-2], refs, man, small)
             rescan.write(review, manifests[-2])
             rescan.write(review, man)
             if not plugin.rescans:
                 problems += show(manifests[-2]) + show(man)
         else:
+            if refs and not plugin.pair_backs:
+                identify.annotate(man, refs, None, small)
+                rescan.write(review, man)
             used = len(man["items"])
             names, turns = names[used:], turns[used:]
             if not (plugin.pair_backs or plugin.rescans):
                 problems += show(man)
     every, ops, changed = rescan.plan(review, manifests, plugin, out) if plugin.rescans else (manifests, [], [])
+    if refs:  # after the re-scan plan: an item a clean re-scan replaced is no duplicate
+        held = identify.dedupe(manifests)
+        if not plugin.rescans:
+            for man in manifests:
+                rescan.write(review, man)
+            problems += held
     pool = [(m, it) for m in every for it in m["items"] if not it.get("replacedBy") and not it.get("heldFor")]
     byname = {it["name"]: it for _, it in pool}
     entries = [e for m, it in pool if "pairOf" not in it
@@ -100,6 +139,9 @@ def main(argv=None) -> int:
         problems += 1
     if plugin.rescans:
         rescan.apply(review, ops, changed)
+        if refs:
+            for man in manifests:
+                rescan.write(review, man)
         shutil.rmtree(dest, ignore_errors=True)
         for man in manifests:
             problems += show(man)
