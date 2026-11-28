@@ -567,6 +567,7 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K789 | `scan-ingest`: choose the cast-shadow fit per item after the silhouette is read (skip it on notched or tabbed cards, or let a plug-in hook decide), so a kind that comes both plain and die-cut can use it. | S | Unstoppable (28 Nov 2026) | done |
 | K790 | `scan-ingest`: with `rescans = True`, a run that scans one `--name` twice no longer crashes in the staging move; the later scan replaces the earlier one (`replaces`, `replacedBy`) and a flagged later scan is held, the same as a re-scan in a later run. | S | scan-ingest re-scans (28 Nov 2026) | done |
 | K791 | `scan-ingest`: on notched and tabbed cards, remove the cast-shadow band along the straight sides only, leaving the notch or tab alone. | M | Unstoppable (28 Nov 2026) | done |
+| K792 | `scan-ingest`: thick pieces on magenta lose their cast shadow when black or red, and in printed_edge mode as in plain mode. | M | Unstoppable (28 Nov 2026) | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

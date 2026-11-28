@@ -64,6 +64,7 @@ DECON_CORNER_MM = 0.3       # ... pixel up to this far in is judged on its own c
 SHADOW_DARKER = 25.0    # thick items (shadow_mm > 0): a shadow pixel is this much darker than the backing (OpenCV L) ...
 SHADOW_NEUTRAL = 12.0   # ... and either has the backing's hue or is nearly grey (chroma under this): the cut side
 SHADOW_HUE_DEG = 60.0   # the dark cut side of a magenta-backed board reads dark red, 35-45 degrees from the magenta
+SHADOW_TINT_DEG = 8.0   # tinted_shadow: a shadow pixel's BGR is within this angle of the backing's (a red piece: about 14)
 
 
 CUT_L_MAX = 60.0        # printed-edge tokens: the cut side's near-black line (OpenCV L about 41-50, blurred) is removed when it
@@ -100,7 +101,8 @@ def _hue_deg(a: np.ndarray, b: np.ndarray) -> np.ndarray:
 
 def key_region(full: np.ndarray, r: Region, bgm: Background, px_per_mm: float, shadow_mm: float = 0.0,
                neutral_shadow: bool = True, cast_mm: float = 0.0, cast_size_mm: Optional[tuple] = None,
-               cast_size_tol_mm: float = 0.0, cast_radius_mm: Optional[float] = None) -> Optional[Keyed]:
+               cast_size_tol_mm: float = 0.0, cast_radius_mm: Optional[float] = None,
+               tinted_shadow: bool = False) -> Optional[Keyed]:
     """Cut one detected item out of a coloured backing; None when no piece is found under the item's centre.
 
     ``shadow_mm`` is for thick items (board pieces about 2 mm thick): on the side away from the scanner's lamp they show
@@ -166,7 +168,14 @@ def key_region(full: np.ndarray, r: Region, bgm: Background, px_per_mm: float, s
         hued = (chroma > RIM_MIN_CHROMA) & (dh < RIM_HUE_DEG)
         # the dark core of the band, and the backing-hued ramp between it and the sheet (what links it to the outside)
         dark_hued = (chroma > RIM_MIN_CHROMA) & (dh < SHADOW_HUE_DEG)
-        if neutral_shadow:
+        if tinted_shadow:
+            # K792: the shadow as the backing darkened, its colour (BGR) in the backing's proportions: a black or red
+            # piece, or a coloured one, is not, whatever its darkness or hue
+            sb = cv2.cvtColor(np.clip(surf, 0, 255).astype(np.uint8), cv2.COLOR_LAB2BGR).astype(np.float32)
+            p = roi.astype(np.float32)
+            cos = (p * sb).sum(axis=2) / (np.linalg.norm(p, axis=2) * np.linalg.norm(sb, axis=2) + 1e-6)
+            shadow = (deep & darker & (cos > np.cos(np.radians(SHADOW_TINT_DEG)))).astype(np.uint8)
+        elif neutral_shadow:
             shadow = (deep & ((dark & (dark_hued | (chroma < SHADOW_NEUTRAL))) | (hued & darker))).astype(np.uint8)
         else:
             # a token printed to its edge: measured beyond the halftone, the shadow's red is clearly coloured (a brown
