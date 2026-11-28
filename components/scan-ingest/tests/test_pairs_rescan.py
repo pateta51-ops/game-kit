@@ -192,3 +192,33 @@ def test_a_held_front_holds_its_clean_back_too(tmp_path: Path):
     assert (out / "c1.jpg").exists() and (out / "c1-b.jpg").read_bytes() == b"c1-b"   # the old pair stays together
     assert (out / "c1.held-s2.jpg").exists() and (out / "c1-b.held-s2b.jpg").exists()
     assert [it.get("replacedBy") for it in json.loads((review / "s1.json").read_text(encoding="utf-8"))["items"]] == [None, None]
+
+
+def test_one_run_that_scans_a_name_twice_replaces_the_earlier_scan(tmp_path: Path):
+    out, review = tmp_path / "out", tmp_path / "scan-review"
+    assert main(["scan", "--plugin", "tests.test_pairs_rescan:PairedGame", "--out", str(out), "--name", "c1",
+                 "--name", "c2", "--name", "c3", "--name", "c2", *sheets(tmp_path, "s1", 3, 3),
+                 *sheets(tmp_path, "s2", 1, 5)]) == 0
+    front = json.loads((review / "s1-a.json").read_text(encoding="utf-8"))
+    back = json.loads((review / "s1-b.json").read_text(encoding="utf-8"))
+    assert [it.get("replacedBy") for it in front["items"]] == [None, "s2-a.png", None]
+    assert [it.get("replacedBy") for it in back["items"] if it["pairOf"] == "c2"] == ["s2-b.png"]
+    assert json.loads((review / "s2-a.json").read_text(encoding="utf-8"))["items"][0]["replaces"] == ["s1-a.png"]
+    pack = json.loads((out / "pack.json").read_text(encoding="utf-8"))
+    assert [(e["id"], e["scan"]) for e in pack] == [("c1", "s1-a.png"), ("c2", "s2-a.png"), ("c3", "s1-a.png")]
+    assert sorted(p.name for p in out.iterdir()) == ["c1-b.jpg", "c1.jpg", "c2-b.jpg", "c2.jpg", "c3-b.jpg",
+                                                     "c3.jpg", "pack.json"]
+
+
+def test_a_flagged_second_scan_in_one_run_is_held_and_keeps_the_first(tmp_path: Path):
+    out, review = tmp_path / "out", tmp_path / "review"
+    review.mkdir()
+    run = [man("s1.png", [item(tmp_path, "c1", 100, 100, folder="stage/0")]),
+           man("s2.png", [item(tmp_path, "c1", 100, 100, flags=["UNKNOWN_SIZE"], folder="stage/1")]),
+           man("s3.png", [item(tmp_path, "c2", 100, 100, folder="stage/2")]),
+           man("s4.png", [item(tmp_path, "c2", 100, 100, ext="png", folder="stage/3")])]
+    every, ops, changed = rescan.plan(review, run, FakeGame(), out)
+    rescan.apply(review, ops, changed)
+    assert sorted(p.name for p in out.iterdir()) == ["c1.held-s2.jpg", "c1.jpg", "c2.png"]
+    assert run[1]["items"][0]["heldFor"] == ["s1.png"] and "replacedBy" not in run[0]["items"][0]
+    assert run[2]["items"][0]["replacedBy"] == "s4.png" and run[3]["items"][0]["replaces"] == ["s3.png"]

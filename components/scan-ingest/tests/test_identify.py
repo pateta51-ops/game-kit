@@ -197,9 +197,8 @@ def test_k784_a_clean_rescan_of_the_same_card_is_no_duplicate(tmp_path: Path, mo
         shutil.copy(tmp_path / "first" / f"{k}-b.jpg", backs / f"{k}.jpg")
     monkeypatch.setattr(PairedGame, "identify_back_refs", str(backs))
     review = tmp_path / "review"
-    for scans in (s1, s2):    # the second run scans the same three cards again under their names
-        main(["scan", "--plugin", "tests.test_pairs_rescan:PairedGame", "--out", str(tmp_path / "out"), "--review",
-              str(review), *names, *scans])
+    main(["scan", "--plugin", "tests.test_pairs_rescan:PairedGame", "--out", str(tmp_path / "out"), "--review",
+          str(review), *names, *names, *s1, *s2])    # one run scans the same three cards twice under their names
     old = json.loads((review / "s1-a.json").read_text(encoding="utf-8"))["items"]
     new = json.loads((review / "s2-a.json").read_text(encoding="utf-8"))["items"]
     assert [it["identity"]["matches"] for it in old] == [True, True, True], old
