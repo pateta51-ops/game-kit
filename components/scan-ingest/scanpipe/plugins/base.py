@@ -35,7 +35,10 @@ class Plugin:
     # away from the lamp: the item's outline is then fitted by geometry, so the shadow goes and the card's print, dark
     # red at the edge or not, stays (key.key_region ``cast_mm``, scanpipe/cast.py).
     cast_kinds: dict[str, float] = {}
-    cast_size_tol_mm = 0.5  # a fitted side that puts the item further than this from the kind's size is not trusted
+    # K791: when cast_for skips the fit on a notched or tabbed item, "sides" takes the cast band off its straight sides
+    # only (cast.trim_sides; the notch and tab stay as cut); None keeps the plain cut
+    cast_skip_mode: Optional[str] = "sides"
+    cast_size_tol_mm = 0.5 # a fitted side that puts the item further than this from the kind's size is not trusted
     corner_radius_mm: dict[str, float] = {}  # per kind, the corner radius when none of an item's lit corners shows one
     card_kind: Optional[str] = None  # the standard card among the kinds (default: the smallest one)
     size_tolerance = 0.03  # a measured item within 3 % of a known size is that kind

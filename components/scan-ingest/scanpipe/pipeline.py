@@ -90,7 +90,7 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
                 crop, _ = detect.rectify(k.roi_bgra, key.shifted(k.region, k.origin))
                 w_mm, h_mm = r.w / dpi * MM_PER_IN, r.h / dpi * MM_PER_IN
                 break
-        sil, cast_skip = None, None
+        sil, cast_skip, sides_cast = None, None, None
         if k is not None and (plugin.cast_kinds.get(kind) or (kind is None and plugin.cast_kinds)):
             # a card: cut again with its outline from geometry, without the shadow it casts (README, *Magenta backing*);
             # an unknown size may be a card with a shadow too wide for its size to be recognised
@@ -114,6 +114,11 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
                     flags.extend(f for f in k.cast["flags"] if f not in flags)
                     sil, cast_skip = None, None
                     break
+            names = silhouette.spec_for(plugin.silhouette_spec)["names"]
+            if cast_skip and plugin.cast_skip_mode == "sides" and sil and crop.ndim == 3 and crop.shape[2] == 4 \
+                    and sil["shape"] in {names.get(s, s) for s in ("notched", "tabbed")}:
+                crop, sides_cast = key.cast.trim_sides(crop, px_per_mm, sil)
+                w_mm, h_mm = crop.shape[1] / dpi * MM_PER_IN, crop.shape[0] / dpi * MM_PER_IN
             if kind not in plugin.silhouette_kinds:
                 sil = None
         regions.append(r)
@@ -154,6 +159,7 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
             **({"silhouette": sil} if sil else {}),
             **({"castSkipped": cast_skip} if cast_skip else {}),
             **({"cast": {kk: v for kk, v in k.cast.items() if kk != "flags"}} if k is not None and k.cast else {}),
+            **({"cast": sides_cast} if sides_cast else {}),
         })
         labels.append(str(i + 1))
     review_dir.mkdir(parents=True, exist_ok=True)
